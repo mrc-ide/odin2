@@ -1,0 +1,17 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+TODO.md
+docs
+*.o
+*.so
+*.dll
+*.dylib
+*.gcda
+*.gcno
+*.gcov
+.valgrind_ignore
+inst/doc
+pkgdown

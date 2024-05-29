@@ -1,0 +1,7 @@
+linters: linters_with_defaults(
+    indentation_linter = NULL,
+    object_length_linter = NULL,
+    object_usage_linter = NULL,
+    cyclocomp_linter = NULL
+    )
+exclusions: list("tests/testthat.R", "R/cpp11.R")
