@@ -41,7 +41,7 @@ parse_system <- function(exprs, call) {
   is_data <- special == "data"
 
   is_equation <- special == ""
-  name_data <- vcapply(exprs, function(x) x$lhs$name)
+  name_data <- vcapply(exprs, function(x) x$lhs$name %||% "") # compare is special
 
   ## We take initial as the set of variables:
   variables <- name_data[is_initial]
