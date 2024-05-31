@@ -43,6 +43,8 @@ parse_system <- function(exprs, call) {
     odin_parse_error("Did not find any call to 'initial()'", NULL, call)
   }
 
+  src <- lapply(exprs, "[[", "src")
+
   ## Check what sort of system we even have:
   is_continuous <- any(is_lhs_deriv)
   is_discrete <- any(is_lhs_update)
@@ -64,7 +66,7 @@ parse_system <- function(exprs, call) {
   variables_target <- name_data[is_lhs_target]
   if (!setequal(variables, variables_target)) {
     common <- intersect(variables, variables_target)
-    err <- (is_lhs_target | is_lhs_initial) & !(name %in% common)
+    err <- (is_lhs_target | is_lhs_initial) & !(variables %in% common)
     odin_parse_error(
       "Different equations for 'initial()' and '{target}()'",
       src[err], call)
@@ -90,7 +92,7 @@ parse_check_lhs_name <- function(lhs, src, call) {
   ## anything reserved.  Add these in later, see
   ## "ir_parse_expr_check_lhs_name" for details.
   if (!rlang::is_symbol(lhs)) {
-    cli::ir_odin_parse_error("Expected a symbol on the lhs", src, call)
+    odin_parse_error("Expected a symbol on the lhs", src, call)
   }
   name <- deparse1(lhs)
   name

@@ -22,3 +22,8 @@ set_names <- function(x, nms) {
   names(x) <- nms
   x
 }
+
+
+squote <- function(x) {
+  sprintf("'%s'", x)
+}

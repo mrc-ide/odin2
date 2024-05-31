@@ -44,6 +44,14 @@ assert_scalar_logical <- function(x, name = deparse(substitute(x)),
 }
 
 
+assert_scalar_character <- function(x, name = deparse(substitute(x)),
+                                  arg = name, call = NULL) {
+  assert_scalar(x, name, arg = arg, call = call)
+  assert_character(x, name, arg = arg, call = call)
+  assert_nonmissing(x, name, arg = arg, call = call)
+}
+
+
 match_value <- function(x, choices, name = deparse(substitute(x)), arg = name,
                         call = NULL) {
   assert_scalar_character(x, call = call, arg = arg)

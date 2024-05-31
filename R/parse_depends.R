@@ -44,13 +44,13 @@ topological_order <- function(deps) {
       m[i, ] <- FALSE
     } else {
       f <- function(i) {
-        sprintf("\t%s: depends on %s", names(graph)[[i]],
+        sprintf("\t%s: depends on %s", names(ret)[[i]],
                 paste(err[m[pending, i]], collapse = ", "))
       }
-      err <- names(graph)[pending]
+      err <- names(ret)[pending]
       detail <- paste(vcapply(which(pending), f), collapse = "\n")
       stop(sprintf("A cyclic dependency detected for %s:\n%s",
-                   paste(names(graph)[pending], collapse = ", "),
+                   paste(names(ret)[pending], collapse = ", "),
                    detail), call. = FALSE)
     }
   }
