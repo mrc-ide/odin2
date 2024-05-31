@@ -9,15 +9,16 @@ generate_dust_model <- function(dat) {
   body$add("  using real_type = double;")
   body$add("  using data_type = dust2::no_data;")
   body$add("  using rng_state_type = mcstate::random::generator<real_type>;")
-  body$add(paste0("  ", core$shared_state))
-  body$add(paste0("  ", core$internal_state))
-  body$add(paste0("  ", core$size))
-  body$add(paste0("  ", core$build_shared))
-  body$add(paste0("  ", core$build_internal))
-  body$add(paste0("  ", core$update_shared))
-  body$add(paste0("  ", core$update_internal))
-  body$add(paste0("  ", core$initial))
-  body$add(paste0("  ", core$update))
+  body$add(sprintf("  %s", core$shared_state))
+  body$add(sprintf("  %s", core$internal_state))
+  body$add(sprintf("  %s", core$data))
+  body$add(sprintf("  %s", core$size))
+  body$add(sprintf("  %s", core$build_shared))
+  body$add(sprintf("  %s", core$build_internal))
+  body$add(sprintf("  %s", core$update_shared))
+  body$add(sprintf("  %s", core$update_internal))
+  body$add(sprintf("  %s", core$initial))
+  body$add(sprintf("  %s", core$update))
   body$add("};")
   body$get()
 }
@@ -48,6 +49,18 @@ generate_dust_model_core_shared_state <- function(dat) {
 
 generate_dust_model_core_internal_state <- function(dat) {
   "struct internal_state {};"
+}
+
+
+generate_dust_model_core_data <- function(dat) {
+  data <- dat$location$contents$data
+  if (length(data) == 0) {
+    "  using data_type = dust2::no_data;"
+  } else {
+    c("struct data_type = {",
+      sprintf("  real_type %s;", data),
+      "}")
+  }
 }
 
 

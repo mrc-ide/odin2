@@ -17,9 +17,10 @@ odin_parse <- function(expr, input = NULL) {
   ## TODO: What has not been done here:
   ## * check for unknown variables
   ## * update recursive dependencies within non-equations bits
+  ## * no use of data from update etc
   equations <- parse_depend_equations(system$exprs$equations, implicit)
   phases <- parse_phases(system$exprs, equations, system$variables)
-  location <- parse_location(equations, system$variables)
+  location <- parse_location(equations, system$variables, system$data)
 
   ret <- list(time = system$time,
               class = "odin",
@@ -31,17 +32,19 @@ odin_parse <- function(expr, input = NULL) {
 
 
 parse_system <- function(exprs, call) {
-  special <- vcapply(exprs, function(x) x$lhs$special %||% "")
-  is_lhs_update <- special == "update"
-  is_lhs_deriv <- special == "deriv"
-  is_lhs_output <- special == "output"
-  is_lhs_initial <- special == "initial"
-  is_lhs_compare <- special == "compare"
+  special <- vcapply(exprs, function(x) x$special %||% "")
+  is_update <- special == "update"
+  is_deriv <- special == "deriv"
+  is_output <- special == "output"
+  is_initial <- special == "initial"
+  is_compare <- special == "compare"
+  is_data <- special == "data"
+
   is_equation <- special == ""
   name_data <- vcapply(exprs, function(x) x$lhs$name)
 
   ## We take initial as the set of variables:
-  variables <- name_data[is_lhs_initial]
+  variables <- name_data[is_initial]
   if (length(variables) == 0) {
     odin_parse_error("Did not find any call to 'initial()'", NULL, call)
   }
@@ -49,27 +52,29 @@ parse_system <- function(exprs, call) {
   src <- lapply(exprs, "[[", "src")
 
   ## Check what sort of system we even have:
-  is_continuous <- any(is_lhs_deriv)
-  is_discrete <- any(is_lhs_update)
+  is_continuous <- any(is_deriv)
+  is_discrete <- any(is_update)
   if (is_continuous && is_discrete) {
     odin_parse_error(
       "Can't support both 'update()' and 'deriv()' within a single model yet",
-      src[is_lhs_deriv | is_lhs_update], call)
+      src[is_deriv | is_update], call)
   }
 
-  if (any(is_lhs_output)) {
+  if (any(is_output)) {
     odin_parse_error(
       "Can't support both 'output()' yet",
-      src[is_lhs_output], call)
+      src[is_output], call)
   }
 
-  target <- if (is_continuous) "deriv" else "update"
-  is_lhs_target <- special == target
+  ## TODO: names in data must be distinct, too.
 
-  variables_target <- name_data[is_lhs_target]
+  target <- if (is_continuous) "deriv" else "update"
+  is_target <- special == target
+
+  variables_target <- name_data[is_target]
   if (!setequal(variables, variables_target)) {
     common <- intersect(variables, variables_target)
-    err <- (is_lhs_target | is_lhs_initial) & !(variables %in% common)
+    err <- (is_target | is_initial) & !(variables %in% common)
     odin_parse_error(
       "Different equations for 'initial()' and '{target}()'",
       src[err], call)
@@ -77,13 +82,15 @@ parse_system <- function(exprs, call) {
 
   ## Then we break equations up:
   exprs <- list(equations = exprs[is_equation],
-                update = exprs[is_lhs_update],
-                deriv = exprs[is_lhs_deriv],
-                output = exprs[is_lhs_output],
-                initial = exprs[is_lhs_initial],
-                compare = exprs[is_lhs_compare])
+                update = exprs[is_update],
+                deriv = exprs[is_deriv],
+                output = exprs[is_output],
+                initial = exprs[is_initial],
+                compare = exprs[is_compare],
+                data = exprs[is_data])
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
+       data = name_data[is_data],
        exprs = exprs)
 }
 
@@ -157,8 +164,13 @@ parse_phases <- function(exprs, equations, variables) {
         }
         phases[[phase]] <- list(equations = eqs_time,
                                 variables = e)
+      } else if (phase == "data") {
+        ## We *could* do this, but it's just a declaration so move on.
+        ##
+        ## phases[[phase]] <- list(
+        ##   names = vcapply(e, function(x) x$lhs$name))
       } else {
-        stop("Unreachable")
+        stop(sprintf("Unsupported phase '%s'", phase))
       }
     }
   }
@@ -172,14 +184,14 @@ parse_phases <- function(exprs, equations, variables) {
 }
 
 
-parse_location <- function(equations, variables) {
+parse_location <- function(equations, variables, data) {
   stage <- vcapply(equations, "[[", "stage")
 
   contents <- list(
     variables = variables,
     shared = names(stage)[stage == "constant"],
     internal = character(),
-    data = character(),
+    data = data,
     output = character(),
     stack = names(stage)[stage == "time"])
   location <- set_names(rep(names(contents), lengths(contents)),
@@ -198,11 +210,10 @@ parse_location <- function(equations, variables) {
 }
 
 
-odin_parse_error <- function(msg, src, expr, .envir = parent.frame()) {
+odin_parse_error <- function(msg, src, call, .envir = parent.frame()) {
   cli::cli_abort(msg,
                  class = "odin_parse_error",
                  src = src,
-                 expr = expr,
                  call = call,
                  .envir = .envir)
 }

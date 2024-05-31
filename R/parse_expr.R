@@ -17,7 +17,14 @@ parse_expr <- function(expr, src, call) {
 parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
   rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
-  list(type = "assignment",
+
+  special <- lhs$special
+  lhs$special <- NULL
+  if (is.null(special) && rhs$type == "data") {
+    special <- "data"
+  }
+
+  list(special = special,
        lhs = lhs,
        rhs = rhs,
        src = src)
@@ -58,7 +65,7 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
   } else if (rlang::is_call(rhs, "parameter")) {
     stop("Implement parameters")
   } else if (rlang::is_call(rhs, "data")) {
-    stop("Implement data")
+    parse_expr_assignment_rhs_data(rhs, src, call)
   } else if (rlang::is_call(rhs, "interpolate")) {
     stop("Implement interpolation")
   } else {
@@ -74,7 +81,8 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   ## the user uses anything stochastic.  We do look for the range
   ## operator but I'm not totlaly sure that's the best place to do so.
   depends <- find_dependencies(rhs)
-  list(expr = rhs,
+  list(type = "expression",
+       expr = rhs,
        depends = depends)
 }
 
@@ -91,6 +99,16 @@ parse_expr_check_lhs_name <- function(lhs, src, call) {
   name <- deparse1(lhs)
   name
 }
+
+
+parse_expr_assignment_rhs_data <- function(rhs, src, call) {
+  if (length(rhs) != 1) {
+    odin_parse_error("Calls to 'data()' must have no arguments",
+                     src, call)
+  }
+  list(type = "data")
+}
+
 
 parse_expr_compare <- function(expr, src, call) {
   .NotYetImplemented()
