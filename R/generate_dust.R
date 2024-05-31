@@ -1,0 +1,136 @@
+generate_dust_model <- function(dat) {
+  core <- generate_dust_model_core(dat)
+  body <- collector()
+  body$add("#include <dust2/common.hpp>")
+  body$add(sprintf("// [[dust2::class(%s)]]", core$class))
+  body$add(sprintf("class %s {", core$class))
+  body$add("public:")
+  body$add(sprintf("  %s() = delete;", core$class))
+  body$add("  using real_type = double;")
+  body$add("  using data_type = dust2::no_data;")
+  body$add("  using rng_state_type = mcstate::random::generator<real_type>;")
+  body$add(paste0("  ", core$shared_state))
+  body$add(paste0("  ", core$internal_state))
+  body$add(paste0("  ", core$size))
+  body$add(paste0("  ", core$build_shared))
+  body$add(paste0("  ", core$build_internal))
+  body$add(paste0("  ", core$update_shared))
+  body$add(paste0("  ", core$update_internal))
+  body$add(paste0("  ", core$initial))
+  body$add(paste0("  ", core$update))
+  body$add("};")
+  body$get()
+}
+
+
+generate_dust_model_core <- function(dat) {
+  list(class = dat$class,
+       shared_state = generate_dust_model_core_shared_state(dat),
+       internal_state = generate_dust_model_core_internal_state(dat),
+       size = generate_dust_model_core_size(dat),
+       build_shared = generate_dust_model_core_build_shared(dat),
+       build_internal = generate_dust_model_core_build_internal(dat),
+       update_shared = generate_dust_model_core_update_shared(dat),
+       update_internal = generate_dust_model_core_update_internal(dat),
+       initial = generate_dust_model_core_initial(dat),
+       update = generate_dust_model_core_update(dat))
+}
+
+
+generate_dust_model_core_shared_state <- function(dat) {
+  nms <- dat$location$contents$shared
+  type <- dat$location$type[nms]
+  c("struct shared_state {",
+    sprintf("  %s %s;", type, nms),
+    "};")
+}
+
+
+generate_dust_model_core_internal_state <- function(dat) {
+  "struct internal_state {};"
+}
+
+
+generate_dust_model_core_size <- function(dat) {
+  args <- c("const shared_state&" = "shared")
+  body <- sprintf("return %d;", length(dat$location$contents$variables))
+  cpp_function("size_t", "size", args, body, static = TRUE)
+}
+
+
+generate_dust_model_core_build_shared <- function(dat) {
+  eqs <- dat$phases$create_shared$equations
+  body <- collector()
+  for (eq in dat$equations[eqs]) {
+    lhs <- eq$lhs$name
+    rhs <- generate_dust_sexp(eq$rhs$expr, dat)
+    body$add(sprintf("real_type %s = %s;", lhs, rhs))
+  }
+  body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
+  args <- c("cpp11::list" = "parameters")
+  cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_model_core_build_internal <- function(dat) {
+  args <- c("const shared_state&" = "shared")
+  body <- "return internal_state{};"
+  cpp_function("internal_state", "build_internal", args, body, static = TRUE)
+}
+
+
+generate_dust_model_core_update_shared <- function(dat) {
+  args <- c("cpp11::list" = "pars", "shared_state&" = "shared")
+  body <- character()
+  cpp_function("void", "update_shared", args, body, static = TRUE)
+}
+
+
+generate_dust_model_core_update_internal <- function(dat) {
+  args <- c("const shared_state&" = "shared", "internal_state&" = "internal")
+  body <- character()
+  cpp_function("void", "update_internal", args, body, static = TRUE)
+}
+
+
+generate_dust_model_core_initial <- function(dat) {
+  args <- c("real_type" = "time",
+            "real_type" = "dt",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal",
+            "rng_state_type&" = "rng_state",
+            "real_type*" = "state")
+  body <- collector()
+  eqs <- dat$phases$initial$equations
+  for (eq in c(dat$equations[eqs], dat$phases$initial$variables)) {
+    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state")
+    rhs <- generate_dust_sexp(eq$rhs$expr, dat)
+    body$add(sprintf("%s = %s;", lhs, rhs))
+  }
+  cpp_function("void", "initial", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_model_core_update <- function(dat) {
+  args <- c("real_type" = "time",
+            "real_type" = "dt",
+            "const real_type*" = "state",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal",
+            "rng_state_type&" = "rng_state",
+            "real_type*" = "state_next")
+  body <- collector()
+  variables <- dat$location$contents$variables
+  packing <- dat$location$packing$state
+  i <- variables %in% dat$phases$update$unpack
+  ## TODO: this will get changed, and also reused.
+  body$add(sprintf("const auto %s = state[%d];",
+                   variables[i], unlist(packing[i])))
+  eqs <- dat$phases$update$equations
+  for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
+    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
+    rhs <- generate_dust_sexp(eq$rhs$expr, dat)
+    body$add(sprintf("%s = %s;", lhs, rhs))
+  }
+  cpp_function("void", "update", args, body$get(), static = TRUE)
+}

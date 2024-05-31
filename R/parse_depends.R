@@ -17,6 +17,7 @@ parse_depends <- function(system, call) {
   location <- parse_depend_location(equations, system$variables)
 
   list(time = system$time,
+       class = "odin",
        location = location,
        phases = phases,
        equations = equations)
@@ -87,7 +88,7 @@ parse_depend_equations <- function(equations, implicit) {
 
 ## This is going to be the grossest bit I think.
 parse_depend_phases <- function(exprs, equations, variables) {
-  phases <- list(create_shared = list(equations = character()))
+  phases <- list(build_shared = list(equations = character()))
   used <- character()
 
   stage <- vcapply(equations, function(x) x$stage)
@@ -109,8 +110,8 @@ parse_depend_phases <- function(exprs, equations, variables) {
 
       ## These bits will change with user variables, and where we
       ## support parameters and updates.  This is fine for now though.
-      phases$create_shared$equations <-
-        union(phases$create_shared$equations,
+      phases$build_shared$equations <-
+        union(phases$build_shared$equations,
               eqs[stage[eqs] == "constant"])
 
       if (phase == "update") { # also deriv
@@ -129,17 +130,36 @@ parse_depend_phases <- function(exprs, equations, variables) {
     }
   }
 
+  ## Reorder following the dependency graph:
+  phases$build_shared$equations <- intersect(
+    names(equations),
+    phases$build_shared$equations)
+
   phases
 }
 
 
 parse_depend_location <- function(equations, variables) {
   stage <- vcapply(equations, "[[", "stage")
-  list(
+
+  contents <- list(
     variables = variables,
     shared = names(stage)[stage == "constant"],
     internal = character(),
     data = character(),
     output = character(),
     stack = names(stage)[stage == "time"])
+  location <- set_names(rep(names(contents), lengths(contents)),
+                        unlist(contents, FALSE, TRUE))
+  location[location == "variables"] <- "state"
+  type <- set_names(rep("real_type", length(location)), names(location))
+  ## This will change soon, as we'll need more flexibility with
+  ## arrays, and output, and adjoints.
+  packing <- list(
+    state = set_names(as.list(seq_along(variables) - 1), variables))
+
+  list(contents = contents,
+       location = location,
+       type = type,
+       packing = packing)
 }

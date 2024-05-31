@@ -4,6 +4,9 @@ odin_parse <- function(expr, input = NULL) {
   exprs <- lapply(dat$exprs, function(x) parse_expr(x$value, x, call = call))
   system <- parse_system(exprs, call)
   ret <- parse_depends(system, call)
+  ## This changes immensely once we have arrays as we need to work
+  ## with a more flexible packing structure.  For now we just cheat
+  ## and assume variables are packed in order as they are all scalars.
   ret
 }
 

@@ -16,6 +16,6 @@ Imports:
     cli,
     rlang
 Suggests:
-    dust2@mrc-5356,
+    mrc-ide/dust2@mrc-5356,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
