@@ -1,3 +1,19 @@
+parse_expr <- function(expr, src, call) {
+  if (rlang::is_call(expr, c("<-", "="))) {
+    parse_expr_assignment(expr, src, call)
+  } else if (rlang::is_call(expr, "~")) {
+    parse_expr_compare(expr, src, call)
+  } else if (rlang::is_call(expr, "print")) {
+    parse_expr_print(expr, src, call)
+  } else {
+    odin_parse_error(
+      c("Unclassifiable expression",
+        i = "Expected an assignment (with '<-') or a relationship (with '~')"),
+      src, call)
+  }
+}
+
+
 parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
   rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
@@ -23,10 +39,10 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   is_array <- rlang::is_call(lhs, "[")
 
   if (is_array) {
-    name <- parse_check_lhs_name(lhs[[1]], src, call)
+    name <- parse_expr_check_lhs_name(lhs[[1]], src, call)
     array <- as.list(lhs[-(1:2)])
   } else {
-    name <- parse_check_lhs_name(lhs, src, call)
+    name <- parse_expr_check_lhs_name(lhs, src, call)
   }
 
   lhs <- list(
@@ -60,4 +76,27 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   depends <- find_dependencies(rhs)
   list(expr = rhs,
        depends = depends)
+}
+
+
+parse_expr_check_lhs_name <- function(lhs, src, call) {
+  ## There are lots of checks we should add here, but fundamentally
+  ## it's a case of making sure that we have been given a symbol and
+  ## that symbol is not anything reserved, nor does it start with
+  ## anything reserved.  Add these in later, see
+  ## "ir_parse_expr_check_lhs_name" for details.
+  if (!rlang::is_symbol(lhs)) {
+    odin_parse_error("Expected a symbol on the lhs", src, call)
+  }
+  name <- deparse1(lhs)
+  name
+}
+
+parse_expr_compare <- function(expr, src, call) {
+  .NotYetImplemented()
+}
+
+
+parse_expr_print <- function(expr, src, call) {
+  .NotYetImplemented()
 }

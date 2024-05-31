@@ -27,3 +27,12 @@ set_names <- function(x, nms) {
 squote <- function(x) {
   sprintf("'%s'", x)
 }
+
+
+collector <- function(init = character(0)) {
+  env <- new.env(parent = emptyenv())
+  env$res <- init
+  list(
+    add = function(x) env$res <- c(env$res, x),
+    get = function() env$res)
+}
