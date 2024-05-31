@@ -12,6 +12,10 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 URL: https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
+Imports:
+    cli,
+    rlang
 Suggests:
+    dust2@mrc-5356,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
