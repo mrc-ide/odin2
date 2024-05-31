@@ -110,8 +110,50 @@ parse_expr_assignment_rhs_data <- function(rhs, src, call) {
 }
 
 
+## This is probably the next thing to get right.  There's a lot of
+## overlap with the lhs bits for expressions really.
 parse_expr_compare <- function(expr, src, call) {
-  .NotYetImplemented()
+  lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
+  rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
+  list(special = "compare",
+       lhs = lhs,
+       rhs = rhs,
+       src = src)
+}
+
+
+parse_expr_compare_lhs <- function(lhs, src, call) {
+  if (!rlang::is_call(lhs, "compare")) {
+    odin_parse_error(
+      "Expected the lhs of '~' to be a compare() call",
+      src, call)
+  }
+  lhs <- lhs[[2]]
+  if (!is.symbol(lhs)) {
+    odin_parse_error(
+      "Expected the argument of 'compare()' to be a symbol",
+      src, call)
+  }
+  list(name = as.character(lhs))
+}
+
+
+parse_expr_compare_rhs <- function(rhs, src, call) {
+  ## Highly restrictive for now:
+  if (!rlang::is_call(rhs, "Normal")) {
+    odin_parse_error(
+      "Expected the rhs of '~' to be a call to Normal()",
+      src, call)
+  }
+  if (length(rhs) != 3) {
+    odin_parse_error(
+      "Normal() requires two arguments",
+      src, call)
+  }
+  depends <- find_dependencies(rhs)
+  list(type = "expression",
+       expr = rhs,
+       depends = depends)
 }
 
 

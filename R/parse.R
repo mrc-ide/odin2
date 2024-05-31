@@ -169,6 +169,10 @@ parse_phases <- function(exprs, equations, variables) {
         ##
         ## phases[[phase]] <- list(
         ##   names = vcapply(e, function(x) x$lhs$name))
+      } else if (phase == "compare") {
+        phases[[phase]] <- list(equations = eqs_time,
+                                unpack = unpack,
+                                compare = e)
       } else {
         stop(sprintf("Unsupported phase '%s'", phase))
       }
