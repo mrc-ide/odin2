@@ -1,4 +1,4 @@
-cpp_function <- function (return_type, name, args, body, static = FALSE) {
+cpp_function <- function(return_type, name, args, body, static = FALSE) {
   c(cpp_args(return_type, name, args, static = static),
     paste0("  ", body),
     "}")
