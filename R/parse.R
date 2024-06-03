@@ -10,11 +10,10 @@ odin_parse <- function(expr, input = NULL) {
   ## * check for unknown variables
   ## * update recursive dependencies within non-equations bits
   ## * no use of data from update etc
-  equations <- parse_depend_equations(system$exprs$equations, system)
+  equations <- parse_depend_equations(system$exprs$equations, system$variables)
   phases <- parse_phases(system$exprs, equations,
                          system$variables, system$parameters)
-  location <- parse_location(equations, system$variables, system$parameters,
-                             system$data)
+  location <- parse_location(equations, system$variables, system$data)
 
   ret <- list(time = system$time,
               class = "odin",
@@ -33,10 +32,12 @@ parse_system <- function(exprs, call) {
   is_initial <- special == "initial"
   is_compare <- special == "compare"
   is_data <- special == "data"
-  is_parameter <- special == "parameter"
+
+  is_parameter <- vlapply(exprs, function(x) identical(x$rhs$type, "parameter"))
 
   is_equation <- special == ""
-  name_data <- vcapply(exprs, function(x) x$lhs$name %||% "") # compare is special
+  ## compare does not have a lhs name
+  name_data <- vcapply(exprs, function(x) x$lhs$name %||% "")
 
   ## We take initial as the set of variables:
   variables <- name_data[is_initial]
@@ -61,7 +62,8 @@ parse_system <- function(exprs, call) {
       src[is_output], call)
   }
 
-  ## TODO: names in data must be distinct, too.
+  ## TODO: names must not be duplicated.  This check is quite hard to
+  ## get right because of arrays.
 
   target <- if (is_continuous) "deriv" else "update"
   is_target <- special == target
@@ -82,7 +84,6 @@ parse_system <- function(exprs, call) {
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
-                parameter = exprs[is_parameter],
                 data = exprs[is_data])
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
@@ -92,13 +93,10 @@ parse_system <- function(exprs, call) {
 }
 
 
-parse_depend_equations <- function(equations, system) {
-  implicit <- c(system$variables, TIME, DT)
-  parameters <- system$parameters
-
+parse_depend_equations <- function(equations, variables) {
+  implicit <- c(variables, TIME, DT)
   stages <- c(constant = 1, parameter = 2, time = 3)
   stage <- c(
-    set_names(rep(stages[["parameter"]], length(parameters)), parameters),
     set_names(rep(stages[["time"]], length(implicit)), implicit))
 
   names(equations) <- vcapply(equations, function(x) x$lhs$name)
@@ -113,8 +111,12 @@ parse_depend_equations <- function(equations, system) {
     deps_recursive[[nm]] <- union(
       vars,
       unlist(deps_recursive[vars], FALSE, FALSE))
-    stage[[nm]] <- max(stages[["constant"]],
-                       stage[equations[[nm]]$rhs$depends$variables])
+    if (identical(equations[[nm]]$rhs$type, "parameter")) {
+      stage[[nm]] <- stages[["parameter"]]
+    } else {
+      stage[[nm]] <- max(stages[["constant"]],
+                         stage[equations[[nm]]$rhs$depends$variables])
+    }
     equations[[nm]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
     equations[[nm]]$stage <- names(stages)[[stage[[nm]]]]
   }
@@ -128,9 +130,8 @@ parse_phases <- function(exprs, equations, variables, parameters) {
   phases <- list(build_shared = list(equations = character()))
   used <- character()
 
+  ## Why do I have the wrong stage here now?
   stage <- vcapply(equations, function(x) x$stage)
-  ## It would be niec not to have to do this:
-  stage <- c(stage, set_names("parameter", parameters))
 
   deps_recursive <- lapply(equations, function(x) {
     x$rhs$depends$variables_recursive
@@ -172,11 +173,7 @@ parse_phases <- function(exprs, equations, variables, parameters) {
     }
   }
 
-  ## TODO: once we have arrays this will need to change to support
-  ## sizes, because then we need to make sure that everything orders
-  ## correctly (a size of a parameter comes before the parameter
-  ## regardless).
-  eqs_shared <- intersect(c(parameters, names(equations)), required)
+  eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
     equations = eqs_shared[stage[eqs_shared] == "parameter"])
@@ -185,10 +182,10 @@ parse_phases <- function(exprs, equations, variables, parameters) {
 }
 
 
-parse_location <- function(equations, variables, parameters, data) {
+parse_location <- function(equations, variables, data) {
   stage <- vcapply(equations, "[[", "stage")
 
-  shared <- c(names(stage)[stage != "time"], parameters)
+  shared <- names(stage)[stage != "time"]
 
   contents <- list(
     variables = variables,

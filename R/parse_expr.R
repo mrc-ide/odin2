@@ -22,8 +22,6 @@ parse_expr_assignment <- function(expr, src, call) {
   lhs$special <- NULL
   if (is.null(special) && rhs$type == "data") {
     special <- "data"
-  } else if (is.null(special) && rhs$type == "parameter") {
-    special <- "parameter"
   }
 
   list(special = special,

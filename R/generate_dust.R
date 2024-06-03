@@ -88,12 +88,17 @@ generate_dust_model_core_size <- function(dat) {
 
 
 generate_dust_model_core_build_shared <- function(dat) {
-  eqs <- dat$phases$create_shared$equations
+  options <- list(shared_exists = FALSE)
+  eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
     lhs <- eq$lhs$name
-    rhs <- generate_dust_sexp(eq$rhs$expr, dat)
-    body$add(sprintf("real_type %s = %s;", lhs, rhs))
+    if (eq$rhs$type == "parameter") {
+      rhs <- sprintf('dust2::r::read_real(parameters, "%s")', lhs)
+    } else {
+      rhs <- generate_dust_sexp(eq$rhs$expr, dat, options)
+    }
+    body$add(sprintf("const real_type %s = %s;", lhs, rhs))
   }
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
@@ -126,9 +131,20 @@ generate_dust_model_core_build_internal <- function(dat) {
 
 
 generate_dust_model_core_update_shared <- function(dat) {
-  args <- c("cpp11::list" = "pars", "shared_state&" = "shared")
-  body <- character()
-  cpp_function("void", "update_shared", args, body, static = TRUE)
+  eqs <- dat$phases$update_shared$equations
+  body <- collector()
+  for (eq in dat$equations[eqs]) {
+    name <- eq$lhs$name
+    lhs <- generate_dust_sexp(name, dat)
+    if (eq$rhs$type == "parameter") {
+      rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)', name, lhs)
+    } else {
+      rhs <- generate_dust_sexp(eq$rhs$expr, dat)
+    }
+    body$add(sprintf("%s = %s;", lhs, rhs))
+  }
+  args <- c("cpp11::list" = "parameters", "shared_state&" = "shared")
+  cpp_function("void", "update_shared", args, body$get(), static = TRUE)
 }
 
 

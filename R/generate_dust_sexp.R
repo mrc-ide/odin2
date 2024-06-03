@@ -1,9 +1,9 @@
-generate_dust_sexp <- function(expr, dat) {
+generate_dust_sexp <- function(expr, dat, options = NULL) {
   if (is.recursive(expr)) {
     fn <- as.character(expr[[1]])
     args <- expr[-1]
     n <- length(args)
-    values <- vcapply(args, generate_dust_sexp, dat)
+    values <- vcapply(args, generate_dust_sexp, dat, options)
 
     if (fn == "(") {
       ret <- sprintf("(%s)", values[[1]])
@@ -17,13 +17,17 @@ generate_dust_sexp <- function(expr, dat) {
       ## TODO: we should catch this elsewhere.
       stop("Unhandled function")
     }
-  } else if (is.symbol(expr)) {
+  } else if (is.symbol(expr) || is.character(expr)) {
     name <- as.character(expr)
     location <- dat$location$location[[name]]
     if (location %in% c("state", "stack")) {
       ret <- name
     } else if (location %in% c("shared", "internal", "data")) {
-      ret <- sprintf("%s.%s", location, name)
+      if (location == "shared" && isFALSE(options$shared_exists)) {
+        ret <- name
+      } else {
+        ret <- sprintf("%s.%s", location, name)
+      }
     } else {
       stop("Unhandled location")
     }
