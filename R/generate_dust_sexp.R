@@ -48,7 +48,7 @@ generate_dust_sexp_compare <- function(expr, dat) {
   args <- expr[-1]
   n <- length(args)
   values <- vcapply(args, generate_dust_sexp, dat)
-  sprintf("mcstate2::density::%s(%s, true)",
+  sprintf("mcstate::density::%s<real_type>(%s, true)",
           tolower(fn),
           paste(values, collapse = ", "))
 }

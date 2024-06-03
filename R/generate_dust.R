@@ -7,14 +7,15 @@ generate_dust_model <- function(dat) {
   body$add("public:")
   body$add(sprintf("  %s() = delete;", dat$class))
   body$add("  using real_type = double;")
-  body$add("  using data_type = dust2::no_data;")
   body$add("  using rng_state_type = mcstate::random::generator<real_type>;")
   body$add(sprintf("  %s", core$shared_state))
   body$add(sprintf("  %s", core$internal_state))
+  body$add(sprintf("  %s", core$data_type))
   body$add(sprintf("  %s", core$data))
   body$add(sprintf("  %s", core$size))
   body$add(sprintf("  %s", core$build_shared))
   body$add(sprintf("  %s", core$build_internal))
+  body$add(sprintf("  %s", core$build_data))
   body$add(sprintf("  %s", core$update_shared))
   body$add(sprintf("  %s", core$update_internal))
   body$add(sprintf("  %s", core$initial))
@@ -29,9 +30,11 @@ generate_dust_model_core <- function(dat) {
   list(attributes = generate_dust_model_core_attributes(dat),
        shared_state = generate_dust_model_core_shared_state(dat),
        internal_state = generate_dust_model_core_internal_state(dat),
+       data = generate_dust_model_core_data(dat),
        size = generate_dust_model_core_size(dat),
        build_shared = generate_dust_model_core_build_shared(dat),
        build_internal = generate_dust_model_core_build_internal(dat),
+       build_data = generate_dust_model_core_build_data(dat),
        update_shared = generate_dust_model_core_update_shared(dat),
        update_internal = generate_dust_model_core_update_internal(dat),
        initial = generate_dust_model_core_initial(dat),
@@ -70,9 +73,9 @@ generate_dust_model_core_data <- function(dat) {
   if (length(data) == 0) {
     "  using data_type = dust2::no_data;"
   } else {
-    c("struct data_type = {",
+    c("struct data_type {",
       sprintf("  real_type %s;", data),
-      "}")
+      "};")
   }
 }
 
@@ -95,6 +98,23 @@ generate_dust_model_core_build_shared <- function(dat) {
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
   cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_model_core_build_data <- function(dat) {
+  data <- dat$location$contents$data
+  if (length(data) == 0) {
+    return(NULL)
+  }
+  ## This is very simple for now, but later we can allow data to have
+  ## types, lengths, etc.
+  eqs <- dat$phases$create_data$equations
+  body <- collector()
+  body$add("auto data = static_cast<cpp11::list>(r_data);")
+  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s");', data, data))
+  body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
+  args <- c("cpp11::list" = "r_data")
+  cpp_function("data_type", "build_data", args, body$get(), static = TRUE)
 }
 
 
