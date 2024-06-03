@@ -22,6 +22,8 @@ parse_expr_assignment <- function(expr, src, call) {
   lhs$special <- NULL
   if (is.null(special) && rhs$type == "data") {
     special <- "data"
+  } else if (is.null(special) && rhs$type == "parameter") {
+    special <- "parameter"
   }
 
   list(special = special,
@@ -63,7 +65,7 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
   if (rlang::is_call(rhs, "delay")) {
     stop("Implement delays")
   } else if (rlang::is_call(rhs, "parameter")) {
-    stop("Implement parameters")
+    parse_expr_assignment_rhs_parameter(rhs, src, call)
   } else if (rlang::is_call(rhs, "data")) {
     parse_expr_assignment_rhs_data(rhs, src, call)
   } else if (rlang::is_call(rhs, "interpolate")) {
@@ -98,6 +100,18 @@ parse_expr_check_lhs_name <- function(lhs, src, call) {
   }
   name <- deparse1(lhs)
   name
+}
+
+
+## TODO: we'll have a variant of this that acts as a compatibility
+## layer for user(), as this is probably the biggest required change
+## to people's code, really.
+parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
+  if (length(rhs) != 1) {
+    odin_parse_error("Calls to 'parameter()' must have no arguments for now",
+                     src, call)
+  }
+  list(type = "parameter")
 }
 
 
