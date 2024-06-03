@@ -113,7 +113,12 @@ parse_expr_assignment_rhs_data <- function(rhs, src, call) {
 parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
-  rhs$against <- lhs
+
+  ## Quickly rewrite the expression, at least for now:
+  rhs$expr <- as.call(c(list(rhs$expr[[1]], lhs),
+                        as.list(rhs$expr[-1])))
+  rhs$depends$variables <- union(rhs$depends$variables,
+                                 as.character(lhs))
   list(special = "compare",
        rhs = rhs,
        src = src)
@@ -149,7 +154,7 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
       src, call)
   }
   depends <- find_dependencies(rhs)
-  list(type = "expression",
+  list(type = "compare",
        expr = rhs,
        depends = depends)
 }

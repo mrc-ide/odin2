@@ -149,7 +149,6 @@ generate_dust_model_core_update <- function(dat) {
   variables <- dat$location$contents$variables
   packing <- dat$location$packing$state
   i <- variables %in% dat$phases$update$unpack
-  ## TODO: this will get changed, and also reused.
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i], unlist(packing[i])))
   eqs <- dat$phases$update$equations
@@ -174,15 +173,23 @@ generate_dust_model_core_compare_data <- function(dat) {
   variables <- dat$location$contents$variables
   packing <- dat$location$packing$state
   i <- variables %in% dat$phases$update$unpack
-  ## TODO: this will get changed, and also reused.
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i], unlist(packing[i])))
-  body$add("real_type ll = 0;") # TODO collision here
+  ## TODO collision here in names with 'll'; we might need to prefix
+  ## with compare_ perhaps?
+  body$add("real_type ll = 0;")
 
-  eqs <- dat$phases$update$equations
-  for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
+  eqs <- dat$phases$compare$equations
+  for (eq in c(dat$equations[eqs])) {
+    lhs <- generate_dust_lhs(eq$lhs$name, dat)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat)
-    body$add(sprintf("ll += %s;", rhs))
+    body$add(sprintf("%s = %s;", lhs, rhs))
+  }
+
+  ## Then the actual comparison:
+  for (eq in dat$phases$compare$compare) {
+    body$add(sprintf("ll += %s;",
+                     generate_dust_sexp_compare(eq$rhs$expr, dat)))
   }
 
   body$add("return ll;")

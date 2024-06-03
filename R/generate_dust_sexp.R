@@ -22,8 +22,8 @@ generate_dust_sexp <- function(expr, dat) {
     location <- dat$location$location[[name]]
     if (location %in% c("state", "stack")) {
       ret <- name
-    } else if (location == "shared") {
-      ret <- sprintf("shared.%s", name)
+    } else if (location %in% c("shared", "internal", "data")) {
+      ret <- sprintf("%s.%s", location, name)
     } else {
       stop("Unhandled location")
     }
@@ -40,6 +40,17 @@ generate_dust_sexp <- function(expr, dat) {
     stop("Unhandled data type")
   }
   ret
+}
+
+
+generate_dust_sexp_compare <- function(expr, dat) {
+  fn <- as.character(expr[[1]])
+  args <- expr[-1]
+  n <- length(args)
+  values <- vcapply(args, generate_dust_sexp, dat)
+  sprintf("mcstate2::density::%s(%s, true)",
+          tolower(fn),
+          paste(values, collapse = ", "))
 }
 
 
