@@ -105,11 +105,15 @@ parse_expr_check_lhs_name <- function(lhs, src, call) {
 ## layer for user(), as this is probably the biggest required change
 ## to people's code, really.
 parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
-  if (length(rhs) != 1) {
-    odin_parse_error("Calls to 'parameter()' must have no arguments for now",
-                     src, call)
+  template <- function(default = NULL, constant = NULL, differentiate = FALSE) {
   }
-  list(type = "parameter")
+  result <- match_call(rhs, template)
+  if (!result$success) {
+    cli::cli_abort("Invalid call to 'parameter()'",
+                   parent = result$error)
+  }
+  list(type = "parameter",
+       args = result$args)
 }
 
 

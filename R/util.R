@@ -36,3 +36,16 @@ collector <- function(init = character(0)) {
     add = function(x) env$res <- c(env$res, x),
     get = function() env$res)
 }
+
+
+match_call <- function(call, fn) {
+  ## We'll probably expand on the error case here to return something
+  ## much nicer.
+  tryCatch(
+    list(success = TRUE,
+         args = as.list(rlang::call_match(call, fn, defaults = TRUE))[-1]),
+    error = function(e) {
+      list(success = FALSE,
+           error = e)
+    })
+}

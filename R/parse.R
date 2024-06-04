@@ -95,7 +95,9 @@ parse_system <- function(exprs, call) {
 
 parse_depend_equations <- function(equations, variables) {
   implicit <- c(variables, TIME, DT)
-  stages <- c(constant = 1, parameter = 2, time = 3)
+  stages <- c(create = 1,
+              update = 2,
+              time = 3)
   stage <- c(
     set_names(rep(stages[["time"]], length(implicit)), implicit))
 
@@ -111,11 +113,13 @@ parse_depend_equations <- function(equations, variables) {
     deps_recursive[[nm]] <- union(
       vars,
       unlist(deps_recursive[vars], FALSE, FALSE))
-    if (identical(equations[[nm]]$rhs$type, "parameter")) {
-      stage[[nm]] <- stages[["parameter"]]
+    rhs <- equations[[nm]]$rhs
+    if (identical(rhs$type, "parameter")) {
+      is_constant <- isTRUE(rhs$args$constant)
+      stage[[nm]] <- stages[[if (is_constant) "create" else "update"]]
     } else {
-      stage[[nm]] <- max(stages[["constant"]],
-                         stage[equations[[nm]]$rhs$depends$variables])
+      stage[[nm]] <- max(stages[["create"]],
+                         stage[rhs$depends$variables])
     }
     equations[[nm]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
     equations[[nm]]$stage <- names(stages)[[stage[[nm]]]]
@@ -127,7 +131,7 @@ parse_depend_equations <- function(equations, variables) {
 
 ## This is going to be the grossest bit I think.
 parse_phases <- function(exprs, equations, variables, parameters) {
-  phases <- list(build_shared = list(equations = character()))
+  phases <- list()
   used <- character()
 
   ## Why do I have the wrong stage here now?
@@ -176,7 +180,7 @@ parse_phases <- function(exprs, equations, variables, parameters) {
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
-    equations = eqs_shared[stage[eqs_shared] == "parameter"])
+    equations = eqs_shared[stage[eqs_shared] == "update"])
 
   phases
 }
