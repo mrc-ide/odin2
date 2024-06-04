@@ -40,10 +40,10 @@ collector <- function(init = character(0)) {
 
 match_call <- function(call, fn) {
   ## We'll probably expand on the error case here to return something
-  ## much nicer.
+  ## much nicer?
   tryCatch(
     list(success = TRUE,
-         args = as.list(rlang::call_match(call, fn, defaults = TRUE))[-1]),
+         value = rlang::call_match(call, fn, defaults = TRUE)),
     error = function(e) {
       list(success = FALSE,
            error = e)

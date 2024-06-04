@@ -13,23 +13,31 @@ generate_dust_sexp <- function(expr, dat, options = NULL) {
       ret <- values[[1]]
     } else if (n == 2 && fn %in% c("+", "-", "*", "/")) {
       ret <- sprintf("%s %s %s", values[[1]], fn, values[[2]])
+    } else if (fn %in% "exp") {
+      ret <- sprintf("mcstate::math::%s(%s)",
+                     fn, paste(values, collapse = ", "))
     } else {
       ## TODO: we should catch this elsewhere.
-      stop("Unhandled function")
+      cli::cli_abort("Unhandled function '{fn}'")
     }
   } else if (is.symbol(expr) || is.character(expr)) {
     name <- as.character(expr)
-    location <- dat$location$location[[name]]
-    if (location %in% c("state", "stack")) {
+    if (name %in% c(TIME, DT)) {
       ret <- name
-    } else if (location %in% c("shared", "internal", "data")) {
-      if (location == "shared" && isFALSE(options$shared_exists)) {
-        ret <- name
-      } else {
-        ret <- sprintf("%s.%s", location, name)
-      }
     } else {
-      stop("Unhandled location")
+      location <- dat$location$location[[name]]
+      if (location %in% c("state", "stack")) {
+        ret <- name
+      } else if (location %in% c("shared", "internal", "data")) {
+        if (location == "shared" && isFALSE(options$shared_exists)) {
+          ret <- name
+        } else {
+          ret <- sprintf("%s.%s", location, name)
+        }
+      } else {
+        ## This is a bug!
+        cli::cli_abort("Unhandled location '{location}'")
+      }
     }
   } else if (is.numeric(expr)) {
     if (expr %% 1 == 0) {
@@ -41,7 +49,8 @@ generate_dust_sexp <- function(expr, dat, options = NULL) {
   } else if (is.logical(expr)) {
     ret <- tolower(expr)
   } else {
-    stop("Unhandled data type")
+    ## This is a bug!
+    cli::cli_abort("Unhandled data type")
   }
   ret
 }

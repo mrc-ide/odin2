@@ -113,7 +113,7 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
                    parent = result$error)
   }
   list(type = "parameter",
-       args = result$args)
+       args = as.list(result$value)[-1])
 }
 
 
@@ -158,20 +158,22 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
 
 
 parse_expr_compare_rhs <- function(rhs, src, call) {
-  ## Highly restrictive for now:
-  if (!rlang::is_call(rhs, "Normal")) {
+  if (!rlang::is_call(rhs, names(COMPARE))) {
+    ## Add DYM support here, including incorrect cases, and dnorm() etc.
     odin_parse_error(
-      "Expected the rhs of '~' to be a call to Normal()",
+      "Expected the rhs of '~' to be a call to a valid distribution function",
       src, call)
   }
-  if (length(rhs) != 3) {
+  nm <- as.character(rhs[[1]])
+  result <- match_call(rhs, COMPARE[[nm]])
+  if (!result$success) {
     odin_parse_error(
-      "Normal() requires two arguments",
+      "Invalid call to '{nm}()': {conditionMessage(result$error)}",
       src, call)
   }
   depends <- find_dependencies(rhs)
   list(type = "compare",
-       expr = rhs,
+       expr = result$value,
        depends = depends)
 }
 
