@@ -6,7 +6,7 @@ parse_prepare <- function(quo, input, call) {
     src <- NULL
     if (rlang::is_call(info$value, "quote")) {
       cli::cli_abort(
-        "You have an extra layer of quote() around 'expr'",
+        "You have an extra layer of 'quote()' around 'expr'",
         arg = "expr", call = call)
     }
     if (!rlang::is_call(info$value, "{")) {
@@ -20,7 +20,8 @@ parse_prepare <- function(quo, input, call) {
       filename <- info$value
       exprs <- parse(file = filename, keep.source = TRUE)
     } else {
-      exprs <- parse(text = info$value, keep.source = TRUE)
+      str <- paste(info$value, collapse = "\n")
+      exprs <- parse(text = str, keep.source = TRUE)
     }
     start <- utils::getSrcLocation(exprs, "line", first = TRUE)
     end <- utils::getSrcLocation(exprs, "line", first = FALSE)
@@ -46,7 +47,7 @@ parse_prepare_detect <- function(quo, input, call) {
   envir <- rlang::quo_get_env(quo)
 
   ## First, resolve and redirection via symbols:
-  if (rlang::is_symbol(quo)) {
+  if (rlang::is_symbol(expr)) {
     sym <- rlang::as_name(expr)
     if (!rlang::env_has(envir, sym, inherit = TRUE)) {
       cli::cli_abort("Could not find expression '{sym}'",
@@ -97,6 +98,18 @@ parse_prepare_detect <- function(quo, input, call) {
                        arg = "expr", call = call)
       }
     }
+  } else {
+    if (is.null(input)) {
+      expected <- "a string, character vector or expression"
+    } else if (input == "expression") {
+      expected <- "an expression"
+    } else if (input == "file") {
+      expected <- "a string"
+    } else if (input == "text") {
+      expected <- "a string or character vector"
+    }
+    cli::cli_abort("Invalid input for odin; expected {expected}",
+                   arg = "expr", call = call)
   }
   list(type = input, value = expr)
 }
