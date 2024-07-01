@@ -11,15 +11,22 @@ odin_parse <- function(expr, input = NULL) {
   ## * update recursive dependencies within non-equations bits
   ## * no use of data from update etc
   equations <- parse_depend_equations(system$exprs$equations, system$variables)
-  phases <- parse_phases(system$exprs, equations,
-                         system$variables, system$parameters)
+  phases <- parse_phases(system$exprs, equations, system$variables)
   location <- parse_location(equations, system$variables, system$data)
 
   ret <- list(time = system$time,
               class = "odin",
+              parameters = system$parameters,
               location = location,
               phases = phases,
               equations = equations)
+
+  ## When we set up the adjoint model we will be adding more equations
+  ## (auxillary things that we otherwise would not need) and some
+  ## additional phases, and some additional data.  Doing this requires
+  ## everything in the system and we may end up doing this later
+  ret <- parse_adjoint(ret)
+  
   ret
 }
 
@@ -77,7 +84,18 @@ parse_system <- function(exprs, call) {
       src[err], call)
   }
 
-  ## Then we break equations up:
+  is_differentiable <-
+    vlapply(exprs[is_parameter], function(x) x$rhs$args$differentiate)
+  ## Later we will want to look this up, after working out what is
+  ## going on with arrays.
+  is_constant <- vlapply(
+    exprs[is_parameter], function(x) x$rhs$args$constant %||% NA)
+
+  parameters <- data_frame(
+    name = name_data[is_parameter],
+    differentiate = is_differentiable,
+    constant = is_constant)
+
   exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
@@ -87,7 +105,7 @@ parse_system <- function(exprs, call) {
                 data = exprs[is_data])
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
-       parameters = name_data[is_parameter],
+       parameters = parameters,
        data = name_data[is_data],
        exprs = exprs)
 }
@@ -131,7 +149,7 @@ parse_depend_equations <- function(equations, variables) {
 
 
 ## This is going to be the grossest bit I think.
-parse_phases <- function(exprs, equations, variables, parameters) {
+parse_phases <- function(exprs, equations, variables) {
   phases <- list()
   used <- character()
 
