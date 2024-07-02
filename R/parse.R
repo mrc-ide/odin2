@@ -95,8 +95,8 @@ parse_system <- function(exprs, call) {
 
 parse_depend_equations <- function(equations, variables) {
   implicit <- c(variables, TIME, DT)
-  stages <- c(create = 1,
-              update = 2,
+  stages <- c(system_create = 1,
+              parameter_update = 2,
               time = 3)
   stage <- c(
     set_names(rep(stages[["time"]], length(implicit)), implicit))
@@ -116,9 +116,10 @@ parse_depend_equations <- function(equations, variables) {
     rhs <- equations[[nm]]$rhs
     if (identical(rhs$type, "parameter")) {
       is_constant <- isTRUE(rhs$args$constant)
-      stage[[nm]] <- stages[[if (is_constant) "create" else "update"]]
+      stage[[nm]] <-
+        stages[[if (is_constant) "system_create" else "parameter_update"]]
     } else {
-      stage[[nm]] <- max(stages[["create"]],
+      stage[[nm]] <- max(stages[["system_create"]],
                          stage[rhs$depends$variables])
     }
     equations[[nm]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
@@ -179,7 +180,7 @@ parse_phases <- function(exprs, equations, variables, parameters) {
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
-    equations = eqs_shared[stage[eqs_shared] == "update"])
+    equations = eqs_shared[stage[eqs_shared] == "parameter_update"])
 
   phases
 }

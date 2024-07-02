@@ -20,6 +20,7 @@ generate_dust_model <- function(dat) {
   body$add(sprintf("  %s", core$update_internal))
   body$add(sprintf("  %s", core$initial))
   body$add(sprintf("  %s", core$update))
+  body$add(sprintf("  %s", core$rhs))
   body$add(sprintf("  %s", core$compare_data))
   body$add("};")
   body$get()
@@ -39,6 +40,7 @@ generate_dust_model_core <- function(dat) {
        update_internal = generate_dust_model_core_update_internal(dat),
        initial = generate_dust_model_core_initial(dat),
        update = generate_dust_model_core_update(dat),
+       rhs = generate_dust_model_core_rhs(dat),
        compare_data = generate_dust_model_core_compare_data(dat))
 }
 
@@ -157,12 +159,21 @@ generate_dust_model_core_update_internal <- function(dat) {
 
 
 generate_dust_model_core_initial <- function(dat) {
-  args <- c("real_type" = "time",
-            "real_type" = "dt",
-            "const shared_state&" = "shared",
-            "internal_state&" = "internal",
-            "rng_state_type&" = "rng_state",
-            "real_type*" = "state")
+  if (dat$time == "continuous") {
+    args <- c("real_type" = "time",
+              "const shared_state&" = "shared",
+              "internal_state&" = "internal",
+              "rng_state_type&" = "rng_state",
+              "real_type*" = "state")
+    args <- args[-2]
+  } else {
+    args <- c("real_type" = "time",
+              "real_type" = "dt",
+              "const shared_state&" = "shared",
+              "internal_state&" = "internal",
+              "rng_state_type&" = "rng_state",
+              "real_type*" = "state")
+  }
   body <- collector()
   eqs <- dat$phases$initial$equations
   for (eq in c(dat$equations[eqs], dat$phases$initial$variables)) {
@@ -175,6 +186,11 @@ generate_dust_model_core_initial <- function(dat) {
 
 
 generate_dust_model_core_update <- function(dat) {
+  ## I think this is not quite the right condition, because we do want
+  ## this with a mixed model.
+  if (dat$time == "continuous") {
+    return(NULL)
+  }
   args <- c("real_type" = "time",
             "real_type" = "dt",
             "const real_type*" = "state",
@@ -195,6 +211,31 @@ generate_dust_model_core_update <- function(dat) {
     body$add(sprintf("%s = %s;", lhs, rhs))
   }
   cpp_function("void", "update", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_model_core_rhs <- function(dat) {
+  if (dat$time == "discrete") {
+    return(NULL)
+  }
+  args <- c("real_type" = "time",
+            "const real_type*" = "state",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal",
+            "real_type*" = "state_deriv")
+  body <- collector()
+  variables <- dat$location$contents$variables
+  packing <- dat$location$packing$state
+  i <- variables %in% dat$phases$deriv$unpack
+  body$add(sprintf("const auto %s = state[%d];",
+                   variables[i], unlist(packing[i])))
+  eqs <- dat$phases$deriv$equations
+  for (eq in c(dat$equations[eqs], dat$phases$deriv$variables)) {
+    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_deriv")
+    rhs <- generate_dust_sexp(eq$rhs$expr, dat)
+    body$add(sprintf("%s = %s;", lhs, rhs))
+  }
+  cpp_function("void", "rhs", args, body$get(), static = TRUE)
 }
 
 
