@@ -12,7 +12,7 @@ generate_dust_model <- function(dat) {
   body$add(sprintf("  %s", core$internal_state))
   body$add(sprintf("  %s", core$data_type))
   body$add(sprintf("  %s", core$data))
-  body$add(sprintf("  %s", core$size))
+  body$add(sprintf("  %s", core$size_state))
   body$add(sprintf("  %s", core$build_shared))
   body$add(sprintf("  %s", core$build_internal))
   body$add(sprintf("  %s", core$build_data))
@@ -31,7 +31,7 @@ generate_dust_model_core <- function(dat) {
        shared_state = generate_dust_model_core_shared_state(dat),
        internal_state = generate_dust_model_core_internal_state(dat),
        data = generate_dust_model_core_data(dat),
-       size = generate_dust_model_core_size(dat),
+       size_state = generate_dust_model_core_size_state(dat),
        build_shared = generate_dust_model_core_build_shared(dat),
        build_internal = generate_dust_model_core_build_internal(dat),
        build_data = generate_dust_model_core_build_data(dat),
@@ -50,6 +50,7 @@ generate_dust_model_core_attributes <- function(dat) {
     has_compare <- NULL
   }
   c(sprintf("// [[dust2::class(%s)]]", dat$class),
+    sprintf("// [[dust2::time_type(%s)]]", dat$time),
     has_compare)
 }
 
@@ -80,10 +81,10 @@ generate_dust_model_core_data <- function(dat) {
 }
 
 
-generate_dust_model_core_size <- function(dat) {
+generate_dust_model_core_size_state <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- sprintf("return %d;", length(dat$location$contents$variables))
-  cpp_function("size_t", "size", args, body, static = TRUE)
+  cpp_function("size_t", "size_state", args, body, static = TRUE)
 }
 
 
@@ -208,7 +209,7 @@ generate_dust_model_core_compare_data <- function(dat) {
   body <- collector()
   variables <- dat$location$contents$variables
   packing <- dat$location$packing$state
-  i <- variables %in% dat$phases$update$unpack
+  i <- variables %in% dat$phases$compare$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i], unlist(packing[i])))
   ## TODO collision here in names with 'll'; we might need to prefix

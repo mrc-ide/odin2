@@ -134,7 +134,6 @@ parse_phases <- function(exprs, equations, variables, parameters) {
   phases <- list()
   used <- character()
 
-  ## Why do I have the wrong stage here now?
   stage <- vcapply(equations, function(x) x$stage)
 
   deps_recursive <- lapply(equations, function(x) {
@@ -153,7 +152,7 @@ parse_phases <- function(exprs, equations, variables, parameters) {
       eqs <- union(eqs, unlist(deps_recursive[eqs], FALSE, FALSE))
       used <- union(used, eqs)
 
-      eqs_time <- eqs[stage[eqs] == "time"]
+      eqs_time <- intersect(names(equations), eqs[stage[eqs] == "time"])
       unpack <- intersect(deps, variables)
       required <- union(required, eqs[stage[eqs] != "time"])
 
