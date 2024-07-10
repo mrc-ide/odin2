@@ -21,6 +21,7 @@ generate_dust_model <- function(dat) {
   body$add(sprintf("  %s", core$initial))
   body$add(sprintf("  %s", core$update))
   body$add(sprintf("  %s", core$rhs))
+  body$add(sprintf("  %s", core$zero_every))
   body$add(sprintf("  %s", core$compare_data))
   body$add("};")
   body$get()
@@ -41,6 +42,7 @@ generate_dust_model_core <- function(dat) {
        initial = generate_dust_model_core_initial(dat),
        update = generate_dust_model_core_update(dat),
        rhs = generate_dust_model_core_rhs(dat),
+       zero_every = generate_dust_model_core_zero_every(dat),
        compare_data = generate_dust_model_core_compare_data(dat))
 }
 
@@ -165,7 +167,6 @@ generate_dust_model_core_initial <- function(dat) {
               "internal_state&" = "internal",
               "rng_state_type&" = "rng_state",
               "real_type*" = "state")
-    args <- args[-2]
   } else {
     args <- c("real_type" = "time",
               "real_type" = "dt",
@@ -236,6 +237,13 @@ generate_dust_model_core_rhs <- function(dat) {
     body$add(sprintf("%s = %s;", lhs, rhs))
   }
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_model_core_zero_every <- function(dat) {
+  args <- c("const shared_state&" = "shared")
+  body <- "return dust2::zero_every_type<real_type>();"
+  cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 
 

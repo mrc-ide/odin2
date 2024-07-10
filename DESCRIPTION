@@ -19,5 +19,5 @@ Imports:
 Suggests:
     testthat (>= 3.0.0)
 Remotes:
-    mrc-ide/dust2
+    mrc-ide/dust2@mrc-5494
 Config/testthat/edition: 3
