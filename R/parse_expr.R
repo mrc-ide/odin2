@@ -157,6 +157,8 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
 }
 
 
+## TODO: See mcstate2 with `match_call_candidate()` for doing this
+## properly with choices.
 parse_expr_compare_rhs <- function(rhs, src, call) {
   if (!rlang::is_call(rhs, names(COMPARE))) {
     ## Add DYM support here, including incorrect cases, and dnorm() etc.

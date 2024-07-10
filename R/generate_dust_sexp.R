@@ -16,8 +16,12 @@ generate_dust_sexp <- function(expr, dat, options = NULL) {
     } else if (fn %in% "exp") {
       ret <- sprintf("mcstate::math::%s(%s)",
                      fn, paste(values, collapse = ", "))
+    } else if (fn %in% names(STOCHASTIC)) {
+      ret <- sprintf("mcstate::random::%s<real_type>(rng_state, %s)",
+                     tolower(fn), paste(values, collapse = ", "))
     } else {
-      ## TODO: we should catch this elsewhere.
+      ## TODO: we should catch this during parse; erroring here is a
+      ## bug as we don't offer context.
       cli::cli_abort("Unhandled function '{fn}'")
     }
   } else if (is.symbol(expr) || is.character(expr)) {
