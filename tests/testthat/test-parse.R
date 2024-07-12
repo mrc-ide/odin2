@@ -5,3 +5,17 @@ test_that("can parse trivial system", {
   })
   expect_null(res)
 })
+
+
+test_that("throw error with context", {
+  path <- withr::local_tempfile()
+  writeLines(c("initial(x) <- a",
+               "update(x) <- x + b",
+               "b <- parameter(invalid = TRUE)",
+               "a <- 5"),
+             path)
+  err <- expect_error(
+    odin_parse(path),
+    "Invalid call to 'parameter()'",
+    fixed = TRUE)
+})
