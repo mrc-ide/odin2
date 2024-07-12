@@ -212,34 +212,17 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
 }
 
 
-## TODO: See mcstate2 with `match_call_candidate()` for doing this
-## properly with choices; we may want to leverage some of the code
-## there to keep the same semantics, especially once we start
-## differentiating.
 parse_expr_compare_rhs <- function(rhs, src, call) {
-  if (!rlang::is_call(rhs, names(COMPARE))) {
-    ## TODO: Add DYM support here, including incorrect cases, and
-    ## dnorm() etc.
-    odin_parse_error(
-      "Expected the rhs of '~' to be a call to a distribution function",
-      src, call)
-  }
-  nm <- as.character(rhs[[1]])
-  ## TODO: we really need this to come from mcstate earlier rather
-  ## than later; add a small utility there which does all the work for
-  ## us, as it's important that we match this well.  The same thing is
-  ## going to happen with the stochastic functions, and again, we're
-  ## using the actual support from mcstate again so this should be
-  ## very consistent.
-  result <- match_call(rhs, COMPARE[[nm]])
+  result <- mcstate2::mcstate_dsl_parse_distribution(rhs, "The rhs of '~'")
   if (!result$success) {
     odin_parse_error(
-      "Invalid call to '{nm}()': {conditionMessage(result$error)}",
+      result$error,
       src, call)
   }
-  depends <- find_dependencies(rhs)
+   depends <- find_dependencies(rhs)
   list(type = "compare",
-       expr = result$value,
+       distribution = result$value$cpp$density,
+       args = result$value$args,
        depends = depends)
 }
 

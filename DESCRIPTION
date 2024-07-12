@@ -14,8 +14,11 @@ URL: https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
+    mcstate,
     rlang
 Suggests:
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
+Remotes:
+    mrc-ide/mcstate

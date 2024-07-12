@@ -2,7 +2,8 @@ test_that("Can parse compare expression", {
   res <- parse_expr(quote(compare(x) ~ Normal(0, 1)), NULL, NULL)
   expect_equal(res$special, "compare")
   expect_equal(res$rhs$type, "compare")
-  expect_equal(res$rhs$expr, quote(Normal(x, mean = 0, sd = 1)))
+  expect_equal(res$rhs$distribution, "normal")
+  expect_equal(res$rhs$args, list(0, 1))
   expect_equal(res$rhs$depends,
                list(functions = "Normal", variables = "x"))
 })
@@ -47,10 +48,10 @@ test_that("compare() calls must wrap symbols", {
 test_that("parse compare call rhs as distributions", {
   expect_error(
     parse_expr(quote(compare(x) ~ 1), NULL, NULL),
-    "Expected the rhs of '~' to be a call to a distribution function")
+    "The rhs of '~' is not a function call")
   expect_error(
     parse_expr(quote(compare(x) ~ Foo(0, 1)), NULL, NULL),
-    "Expected the rhs of '~' to be a call to a distribution function")
+    "Unknown distribution 'Foo'")
   expect_error(
     parse_expr(quote(compare(x) ~ Normal(mu = 1)), NULL, NULL),
     "Invalid call to 'Normal()'",
