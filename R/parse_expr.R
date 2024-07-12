@@ -127,10 +127,10 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   }
   result <- match_call(rhs, template)
   if (!result$success) {
-    ## I don't think this is quite correct really, and I'm not sure
-    ## the generated error is hugely informative for the user.
-    odin_parse_error("Invalid call to 'parameter()'",
-                     src, call, parent = result$error)
+    odin_parse_error(
+      c("Invalid call to 'parameter()'",
+        x = conditionMessage(result$error)),
+      src, call)
   }
   args <- as.list(result$value)[-1]
   if (is.language(args$default)) {
