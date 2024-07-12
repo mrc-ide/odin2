@@ -1,5 +1,5 @@
-parse_prepare <- function(quo, input, call) {
-  info <- parse_prepare_detect(quo, input, call)
+parse_prepare <- function(quo, input_type, call) {
+  info <- parse_prepare_detect(quo, input_type, call)
   filename <- NULL
 
   if (info$type == "expression") {
@@ -42,7 +42,7 @@ parse_prepare <- function(quo, input, call) {
 }
 
 
-parse_prepare_detect <- function(quo, input, call) {
+parse_prepare_detect <- function(quo, input_type, call) {
   expr <- rlang::quo_get_expr(quo)
   envir <- rlang::quo_get_env(quo)
 
@@ -56,39 +56,41 @@ parse_prepare_detect <- function(quo, input, call) {
     expr <- rlang::env_get(envir, sym, inherit = TRUE)
   }
 
-  if (!is.null(input)) {
-    input <- match_value(input, c("file", "text", "expression"))
+  if (!is.null(input_type)) {
+    input_type <- match_value(input_type, c("file", "text", "expression"))
   }
 
   if (is.language(expr)) {
-    if (!is.null(input) && input != "expression") {
+    if (!is.null(input_type) && input_type != "expression") {
       cli::cli_abort(
-        c("Invalid input for odin; given expression but expected {input}",
-          i = "You have requested '{input}' only via the 'input' argument"),
+        c("Invalid input for odin; given expression but expected {input_type}",
+          i = paste("You have requested '{input_type}' only via the",
+                    "'input_type' argument")),
         arg = "expr", call = call)
     }
-    input <- "expression"
+    input_type <- "expression"
   } else if (is.character(expr)) {
-    if (is.null(input)) {
+    if (is.null(input_type)) {
       if (length(expr) != 1 || grepl("([\n;=]|<-)", expr)) {
-        input <- "text"
+        input_type <- "text"
       } else if (file.exists(expr)) {
-        input <- "file"
+        input_type <- "file"
       } else {
         cli::cli_abort(
           "'{expr}' looks like a filename but does not exist",
           arg = "expr", call = call)
       }
-    } else if (input == "expression") {
+    } else if (input_type == "expression") {
       cli::cli_abort(
-        c("Invalid input for odin; given string but expected {input}",
-          i = "You have requested '{input}' only via the 'input' argument"),
+        c("Invalid input for odin; given string but expected {input_type}",
+          i = paste("You have requested '{input_type}' only via the",
+                    "'input_type' argument")),
         arg = "expr", call = call)
-    } else if (input == "file") {
+    } else if (input_type == "file") {
       if (length(expr) != 1) {
         cli::cli_abort(
           c("Invalid input for odin; expected a scalar for 'expr'",
-            i = paste("You have requested 'input = \"file\" but provided",
+            i = paste("You have requested 'input_type = \"file\" but provided",
                       "'expr' with length {length(expr)}")),
           arg = "expr", call = call)
       }
@@ -99,17 +101,17 @@ parse_prepare_detect <- function(quo, input, call) {
       }
     }
   } else {
-    if (is.null(input)) {
+    if (is.null(input_type)) {
       expected <- "a string, character vector or expression"
-    } else if (input == "expression") {
+    } else if (input_type == "expression") {
       expected <- "an expression"
-    } else if (input == "file") {
+    } else if (input_type == "file") {
       expected <- "a string"
-    } else if (input == "text") {
+    } else if (input_type == "text") {
       expected <- "a string or character vector"
     }
     cli::cli_abort("Invalid input for odin; expected {expected}",
                    arg = "expr", call = call)
   }
-  list(type = input, value = expr)
+  list(type = input_type, value = expr)
 }
