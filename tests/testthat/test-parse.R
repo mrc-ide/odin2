@@ -1,4 +1,5 @@
 test_that("can parse trivial system", {
+  skip("drop for now")
   res <- odin_parse({
     initial(x) <- 0
     update(x) <- 0

@@ -20,7 +20,12 @@ parse_expr_assignment <- function(expr, src, call) {
 
   special <- lhs$special
   lhs$special <- NULL
-  if (is.null(special) && rhs$type == "data") {
+  if (rhs$type == "data") {
+    if (!is.null(special)) {
+      odin_parse_error(
+        "Calls to 'data()' must be assigned to a symbol",
+        src, call)
+    }
     special <- "data"
   }
 
@@ -37,37 +42,48 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   name <- NULL
 
   if (rlang::is_call(lhs, SPECIAL_LHS)) {
-    if (length(lhs) != 2 || !is.null(names(lhs))) {
-      odin_parse_error("Invalid special function call", src, call)
-    }
     special <- deparse1(lhs[[1]])
+    if (length(lhs) != 2 || !is.null(names(lhs))) {
+      odin_parse_error(
+        c("Invalid special function call",
+          i = "Expected a single unnamed argument to '{special}()'"),
+        src, call)
+    }
+    if (special == "compare") {
+      ## TODO: a good candidate for pointing at the source location of
+      ## the error.
+      odin_parse_error(
+        c("'compare()' expressions must use '~', not '<-'",
+          i = paste("Compare expressions do not represent assignents, but",
+                    "relationships, which we emphasise by using '~'.  This",
+                    "also keeps the syntax close to that for the prior",
+                    "specification in mcstate2")),
+        src, call)
+    }
     lhs <- lhs[[2]]
   }
-  is_array <- rlang::is_call(lhs, "[")
 
-  if (is_array) {
-    name <- parse_expr_check_lhs_name(lhs[[1]], src, call)
-    array <- as.list(lhs[-(1:2)])
-  } else {
-    name <- parse_expr_check_lhs_name(lhs, src, call)
-  }
+  is_array <- rlang::is_call(lhs, "[")
+  odin_parse_error(
+    "Arrays are not supported yet", src, call)
+
+  name <- parse_expr_check_lhs_name(lhs, src, call)
 
   lhs <- list(
     name = name,
-    array = array,
     special = special)
 }
 
 
 parse_expr_assignment_rhs <- function(rhs, src, call) {
   if (rlang::is_call(rhs, "delay")) {
-    stop("Implement delays")
+    odin_parse_error("'delay()' is not implemented yet", src, call)
   } else if (rlang::is_call(rhs, "parameter")) {
     parse_expr_assignment_rhs_parameter(rhs, src, call)
   } else if (rlang::is_call(rhs, "data")) {
     parse_expr_assignment_rhs_data(rhs, src, call)
   } else if (rlang::is_call(rhs, "interpolate")) {
-    stop("Implement interpolation")
+    odin_parse_error("'interpolate()' is not implemented yet", src, call)
   } else {
     parse_expr_assignment_rhs_expression(rhs, src, call)
   }
@@ -109,11 +125,44 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   }
   result <- match_call(rhs, template)
   if (!result$success) {
-    cli::cli_abort("Invalid call to 'parameter()'",
-                   parent = result$error)
+    ## I don't think this is quite correct really, and I'm not sure
+    ## the generated error is hugely informative for the user.
+    odin_parse_error("Invalid call to 'parameter()'",
+                     src, call, parent = result$error)
+  }
+  args <- as.list(result$value)[-1]
+  if (is.language(args$default)) {
+    deps <- find_dependencies(args$default)
+    if (length(deps$variables) > 0) {
+      default_str <- deparse1(args$default)
+      odin_parse_error(
+        c("Invalid default argument to 'parameter()': {default_str}",
+          i = paste("Default arguments can only perform basic arithmetic",
+                    "operations on numbers, and may not reference any",
+                    "other parameter or variable")),
+        src, call)
+    }
+    ## TODO: validate the functions used at some point, once we do
+    ## that generally.
+  }
+
+  if (!is_scalar_logical(args$differentiate)) {
+    str <- deparse1(args$differentiate)
+    odin_parse_error(
+      "'differentiate' must be a scalar logical, but was '{str}'",
+      src, call)
+  }
+  ## constant has a different default
+  if (is.null(args$constant)) {
+    args$constant <- NA
+  } else if (!is_scalar_logical(args$constant)) {
+    str <- deparse1(args$constant)
+    odin_parse_error(
+      "'constant' must be a scalar logical if given, but was '{str}'",
+      src, call)
   }
   list(type = "parameter",
-       args = as.list(result$value)[-1])
+       args = args)
 }
 
 
@@ -143,9 +192,13 @@ parse_expr_compare <- function(expr, src, call) {
 
 parse_expr_compare_lhs <- function(lhs, src, call) {
   if (!rlang::is_call(lhs, "compare")) {
+    ## TODO: this is a good candidate for pointing at the assignment
+    ## symbol in the error message, if we have access to the source,
+    ## as that's the most likely fix.
     odin_parse_error(
-      "Expected the lhs of '~' to be a compare() call",
-      src, call)
+      c("Expected the lhs of '~' to be a 'compare()' call",
+        i = "Did you mean to use '<-' in place of '~'?"),
+        src, call)
   }
   lhs <- lhs[[2]]
   if (!is.symbol(lhs)) {
@@ -158,15 +211,24 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
 
 
 ## TODO: See mcstate2 with `match_call_candidate()` for doing this
-## properly with choices.
+## properly with choices; we may want to leverage some of the code
+## there to keep the same semantics, especially once we start
+## differentiating.
 parse_expr_compare_rhs <- function(rhs, src, call) {
   if (!rlang::is_call(rhs, names(COMPARE))) {
-    ## Add DYM support here, including incorrect cases, and dnorm() etc.
+    ## TODO: Add DYM support here, including incorrect cases, and
+    ## dnorm() etc.
     odin_parse_error(
-      "Expected the rhs of '~' to be a call to a valid distribution function",
+      "Expected the rhs of '~' to be a call to a distribution function",
       src, call)
   }
   nm <- as.character(rhs[[1]])
+  ## TODO: we really need this to come from mcstate earlier rather
+  ## than later; add a small utility there which does all the work for
+  ## us, as it's important that we match this well.  The same thing is
+  ## going to happen with the stochastic functions, and again, we're
+  ## using the actual support from mcstate again so this should be
+  ## very consistent.
   result <- match_call(rhs, COMPARE[[nm]])
   if (!result$success) {
     odin_parse_error(
@@ -181,5 +243,6 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
 
 
 parse_expr_print <- function(expr, src, call) {
-  .NotYetImplemented()
+  odin_parse_error(
+    "'print()' is not implemented yet", src, call)
 }

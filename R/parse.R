@@ -25,7 +25,7 @@ odin_parse <- function(expr, input = NULL) {
   ## (auxillary things that we otherwise would not need) and some
   ## additional phases, and some additional data.  Doing this requires
   ## everything in the system and we may end up doing this later
-  ret <- parse_adjoint(ret)
+  ## ret <- parse_adjoint(ret)
   
   ret
 }
@@ -232,10 +232,12 @@ parse_location <- function(equations, variables, data) {
 }
 
 
-odin_parse_error <- function(msg, src, call, .envir = parent.frame()) {
+odin_parse_error <- function(msg, src, call, parent = NULL,
+                             .envir = parent.frame()) {
   cli::cli_abort(msg,
                  class = "odin_parse_error",
                  src = src,
                  call = call,
+                 parent = parent,
                  .envir = .envir)
 }
