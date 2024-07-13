@@ -6,13 +6,15 @@ odin_parse <- function(expr, input_type = NULL) {
 }
 
 
-odin_parse_error <- function(msg, src, call, ...,
+odin_parse_error <- function(msg, code, src, call, ...,
                              .envir = parent.frame()) {
+  stopifnot(grepl("E[0-9]{4}", code))
   if (!is.null(names(src))) {
     src <- list(src)
   }
   cli::cli_abort(msg,
                  class = "odin_parse_error",
+                 code = code,
                  src = src,
                  call = call,
                  ...,
@@ -27,6 +29,9 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   ## and say "here, this is where you are wrong" but that's not done
   ## yet...
   src <- cnd$src
+  if (is.null(src)) {
+    return(character())
+  }
   if (is.null(src[[1]]$str)) {
     context <- unlist(lapply(cnd$src, function(x) deparse1(x$value)))
   } else {
