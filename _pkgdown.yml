@@ -1,0 +1,17 @@
+url: https://mrc-ide.github.io/dust2
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: All functions
+    desc: >-
+      All functions, until the API starts to develop properly.
+    contents:
+      - odin_error_explain
+
+articles:
+  - title: Details
+    navbar: Details
+    contents:
+      - errors
