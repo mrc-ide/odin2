@@ -78,6 +78,6 @@ odin_error_explain <- function(code) {
       arg = "code")
   }
   url <- sprintf("https://mrc-ide.github.io/odin2/articles/errors.html#%s",
-                 code)
+                 tolower(code))
   utils::browseURL(url)
 }
