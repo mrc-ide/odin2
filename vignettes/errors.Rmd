@@ -224,3 +224,11 @@ Example:
 ```
 initial(x) <- parameter()
 ```
+
+# `E2001`
+
+Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
+
+# `E2002`
+
+You have a system where you use different equations for `deriv()`/`update()` to the variables defined in `initial()`.  This is an error if there are equations imn `deriv()`/`update()` that don't have a corresponding equation using `initial()`, or if you have equations in `initial()` that don't have a corresponding `deriv()` or `update()` equation.  The error will highlight all lines that might be involved in the error.

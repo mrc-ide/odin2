@@ -27,6 +27,13 @@ parse_expr_assignment <- function(expr, src, call) {
         "E1002", src, call)
     }
     special <- "data"
+  } else if (rhs$type == "parameter") {
+    if (!is.null(special)) {
+      odin_parse_error(
+        "Calls to 'parameter()' must be assigned to a symbol",
+        "E1014", src, call)
+    }
+    special <- "parameter"
   }
 
   list(special = special,
