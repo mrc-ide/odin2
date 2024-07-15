@@ -1,0 +1,226 @@
+---
+title: "Odin parse errors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Odin Parse Errors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!--
+
+    At present I'm doing this within R's vignette system, but it's
+    not totally clear it will stay there.  Once things settle down,
+    I'd like to improve this so that:
+
+    * All errors are folded by default except the one linked to
+    * We can easily parse the contents of the vignette into json
+    * We can easily link between errors and link from the error thrown
+      by R to the vignette or offline version
+
+    For now we'll just focus on getting the content in and then make
+    it usable later.  Most of the bits of detail here are pretty basic
+    and expansion will happen later, focussed on the ones that people
+    find confusing.
+
+    This does also need to be easily linkable from wodin, and a
+    machine readable version would be something that we could include
+    in the app or send to the app as context.
+
+    We might also include actual failing examples, alongside fixed
+    versions, where that is useful.
+
+-->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette outlines errors that might be generated when parsing odin code, with more explanation about the error and how they can be avoided.  Don't read this top to bottom as it's quite boring!  However, if we get errors that benefit from more explanation about why they've been thrown then we'll expand on the contents here and arrange for these to be linked from the thrown error directly.
+
+The error numbers are arbitrary after the first digit.  The first digit will correspond to different phases of the parsing:
+
+* `E0xxx` - general errors
+* `E1xxx` - errors during parsing of individual expressions
+* `E2xxx` - errors when considering the system as a whole
+
+# `E0001`
+
+You have used a feature that is not yet implemented, but which is intended to be implemented.  Try again later.  Probably the code you have written works well in odin v1.x.x but has not been implemented in odin2.
+
+In some cases, code that produces this error may in future produce a different error code, if implementation is forecast to take a while.
+
+# `E1001`
+
+We were not able to classify an expression in your odin source code.
+
+Example:
+
+```
+a + 1
+```
+
+# `E1002`
+
+Invalid assignment of `data()`.  If you use `data()` on the right hand side of an expression, then the left hand side must be a symbol.
+
+Example:
+
+```
+initial(x) <- data()
+```
+
+# `E1003`
+
+Invalid input to a special lhs function (`initial()`, `update()`, etc).  These functions all (currently) accept a single unnamed argument.
+
+Examples:
+
+```
+initial() <- 1
+initial(a, b) <- 1
+initial(x = a) <- 1
+```
+
+# `E1004`
+
+Assignment, rather than relationship (`~`) used for a `compare()` call.
+
+Example:
+
+```
+compare(x) ~ Normal(0, 1)
+```
+
+You can't write code like the above, because this is not an assignment into `x`, but instead the description of a relationship of `x`.  Use `~` rather than `<-` to say:
+
+```
+compare(x) ~ Normal(0, 1)
+```
+
+which reads as `x` is normally distributed with a mean of 0 and standard deviation of 1.
+
+# `E1005`
+
+Invalid target on lhs of assignment.
+
+Example:
+
+```
+1 <- 10
+```
+
+The code above is valid R (as in, it can be parsed) but it is nonsensical.  At present the lhs of an assignment must be a symbol (e.g., `a <- 1`).  In future versions we will support assignments into arrays (e.g., `a[] <- 1`) but this is not yet implemented.
+
+# `E1006`
+
+Invalid call to the `parameter()` function, used on the rhs of an assignment.  If this error is thrown then we have failed parse the arguments of your call to `parameter`.  The full prototype of `parameter()` is:
+
+```
+parameter(default = NULL, constant = NULL, differentiate = FALSE)
+```
+
+We will fail to parse your call if:
+
+* You provide more than three arguments
+* You provide named arguments that do not match the three above (`default`, `constant` or `differentiate`)
+
+Example:
+
+```
+x <- parameter(value = 10)
+```
+
+This fails because `value` is not a valid keyword argument to `parameter`.
+
+# `E1007`
+
+Invalid `default` argument to `parameter()`.
+
+Currently we support very little of odin's syntax within the default argument definition, though in future we may support more.  It's complicated (and a bit confusing) to allow use of other variables here because we end up with another copy of the dependency graph to consider (we have to be able to resolve all the possible relationships between quantities used as defaults *before* any of these quantities are used).  It's not impossible to support this and in future we may consider doing so.
+
+At present, you may perform arithmetic operations on literal numbers.  This allows you to write:
+
+```
+a <- parameter(1 / 3)
+```
+
+defining `a` to be a parameter with a default value of `0.33333...` without having to write out a long floating point number.
+
+# `E1008`
+
+Invalid `differentiate` argument to `parameter()`.  You have provided something than a literal `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
+
+# `E1009`
+
+Invalid `constant` argument to `parameter()`.  You have provided something than a literal `NULL`, `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
+
+# `E1010`
+
+Invalid call to `data()` used on the right hand side.  Currently this function takes no arguments, though later we will expand this to allow description of the data that you wish to use.
+
+Example
+
+```
+d <- data(integer = TRUE)
+```
+
+Here, you have somewhat hopefully requested that `d` will be data as an integer but we don't yet support that.  Probably this will be supported in future, but the interface is not yet decided.  For now all data elements are assumed to be scalar reals.
+
+# `E1011`
+
+Something other than `compare()` was found on the lhs of `~`, which is not supported.
+
+Example:
+
+```
+a ~ Normal(0, 1)
+```
+
+I'm open to supporting writing the above in this way, actually, but it's not been how we implemented this first in odin 1.x.  You also can't write:
+
+```
+initial(x) ~ Normal(0, 1)
+```
+
+you should use assignment in this place.
+
+Probably if you see this error you have used `~` where you had meant to use assignment with `<-`.
+
+# `E1012`
+
+Invalid argument to `compare` on the lhs of `~`.
+
+Example
+
+```
+compare(x / 2) ~ Normal(0, 1)
+compare(1) ~ Normal(0, 1)
+```
+
+The argument to `compare()` must be a symbol.  We may expand this in future to support arrays too.
+
+# `E1013`
+
+Failed to parse the rhs of `~` as a valid distribution.  This can fail for many reasons, and the details of the failure come from `mcstate2::mcstate_dsl_parse_distribution`
+
+Example reasons for failure include the the rhs being:
+
+* not a call (e.g., `compare(x) ~ 1`
+* not a call to distribution function (e.g., `compare(x) ~ sqrt(2)`)
+* an invalid call (e.g., `compare(x) ~ Normal(0, 1, 2)`)
+
+The details for the failure will be included in the body of the error message.
+
+# `E1014`
+
+Invalid assignment of `parameter()`.  If you use `parameter()` on the right hand side of an expression, then the left hand side must be a symbol.
+
+Example:
+
+```
+initial(x) <- parameter()
+```

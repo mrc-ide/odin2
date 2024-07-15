@@ -10,15 +10,18 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-URL: https://github.com/mrc-ide/odin2
+URL: https://mrc-ide.github.io/odin2, https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
     mcstate2,
     rlang
 Suggests:
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
-Remotes:
     mrc-ide/mcstate2
+VignetteBuilder: knitr
+Language: en-GB
