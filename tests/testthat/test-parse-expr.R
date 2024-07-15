@@ -148,6 +148,14 @@ test_that("data calls must be very simple", {
 })
 
 
+test_that("parameter calls must be assigned to a symbol", {
+  expect_error(
+    parse_expr(quote(deriv(d) <- parameter()), NULL, NULL),
+    "Calls to 'parameter()' must be assigned to a symbol",
+    fixed = TRUE)
+})
+
+
 test_that("print not yet supported", {
   expect_error(
     parse_expr(quote(print(x)), NULL, NULL),
