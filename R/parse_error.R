@@ -28,8 +28,13 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
     src <- unlist(lapply(src, "[[", "str"))
     context <- sprintf("%s| %s", gsub(" ", "\u00a0", format(line)), src)
   }
+
+  code <- cnd$code
+  explain <- cli::format_inline(
+    "For more information, run {.run odin2::odin_error_explain(\"{code}\")}")
+
   c(">" = "Context:", context,
-    "i" = "For more information, run `odin_error_explain(\"{code}\")'")
+    "i" = explain)
 }
 
 
@@ -58,13 +63,13 @@ odin_error_explain <- function(code) {
   ## * We might send the user to the web page version
 
   assert_scalar_character(code)
-  if (!grepl("^E[0-9]{4}$")) {
+  if (!grepl("^E[0-9]{4}$", code)) {
     cli::cli_abort("Invalid code '{code}', should match 'Exxxx'",
                    arg = "code")
   }
-  txt <- errors$code
+  txt <- errors[[code]]
   if (is.null(txt)) {
-    cli::cli_error(
+    cli::cli_abort(
       c("Error '{code}' is undocumented",
         i = paste("If you were directed here from an error message, please",
                   "let us know (e.g., file an issue or send us a message)")),
