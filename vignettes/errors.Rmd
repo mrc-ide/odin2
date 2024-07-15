@@ -224,3 +224,35 @@ Example:
 ```
 initial(x) <- parameter()
 ```
+
+# `E1015`
+
+Differentiable parameters must not be constant.  You have written
+
+```
+a <- parameter(constant = TRUE, differentiate = TRUE)
+```
+
+which is impossible.  Parameters that are differentiable need to be able to be set by `dust::dust_system_update_pars()` as well as on model creation.
+
+Probably you want to set at least one of these to `FALSE`, or omit the argument and accept the default.
+
+# `E2001`
+
+Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
+
+# `E2002`
+
+No call to `deriv()` or `update()` on the lhs of any equation.  Every call to `initial()` requires a call to `deriv()` or `update()`, and when there is not even a single call to either of these we can't tell what sort of time your model runs in (i.e., if it works in continuous or discrete time).  This error is related to `E2004`, but separate because we can't describe what is missing properly.
+
+# `E2003`
+
+Variables are missing initial conditions.
+
+All variables used in `deriv()` or `update()` require a corresponding entry in `initial()` to set their initial conditions.  The error will highlight all lines that have a `deriv()` or `update()` call that lacks a call to `initial()`.  This can sometimes be because you have a spelling error in your call to `initial()`.
+
+# `E2004`
+
+Variables are missing calls to `deriv()` or `update()`
+
+You have a system where you use different equations for `deriv()`/`update()` to the variables defined in `initial()`.  This is an error if there are equations imn `deriv()`/`update()` that don't have a corresponding equation using `initial()`, or if you have equations in `initial()` that don't have a corresponding `deriv()` or `update()` equation.  The error will highlight all lines that might be involved in the error.

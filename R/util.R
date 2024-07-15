@@ -8,6 +8,11 @@ squote <- function(x) {
 }
 
 
+vlapply <- function(...) {
+  vapply(..., FUN.VALUE = TRUE)
+}
+
+
 vcapply <- function(...) {
   vapply(..., FUN.VALUE = "")
 }
@@ -57,4 +62,9 @@ collector <- function(init = character(0)) {
   list(
     add = function(x) env$res <- c(env$res, x),
     get = function() env$res)
+}
+
+
+data_frame <- function(...) {
+  data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
 }

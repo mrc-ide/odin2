@@ -120,6 +120,14 @@ test_that("validate constant argument", {
 })
 
 
+test_that("can't use both constant and differentiate", {
+  expect_error(
+    parse_expr(quote(a <- parameter(differentiate = TRUE, constant = TRUE)),
+               NULL, NULL),
+    "Differentiable parameters must not be constant")
+})
+
+
 test_that("sensible error if parameters are incorrectly specified", {
   expect_error(
     parse_expr(quote(a <- parameter(other = TRUE)), NULL, NULL),
