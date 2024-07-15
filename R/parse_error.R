@@ -30,6 +30,8 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   }
 
   code <- cnd$code
+  ## See https://cli.r-lib.org/reference/links.html#click-to-run-code
+  ## RStudio will only run code in namespaced form
   explain <- cli::format_inline(
     "For more information, run {.run odin2::odin_error_explain(\"{code}\")}")
 
