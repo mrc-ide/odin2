@@ -255,4 +255,4 @@ All variables used in `deriv()` or `update()` require a corresponding entry in `
 
 Variables are missing calls to `deriv()` or `update()`
 
-You have a system where you use different equations for `deriv()`/`update()` to the variables defined in `initial()`.  This is an error if there are equations imn `deriv()`/`update()` that don't have a corresponding equation using `initial()`, or if you have equations in `initial()` that don't have a corresponding `deriv()` or `update()` equation.  The error will highlight all lines that might be involved in the error.
+You have a system where you use different equations for `deriv()`/`update()` to the variables defined in `initial()`.  This is an error if there are equations in `deriv()`/`update()` that don't have a corresponding equation using `initial()`, or if you have equations in `initial()` that don't have a corresponding `deriv()` or `update()` equation.  The error will highlight all lines that might be involved in the error.
