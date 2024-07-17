@@ -256,3 +256,25 @@ All variables used in `deriv()` or `update()` require a corresponding entry in `
 Variables are missing calls to `deriv()` or `update()`
 
 You have a system where you use different equations for `deriv()`/`update()` to the variables defined in `initial()`.  This is an error if there are equations in `deriv()`/`update()` that don't have a corresponding equation using `initial()`, or if you have equations in `initial()` that don't have a corresponding `deriv()` or `update()` equation.  The error will highlight all lines that might be involved in the error.
+
+# `E2005`
+
+Cyclic dependency detected within equations.  There are a few ways this can happen.  The simplest is that your equation references itself, for example:
+
+```r
+a <- a + 1
+```
+
+Unlike in R, this is disallowed, as each variable may only be assigned to once within the target function of your system.  Each assignment is much more like mathematical equation than usual programming statements.
+
+You can get more complicated cycles, for example:
+
+```r
+a <- c / 2
+b <- sqrt(a)
+c <- a + 1
+```
+
+Here `a` depends on `c`, `c` depends on `b` and `b` depends on `a`.  The error will reference all the variables involved in cycle.
+
+It is possible that there is more than one cycle within the reported expressions.

@@ -32,3 +32,16 @@ test_that("can match a simple call", {
     suppressWarnings(match_call(quote(f(fo = 2)), fn)),
     list(success = TRUE, value = quote(f(foo = 2, bar = 1))))
 })
+
+
+test_that("set_names copes with common pathologies", {
+  expect_equal(set_names(character(), "x"),
+               structure(character(), names = character()))
+  expect_equal(set_names("a", "x"),
+               c("x" = "a"))
+  expect_equal(set_names(c("a", "b"), "x"),
+               c("x" = "a", x = "b"))
+  expect_equal(set_names(c("a", "b"), c("x", "y")),
+               c("x" = "a", y = "b"))
+  expect_null(set_names(NULL, "x"))
+})
