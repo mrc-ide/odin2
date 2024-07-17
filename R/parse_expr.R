@@ -173,6 +173,13 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
       "'constant' must be a scalar logical if given, but was '{str}'",
       "E1009", src, call)
   }
+
+  if (args$differentiate && isTRUE(args$constant)) {
+    odin_parse_error(
+      "Differentiable parameters must not be constant",
+      "E1015", src, call)
+  }
+
   list(type = "parameter",
        args = args)
 }

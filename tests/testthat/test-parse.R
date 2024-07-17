@@ -3,7 +3,37 @@ test_that("can parse trivial system", {
     initial(x) <- 0
     update(x) <- 0
   })
-  expect_null(res)
+  expect_equal(res$time, "discrete")
+  expect_equal(res$class, "odin")
+  expect_equal(res$variables, "x")
+  expect_equal(nrow(res$parameters), 0)
+  expect_equal(nrow(res$data), 0)
+})
+
+
+test_that("can parse dust MVP system", {
+  ## Silly system that will work towards being one of the MVPs for
+  ## compilation to dust; contains basically everything we are
+  ## interested in.
+  res <- odin_parse({
+    z <- x + a
+    update(x) <- x + z * 2 + p
+    a <- 1 * b
+    b <- parameter()
+    p <- parameter(constant = TRUE)
+    initial(x) <- 0
+    d <- data()
+    compare(d) ~ Normal(x, 1)
+  })
+
+  expect_equal(res$time, "discrete")
+  expect_equal(res$class, "odin")
+  expect_equal(res$variables, "x")
+  expect_equal(res$parameters,
+               data_frame(name = c("b", "p"),
+                          differentiate = FALSE,
+                          constant = c(FALSE, TRUE)))
+  expect_equal(res$data, data_frame(name = "d"))
 })
 
 
