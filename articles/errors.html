@@ -310,6 +310,65 @@ the left hand side must be a symbol.</p>
 <p>Example:</p>
 <pre><code><span><span class="fu">initial</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu">parameter</span><span class="op">(</span><span class="op">)</span></span></code></pre>
 </div>
+<div class="section level2">
+<h2 id="e1015">
+<code>E1015</code><a class="anchor" aria-label="anchor" href="#e1015"></a>
+</h2>
+<p>Differentiable parameters must not be constant. You have written</p>
+<pre><code><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu">parameter</span><span class="op">(</span>constant <span class="op">=</span> <span class="cn">TRUE</span>, differentiate <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre>
+<p>which is impossible. Parameters that are differentiable need to be
+able to be set by <code>dust::dust_system_update_pars()</code> as well
+as on model creation.</p>
+<p>Probably you want to set at least one of these to <code>FALSE</code>,
+or omit the argument and accept the default.</p>
+</div>
+<div class="section level2">
+<h2 id="e2001">
+<code>E2001</code><a class="anchor" aria-label="anchor" href="#e2001"></a>
+</h2>
+<p>Your system of equations does not include any expressions with
+<code>initial()</code> on the lhs. This is what we derive the set of
+variables from, so at least one must be present.</p>
+</div>
+<div class="section level2">
+<h2 id="e2002">
+<code>E2002</code><a class="anchor" aria-label="anchor" href="#e2002"></a>
+</h2>
+<p>No call to <code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> on the lhs
+of any equation. Every call to <code>initial()</code> requires a call to
+<code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code>, and when there is not
+even a single call to either of these we can’t tell what sort of time
+your model runs in (i.e., if it works in continuous or discrete time).
+This error is related to <code>E2004</code>, but separate because we
+can’t describe what is missing properly.</p>
+</div>
+<div class="section level2">
+<h2 id="e2003">
+<code>E2003</code><a class="anchor" aria-label="anchor" href="#e2003"></a>
+</h2>
+<p>Variables are missing initial conditions.</p>
+<p>All variables used in <code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code>
+require a corresponding entry in <code>initial()</code> to set their
+initial conditions. The error will highlight all lines that have a
+<code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> call that lacks a call to
+<code>initial()</code>. This can sometimes be because you have a
+spelling error in your call to <code>initial()</code>.</p>
+</div>
+<div class="section level2">
+<h2 id="e2004">
+<code>E2004</code><a class="anchor" aria-label="anchor" href="#e2004"></a>
+</h2>
+<p>Variables are missing calls to <code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or
+<code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code></p>
+<p>You have a system where you use different equations for
+<code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code>/<code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> to the variables defined in
+<code>initial()</code>. This is an error if there are equations in
+<code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code>/<code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> that don’t have a
+corresponding equation using <code>initial()</code>, or if you have
+equations in <code>initial()</code> that don’t have a corresponding
+<code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> equation. The error will
+highlight all lines that might be involved in the error.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
