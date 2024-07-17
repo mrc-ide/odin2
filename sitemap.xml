@@ -1,8 +1,11 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>/404.html</loc></url>
-<url><loc>/LICENSE-text.html</loc></url>
-<url><loc>/authors.html</loc></url>
-<url><loc>/index.html</loc></url>
-<url><loc>/reference/index.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/404.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/LICENSE-text.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/articles/errors.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/articles/index.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/authors.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/index.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/reference/index.html</loc></url>
+<url><loc>https://mrc-ide.github.io/dust2/reference/odin_error_explain.html</loc></url>
 </urlset>
 
