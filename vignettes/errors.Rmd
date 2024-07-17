@@ -117,7 +117,7 @@ The code above is valid R (as in, it can be parsed) but it is nonsensical.  At p
 
 # `E1006`
 
-Invalid call to the `parameter()` function, used on the rhs of an assignment.  If this error is thrown then we have failed parse the arguments of your call to `parameter`.  The full prototype of `parameter()` is:
+Invalid call to the `parameter()` function, used on the rhs of an assignment.  If this error is thrown then we have failed to parse the arguments of your call to `parameter`.  The full prototype of `parameter()` is:
 
 ```
 parameter(default = NULL, constant = NULL, differentiate = FALSE)
@@ -152,11 +152,11 @@ defining `a` to be a parameter with a default value of `0.33333...` without havi
 
 # `E1008`
 
-Invalid `differentiate` argument to `parameter()`.  You have provided something than a literal `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
+Invalid `differentiate` argument to `parameter()`.  You have provided something other than a literal `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
 
 # `E1009`
 
-Invalid `constant` argument to `parameter()`.  You have provided something than a literal `NULL`, `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
+Invalid `constant` argument to `parameter()`.  You have provided something other than a literal `NULL`, `TRUE` or `FALSE` here (e.g., a missing value, an expression or a symbol).
 
 # `E1010`
 
