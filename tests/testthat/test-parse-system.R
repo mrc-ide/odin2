@@ -122,7 +122,7 @@ test_that("parameters default to constant in face of differentiability", {
 })
 
 
-test_that("fail informatively if recursive depenency in equations", {
+test_that("fail informatively if recursive dependency in equations", {
   ## This the simplest, it's just impossible:
   err <- expect_error(
     odin_parse({
