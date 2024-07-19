@@ -23,3 +23,30 @@ find_dependencies <- function(expr) {
        variables = unique(variables$get()))
 
 }
+
+
+topological_order <- function(deps) {
+  if (all(lengths(deps) == 0)) {
+    return(list(success = TRUE, value = seq_along(deps)))
+  }
+
+  m <- matrix(FALSE, length(deps), length(deps))
+  for (i in seq_along(deps)) {
+    m[, i] <- unname(names(deps) %in% deps[[i]])
+  }
+
+  pending <- rep(TRUE, length(deps))
+  ret <- integer(0)
+  while (any(pending)) {
+    i <- which(pending)[colSums(m[, pending, drop = FALSE]) == 0]
+    if (length(i) > 0L) {
+      ret <- c(ret, i)
+      pending[i] <- FALSE
+      m[i, ] <- FALSE
+    } else {
+      return(list(success = FALSE, error = which(pending)))
+    }
+  }
+
+  list(success = TRUE, value = ret)
+}

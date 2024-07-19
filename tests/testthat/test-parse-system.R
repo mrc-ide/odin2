@@ -120,3 +120,42 @@ test_that("parameters default to constant in face of differentiability", {
                           differentiate = c(FALSE, FALSE, TRUE),
                           constant = c(TRUE, TRUE, FALSE)))
 })
+
+
+test_that("fail informatively if recursive dependency in equations", {
+  ## This the simplest, it's just impossible:
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- a
+      deriv(x) <- a
+      a <- a + 1
+    }),
+    "Cyclic dependency detected within equation 'a'")
+})
+
+
+test_that("fail informatively if recursive depenency in several equations", {
+  ## This the simplest, it's just impossible:
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- a
+      deriv(x) <- a
+      a <- c + 1
+      b <- a * 2
+      c <- b / 2
+    }),
+    "Cyclic dependency detected within equations 'a', 'b', and 'c'")
+})
+
+
+test_that("prevent dependencies among variables in initial conditions", {
+  ## ...at least for now
+  expect_error(
+    odin_parse({
+      initial(a) <- 1
+      initial(b) <- a + 1
+      deriv(a) <- 0
+      deriv(b) <- 0
+    }),
+    "Dependencies within initial conditions not yet supported")
+})

@@ -68,3 +68,15 @@ collector <- function(init = character(0)) {
 data_frame <- function(...) {
   data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
 }
+
+
+set_names <- function(x, nms) {
+  if (length(nms) == 1 && length(x) != 1) {
+    if (is.null(x)) {
+      return(NULL)
+    }
+    nms <- rep_len(nms, length(x))
+  }
+  names(x) <- nms
+  x
+}
