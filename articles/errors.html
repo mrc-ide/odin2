@@ -369,6 +369,30 @@ equations in <code>initial()</code> that don’t have a corresponding
 <code><a href="https://rdrr.io/r/stats/deriv.html" class="external-link">deriv()</a></code> or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> equation. The error will
 highlight all lines that might be involved in the error.</p>
 </div>
+<div class="section level2">
+<h2 id="e2005">
+<code>E2005</code><a class="anchor" aria-label="anchor" href="#e2005"></a>
+</h2>
+<p>Cyclic dependency detected within equations. There are a few ways
+this can happen. The simplest is that your equation references itself,
+for example:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
+<p>Unlike in R, this is disallowed, as each variable may only be
+assigned to once within the target function of your system. Each
+assignment is much more like mathematical equation than usual
+programming statements.</p>
+<p>You can get more complicated cycles, for example:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">c</span> <span class="op">/</span> <span class="fl">2</span></span>
+<span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span>
+<span><span class="va">c</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
+<p>Here <code>a</code> depends on <code>c</code>, <code>c</code> depends
+on <code>b</code> and <code>b</code> depends on <code>a</code>. The
+error will reference all the variables involved in cycle.</p>
+<p>It is possible that there is more than one cycle within the reported
+expressions.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
