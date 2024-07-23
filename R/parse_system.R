@@ -217,3 +217,37 @@ parse_system_phases <- function(exprs, equations, variables, call) {
 
   phases
 }
+
+
+parse_storage <- function(equations, phases, variables, data, call) {
+  ## This will need additional work once we support arrays as these
+  ## will be put into internal storage.
+  shared <- intersect(names(equations), phases$build_shared$equations)
+  stack <- setdiff(names(equations), shared)
+
+  contents <- list(
+    variables = variables,
+    shared = shared,
+    internal = character(),
+    data = data,
+    output = character(),
+    stack = stack)
+  location <- set_names(rep(names(contents), lengths(contents)),
+                        unlist(contents, FALSE, TRUE))
+  location[location == "variables"] <- "state"
+
+  ## We'll need integer variables soon, these are always weird.  We
+  ## could also use proper booleans too.
+  type <- set_names(rep("real_type", length(location)), names(location))
+
+  ## This will change soon, as we'll need more flexibility with
+  ## arrays, and output, and adjoints.  For now just record the
+  ## locations of variables and we'll work out what index these sit at
+  ## later.
+  packing <- list(scalar = variables)
+
+  list(contents = contents,
+       location = location,
+       type = type,
+       packing = packing)
+}
