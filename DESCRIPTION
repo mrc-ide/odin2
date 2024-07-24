@@ -18,6 +18,7 @@ Imports:
     mcstate2,
     rlang
 Suggests:
+    decor,
     knitr,
     rmarkdown,
     mockery,
