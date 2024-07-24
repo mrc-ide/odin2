@@ -14,6 +14,7 @@ URL: https://mrc-ide.github.io/odin2, https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
+    dust2,
     mcstate2,
     rlang
 Suggests:
@@ -24,6 +25,7 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Remotes:
+    mrc-ide/dust2,
     mrc-ide/mcstate2
 VignetteBuilder: knitr
 Language: en-GB
