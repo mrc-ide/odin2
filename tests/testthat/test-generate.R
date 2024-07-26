@@ -295,7 +295,7 @@ test_that("can build simple compare function", {
     c(method_args$compare_data,
       "  const auto x = state[0];",
       "  real_type ll = 0;",
-      "  ll += mcstate::density::normal(rng, shared.d, x, 1, true);",
+      "  ll += mcstate::density::normal(data.d, x, 1, true);",
       "  return ll;",
       "}"))
 })
@@ -315,8 +315,8 @@ test_that("can build more complex compare function", {
     c(method_args$compare_data,
       "  const auto x = state[0];",
       "  real_type ll = 0;",
-      "  const real_type a = x / shared.d;",
-      "  ll += mcstate::density::normal(rng, shared.d, x, a, true);",
+      "  const real_type a = x / data.d;",
+      "  ll += mcstate::density::normal(data.d, x, a, true);",
       "  return ll;",
       "}"))
 })
@@ -354,4 +354,71 @@ test_that("can look up lhs for bits of data", {
   expect_error(
     generate_dust_lhs("c", dat, "mystate"),
     "Unsupported location")
+})
+
+
+test_that("variables involving data are computed within compare", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    d1 <- data()
+    d2 <- data()
+    a <- d1 / d2
+    compare(d1) ~ Normal(x, a)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto x = state[0];",
+      "  real_type ll = 0;",
+      "  const real_type a = data.d1 / data.d2;",
+      "  ll += mcstate::density::normal(data.d1, x, a, true);",
+      "  return ll;",
+      "}"))
+
+  ## Check other methods and data structures too
+  expect_equal(
+    generate_dust_system_data_type(dat),
+    c("struct data_type {",
+      "  real_type d1;",
+      "  real_type d2;",
+      "};"))
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_data(dat),
+    c(method_args$build_data,
+      '  auto d1 = dust2::r::read_real(data, "d1");',
+      '  auto d2 = dust2::r::read_real(data, "d2");',
+      '  return data_type{d1, d2};',
+      '}'))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  return shared_state{};",
+      "}"))
+})
+
+
+test_that("pull recursive dependencies into compare_data", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    p <- exp(x)
+    d <- data()
+    compare(d) ~ Poisson(p)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto x = state[0];",
+      "  real_type ll = 0;",
+      "  const real_type p = mcstate::math::exp(x);",
+      "  ll += mcstate::density::poisson(data.d, p, true);",
+      "  return ll;",
+      "}"))
 })

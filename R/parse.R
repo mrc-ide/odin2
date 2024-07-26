@@ -7,7 +7,7 @@ odin_parse <- function(expr, input_type = NULL) {
   equations <- parse_system_depends(
     system$exprs$equations, system$variables, call)
   phases <- parse_system_phases(
-    system$exprs, equations, system$variables, call)
+    system$exprs, equations, system$variables, system$data$name, call)
   storage <- parse_storage(
     equations, phases, system$variables, system$data, call)
 

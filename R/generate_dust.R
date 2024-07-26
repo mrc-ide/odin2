@@ -63,11 +63,11 @@ generate_dust_system_internal_state <- function(dat) {
 
 generate_dust_system_data_type <- function(dat) {
   data <- dat$storage$contents$data
-  if (nrow(data) == 0) {
+  if (length(data) == 0) {
     "using data_type = dust2::no_data;"
   } else {
     c("struct data_type {",
-      sprintf("  real_type %s;", data$name),
+      sprintf("  real_type %s;", data),
       "};")
   }
 }
@@ -101,15 +101,14 @@ generate_dust_system_build_shared <- function(dat) {
 
 generate_dust_system_build_data <- function(dat) {
   data <- dat$storage$contents$data
-  if (nrow(data) == 0) {
+  if (length(data) == 0) {
     return(NULL)
   }
   ## This is very simple for now, but later we can allow data to have
   ## types, lengths, etc.
   eqs <- dat$phases$create_data$equations
   body <- collector()
-  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s");',
-                   data$name, data$name))
+  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s");', data, data))
   body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
   args <- c("cpp11::list" = "data")
   cpp_function("data_type", "build_data", args, body$get(), static = TRUE)
@@ -266,7 +265,7 @@ generate_dust_system_compare_data <- function(dat) {
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
     eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
-    body$add(sprintf("ll += mcstate::density::%s(rng, %s, true);",
+    body$add(sprintf("ll += mcstate::density::%s(%s, true);",
                      eq$rhs$distribution, paste(eq_args, collapse = ", ")))
   }
 

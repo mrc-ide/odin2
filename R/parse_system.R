@@ -7,7 +7,7 @@ parse_system_overall <- function(exprs, call) {
   is_compare <- special == "compare"
   is_data <- special == "data"
   is_parameter <- special == "parameter"
-  is_equation <- special %in% c("", "parameter", "data")
+  is_equation <- special %in% c("", "parameter")
 
   ## We take initial as the set of variables:
   variables <- vcapply(exprs[is_initial], function(x) x$lhs$name)
@@ -99,8 +99,10 @@ parse_system_overall <- function(exprs, call) {
 
 
 parse_system_depends <- function(equations, variables, call) {
-  implicit <- c(variables, "time", "dt")
+  automatic <- c("time", "dt")
+  implicit <- c(variables, automatic)
 
+  ## First, compute the topological order ignoring variables
   names(equations) <- vcapply(equations, function(eq) eq$lhs$name)
   deps <- lapply(equations, function(eq) {
     ## In an earlier proof-of-concept here we also removed eq$lhs$name
@@ -121,7 +123,11 @@ parse_system_depends <- function(equations, variables, call) {
       "E2005", src, call)
   }
 
-  deps <- deps[res$value]
+  ## Now, we need to get the variables a second time, and only exclude
+  ## automatic variables
+  deps <- lapply(equations[res$value], function(eq) {
+    setdiff(eq$rhs$depends$variables, automatic)
+  })
   deps_recursive <- list()
   for (nm in names(deps)) {
     vars <- deps[[nm]]
@@ -135,7 +141,7 @@ parse_system_depends <- function(equations, variables, call) {
 }
 
 
-parse_system_phases <- function(exprs, equations, variables, call) {
+parse_system_phases <- function(exprs, equations, variables, data, call) {
   ## First compute the 'stage' that things occur in; there are only
   ## three of these, but "time" covers a multitude of sins and
   ## includes things like the compare function as well as deriv/update
@@ -143,10 +149,12 @@ parse_system_phases <- function(exprs, equations, variables, call) {
   ## considered time).
   stages <- c(system_create = 1,
               parameter_update = 2,
-              time = 3)
+              time = 3,
+              data = 4)
   implicit <- c(variables, "time", "dt")
   stage <- c(
-    set_names(rep(stages[["time"]], length(implicit)), implicit))
+    set_names(rep(stages[["time"]], length(implicit)), implicit),
+    set_names(rep(stages[["data"]], length(data)), data))
   for (nm in names(equations)) {
     rhs <- equations[[nm]]$rhs
     if (identical(rhs$type, "parameter")) {
@@ -163,8 +171,6 @@ parse_system_phases <- function(exprs, equations, variables, call) {
   ## Now, we try and work out which parts of the graph are needed at
   ## different "phases".  These roughly correspond to dust functions.
 
-  used <- character()
-
   deps_recursive <- lapply(equations, function(x) {
     x$rhs$depends$variables_recursive
   })
@@ -172,10 +178,10 @@ parse_system_phases <- function(exprs, equations, variables, call) {
   used <- character()
   required <- character()
 
-  phases <- set_names(vector("list", 5),
-                      c("update", "deriv", "output", "initial", "compare"))
+  phase_names <- c("update", "deriv", "output", "initial", "compare")
+  phases <- set_names(vector("list", length(phase_names)), phase_names)
 
-  for (phase in names(phases)) {
+  for (phase in phase_names) {
     e <- exprs[[phase]]
     if (length(e) > 0) {
       deps <- unique(unlist(lapply(e, function(x) x$rhs$depends$variables),
@@ -184,9 +190,11 @@ parse_system_phases <- function(exprs, equations, variables, call) {
       eqs <- union(eqs, unlist(deps_recursive[eqs], FALSE, FALSE))
       used <- union(used, eqs)
 
-      eqs_time <- intersect(names(equations), eqs[stage[eqs] == "time"])
-      unpack <- intersect(deps, variables)
-      required <- union(required, eqs[stage[eqs] != "time"])
+      is_time <- stage[eqs] == "time"
+      is_data <- stage[eqs] == "data"
+      eqs_time <- intersect(names(equations), eqs[is_time])
+      unpack <- intersect(variables, c(eqs, deps))
+      required <- union(required, eqs[!(is_time | is_data)])
 
       if (phase %in% c("update", "deriv", "output")) {
         phases[[phase]] <- list(unpack = unpack,
@@ -203,7 +211,8 @@ parse_system_phases <- function(exprs, equations, variables, call) {
         phases[[phase]] <- list(equations = eqs_time,
                                 variables = e)
       } else if (phase == "compare") {
-        phases[[phase]] <- list(equations = eqs_time,
+        eqs_data <- intersect(names(equations), eqs[is_time | is_data])
+        phases[[phase]] <- list(equations = eqs_data,
                                 unpack = unpack,
                                 compare = e)
       }
@@ -229,7 +238,7 @@ parse_storage <- function(equations, phases, variables, data, call) {
     variables = variables,
     shared = shared,
     internal = character(),
-    data = data,
+    data = data$name,
     output = character(),
     stack = stack)
   location <- set_names(rep(names(contents), lengths(contents)),

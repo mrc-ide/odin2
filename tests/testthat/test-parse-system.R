@@ -159,3 +159,27 @@ test_that("prevent dependencies among variables in initial conditions", {
     }),
     "Dependencies within initial conditions not yet supported")
 })
+
+
+test_that("unpack indirect variables in compare", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    p <- exp(x)
+    d <- data()
+    compare(d) ~ Poisson(p)
+  })
+
+  expect_equal(dat$phases$compare$unpack, "x")
+  expect_equal(dat$phases$compare$equations, "p")
+  expect_length(dat$phases$compare$compare, 1)
+})
+
+
+test_that("unpack self-referential variables", {
+  dat <- odin_parse({
+    update(a) <- a + 1
+    initial(a) <- 1
+  })
+  expect_equal(dat$phases$update$unpack, "a")
+})
