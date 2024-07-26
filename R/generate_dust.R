@@ -266,7 +266,7 @@ generate_dust_system_compare_data <- function(dat) {
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
     eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
-    body$add(sprintf("ll += mcstate2::density::%s(rng, %s, true);",
+    body$add(sprintf("ll += mcstate::density::%s(rng, %s, true);",
                      eq$rhs$distribution, paste(eq_args, collapse = ", ")))
   }
 

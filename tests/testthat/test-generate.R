@@ -295,7 +295,7 @@ test_that("can build simple compare function", {
     c(method_args$compare_data,
       "  const auto x = state[0];",
       "  real_type ll = 0;",
-      "  ll += mcstate2::density::normal(rng, shared.d, x, 1, true);",
+      "  ll += mcstate::density::normal(rng, shared.d, x, 1, true);",
       "  return ll;",
       "}"))
 })
@@ -316,7 +316,7 @@ test_that("can build more complex compare function", {
       "  const auto x = state[0];",
       "  real_type ll = 0;",
       "  const real_type a = x / shared.d;",
-      "  ll += mcstate2::density::normal(rng, shared.d, x, a, true);",
+      "  ll += mcstate::density::normal(rng, shared.d, x, a, true);",
       "  return ll;",
       "}"))
 })
