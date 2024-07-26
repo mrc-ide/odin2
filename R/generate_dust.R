@@ -3,26 +3,26 @@ generate_dust_system <- function(dat) {
 
   body <- collector()
   body$add("#include <dust2/common.hpp>")
-  body$add(generate_dust_system_core_attributes(dat))
+  body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
   body$add(sprintf("  %s() = delete;", dat$class))
   body$add("  using real_type = double;")
   body$add("  using rng_state_type = mcstate::random::generator<real_type>;")
-  body$add(sprintf("  %s", generate_dust_system_core_shared_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_internal_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_data_type(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_size_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_build_shared(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_build_internal(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_build_data(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_update_shared(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_update_internal(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_initial(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_update(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_rhs(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_zero_every(dat)))
-  body$add(sprintf("  %s", generate_dust_system_core_compare_data(dat)))
+  body$add(sprintf("  %s", generate_dust_system_shared_state(dat)))
+  body$add(sprintf("  %s", generate_dust_system_internal_state(dat)))
+  body$add(sprintf("  %s", generate_dust_system_data_type(dat)))
+  body$add(sprintf("  %s", generate_dust_system_size_state(dat)))
+  body$add(sprintf("  %s", generate_dust_system_build_shared(dat)))
+  body$add(sprintf("  %s", generate_dust_system_build_internal(dat)))
+  body$add(sprintf("  %s", generate_dust_system_build_data(dat)))
+  body$add(sprintf("  %s", generate_dust_system_update_shared(dat)))
+  body$add(sprintf("  %s", generate_dust_system_update_internal(dat)))
+  body$add(sprintf("  %s", generate_dust_system_initial(dat)))
+  body$add(sprintf("  %s", generate_dust_system_update(dat)))
+  body$add(sprintf("  %s", generate_dust_system_rhs(dat)))
+  body$add(sprintf("  %s", generate_dust_system_zero_every(dat)))
+  body$add(sprintf("  %s", generate_dust_system_compare_data(dat)))
   body$add("};")
   body$get()
 }
@@ -34,7 +34,7 @@ generate_prepare <- function(dat) {
 }
 
 
-generate_dust_system_core_attributes <- function(dat) {
+generate_dust_system_attributes <- function(dat) {
   if (length(dat$phases$compare) > 0) {
     has_compare <- "// [[dust2::has_compare()]]"
   } else {
@@ -46,7 +46,7 @@ generate_dust_system_core_attributes <- function(dat) {
 }
 
 
-generate_dust_system_core_shared_state <- function(dat) {
+generate_dust_system_shared_state <- function(dat) {
   nms <- dat$storage$contents$shared
   type <- dat$storage$type[nms]
   c("struct shared_state {",
@@ -56,12 +56,12 @@ generate_dust_system_core_shared_state <- function(dat) {
 
 
 ## This one is trivial until we pick up arrays
-generate_dust_system_core_internal_state <- function(dat) {
+generate_dust_system_internal_state <- function(dat) {
   "struct internal_state {};"
 }
 
 
-generate_dust_system_core_data_type <- function(dat) {
+generate_dust_system_data_type <- function(dat) {
   data <- dat$storage$contents$data
   if (nrow(data) == 0) {
     "using data_type = dust2::no_data;"
@@ -73,14 +73,14 @@ generate_dust_system_core_data_type <- function(dat) {
 }
 
 
-generate_dust_system_core_size_state <- function(dat) {
+generate_dust_system_size_state <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- sprintf("return %d;", length(dat$storage$contents$variables))
   cpp_function("size_t", "size_state", args, body, static = TRUE)
 }
 
 
-generate_dust_system_core_build_shared <- function(dat) {
+generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
   eqs <- dat$phases$build_shared$equations
   body <- collector()
@@ -99,7 +99,7 @@ generate_dust_system_core_build_shared <- function(dat) {
 }
 
 
-generate_dust_system_core_build_data <- function(dat) {
+generate_dust_system_build_data <- function(dat) {
   data <- dat$storage$contents$data
   if (nrow(data) == 0) {
     return(NULL)
@@ -116,14 +116,14 @@ generate_dust_system_core_build_data <- function(dat) {
 }
 
 
-generate_dust_system_core_build_internal <- function(dat) {
+generate_dust_system_build_internal <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- "return internal_state{};"
   cpp_function("internal_state", "build_internal", args, body, static = TRUE)
 }
 
 
-generate_dust_system_core_update_shared <- function(dat) {
+generate_dust_system_update_shared <- function(dat) {
   eqs <- dat$phases$update_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
@@ -141,14 +141,14 @@ generate_dust_system_core_update_shared <- function(dat) {
 }
 
 
-generate_dust_system_core_update_internal <- function(dat) {
+generate_dust_system_update_internal <- function(dat) {
   args <- c("const shared_state&" = "shared", "internal_state&" = "internal")
   body <- character()
   cpp_function("void", "update_internal", args, body, static = TRUE)
 }
 
 
-generate_dust_system_core_initial <- function(dat) {
+generate_dust_system_initial <- function(dat) {
   if (dat$time == "continuous") {
     args <- c("real_type" = "time",
               "const shared_state&" = "shared",
@@ -174,7 +174,7 @@ generate_dust_system_core_initial <- function(dat) {
 }
 
 
-generate_dust_system_core_update <- function(dat) {
+generate_dust_system_update <- function(dat) {
   ## I think this is not quite the right condition, because we do want
   ## this with a mixed model.
   if (dat$time == "continuous") {
@@ -203,7 +203,7 @@ generate_dust_system_core_update <- function(dat) {
 }
 
 
-generate_dust_system_core_rhs <- function(dat) {
+generate_dust_system_rhs <- function(dat) {
   if (dat$time == "discrete") {
     return(NULL)
   }
@@ -228,14 +228,14 @@ generate_dust_system_core_rhs <- function(dat) {
 }
 
 
-generate_dust_system_core_zero_every <- function(dat) {
+generate_dust_system_zero_every <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- "return dust2::zero_every_type<real_type>();"
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 
 
-generate_dust_system_core_compare_data <- function(dat) {
+generate_dust_system_compare_data <- function(dat) {
   if (length(dat$phases$compare) == 0) {
     return(NULL)
   }
