@@ -3,7 +3,7 @@ test_that("Can parse compare expression", {
   expect_equal(res$special, "compare")
   expect_equal(res$rhs$type, "compare")
   expect_equal(res$rhs$distribution, "normal")
-  expect_equal(res$rhs$args, list(0, 1))
+  expect_equal(res$rhs$args, list(quote(x), 0, 1))
   expect_equal(res$rhs$depends,
                list(functions = "Normal", variables = "x"))
 })

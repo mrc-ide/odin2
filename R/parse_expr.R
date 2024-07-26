@@ -198,11 +198,8 @@ parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
 
-  ## Quickly rewrite the expression, at least for now:
-  rhs$expr <- as.call(c(list(rhs$expr[[1]], lhs),
-                        as.list(rhs$expr[-1])))
-  rhs$depends$variables <- union(rhs$depends$variables,
-                                 as.character(lhs))
+  rhs$args <- c(lhs, rhs$args)
+  rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))
   list(special = "compare",
        rhs = rhs,
        src = src)

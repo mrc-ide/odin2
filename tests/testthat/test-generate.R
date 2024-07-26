@@ -263,7 +263,7 @@ test_that("can generate simple update method", {
     c(method_args$update,
       "  state_next[0] = 1;",
       "}"))
-  expect_null(generate_dust_system_core_deriv(dat))
+  expect_null(generate_dust_system_core_rhs(dat))
 })
 
 
@@ -279,4 +279,79 @@ test_that("can generate simple deriv method", {
       "  state_deriv[0] = 1;",
       "}"))
   expect_null(generate_dust_system_core_update(dat))
+})
+
+
+test_that("can build simple compare function", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    d <- data()
+    compare(d) ~ Normal(x, 1)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_core_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto x = state[0];",
+      "  real_type ll = 0;",
+      "  ll += mcstate2::density::normal(rng, shared.d, x, 1, true);",
+      "  return ll;",
+      "}"))
+})
+
+
+test_that("can build more complex compare function", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    a <- x / d
+    d <- data()
+    compare(d) ~ Normal(x, a)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_core_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto x = state[0];",
+      "  real_type ll = 0;",
+      "  const real_type a = x / shared.d;",
+      "  ll += mcstate2::density::normal(rng, shared.d, x, a, true);",
+      "  return ll;",
+      "}"))
+})
+
+
+test_that("generate stack equations during update", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + a
+    a <- 1 / x
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_core_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type a = 1 / x;",
+      "  state_next[0] = x + a;",
+      "}"))
+})
+
+
+test_that("can look up lhs for bits of data", {
+  dat <- list(storage = list(location = c(a = "stack",
+                                          b = "state",
+                                          c = "outerspace"),
+                             type = c("a" = "real", b = "real", c = "real"),
+                             packing = list(scalar = c("x", "y", "b", "z"))))
+  expect_equal(
+    generate_dust_lhs("a", dat, "mystate"),
+    "const real a")
+  expect_equal(
+    generate_dust_lhs("b", dat, "mystate"),
+    "mystate[2]")
+  expect_error(
+    generate_dust_lhs("c", dat, "mystate"),
+    "Unsupported location")
 })

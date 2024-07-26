@@ -1,5 +1,5 @@
 generate_dust_system <- function(dat) {
-  dat$sexp_data <- generate_dust_dat(dat$storage$location)
+  dat <- generate_prepare(dat)
 
   body <- collector()
   body$add("#include <dust2/common.hpp>")
@@ -28,8 +28,14 @@ generate_dust_system <- function(dat) {
 }
 
 
+generate_prepare <- function(dat) {
+  dat$sexp_data <- generate_dust_dat(dat$storage$location)
+  dat
+}
+
+
 generate_dust_system_core_attributes <- function(dat) {
-  if (length(dat$phases$compare)) {
+  if (length(dat$phases$compare) > 0) {
     has_compare <- "// [[dust2::has_compare()]]"
   } else {
     has_compare <- NULL
@@ -58,7 +64,7 @@ generate_dust_system_core_internal_state <- function(dat) {
 generate_dust_system_core_data_type <- function(dat) {
   data <- dat$storage$contents$data
   if (nrow(data) == 0) {
-    "  using data_type = dust2::no_data;"
+    "using data_type = dust2::no_data;"
   } else {
     c("struct data_type {",
       sprintf("  real_type %s;", data$name),
@@ -102,11 +108,10 @@ generate_dust_system_core_build_data <- function(dat) {
   ## types, lengths, etc.
   eqs <- dat$phases$create_data$equations
   body <- collector()
-  body$add("auto data = static_cast<cpp11::list>(r_data);")
   body$add(sprintf('auto %s = dust2::r::read_real(data, "%s");',
                    data$name, data$name))
   body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
-  args <- c("cpp11::list" = "r_data")
+  args <- c("cpp11::list" = "data")
   cpp_function("data_type", "build_data", args, body$get(), static = TRUE)
 }
 
@@ -231,6 +236,9 @@ generate_dust_system_core_zero_every <- function(dat) {
 
 
 generate_dust_system_core_compare_data <- function(dat) {
+  if (length(dat$phases$compare) == 0) {
+    return(NULL)
+  }
   args <- c("real_type" = "time",
             "real_type" = "dt",
             "const real_type*" = "state",
@@ -257,8 +265,9 @@ generate_dust_system_core_compare_data <- function(dat) {
 
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
-    body$add(sprintf("ll += %s;",
-                     generate_dust_sexp_compare(eq$rhs$expr, dat$sexp_data)))
+    eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
+    body$add(sprintf("ll += mcstate2::density::%s(rng, %s, true);",
+                     eq$rhs$distribution, paste(eq_args, collapse = ", ")))
   }
 
   body$add("return ll;")
