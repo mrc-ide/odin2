@@ -295,3 +295,7 @@ r <- exp(v)
 ```
 
 This will error because `v` (referenced by `r`, which is referenced by `update(a)`) is undefined.
+
+# `E2007`
+
+Trying to use `dt` in a continuous time (ODE) system.  This is really a special case of `E2006`, but we treat it separately because it usually means that something has gone badly with the system design.

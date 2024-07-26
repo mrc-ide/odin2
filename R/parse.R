@@ -32,7 +32,8 @@ parse_check_usage <- function(exprs, dat, call) {
 
 
 parse_check_usage_find_unknown <- function(exprs, dat, call) {
-  known <- c(unlist(dat$storage$contents, FALSE, FALSE), "time", "dt")
+  implicit <- c("time", if (dat$time == "discrete") "dt")
+  known <- c(unlist(dat$storage$contents, FALSE, FALSE), implicit)
   eqs <- c(dat$phases$update$variables,
            dat$phases$deriv$variables,
            dat$phases$output$variables,
@@ -47,7 +48,19 @@ parse_check_usage_find_unknown <- function(exprs, dat, call) {
 
   err_nms <- unique(unlist(unknown))
   src <- lapply(eqs[err], "[[", "src")
-  odin_parse_error(
-    "Unknown variable{?s} used in odin code: {squote(err_nms)}",
-    "E2006", src, call)
+
+  if (dat$time == "continuous" && "dt" %in% unknown) {
+    uses_dt <- vlapply(err_nms, function(nms) "dt" %in% nms)
+    odin_parse_error(
+      c("Cannot use 'dt' in a continuous time (ODE) model",
+        i = paste("The special variable 'dt' only exists in discrete-time",
+                  "models.  In an ODE model, the step size is never known",
+                  "by the system, which needs to consider only rates",
+                  "of change in the variables.")),
+      "E2007", src[uses_dt], call)
+  } else {
+    odin_parse_error(
+      "Unknown variable{?s} used in odin code: {squote(err_nms)}",
+      "E2006", src, call)
+  }
 }
