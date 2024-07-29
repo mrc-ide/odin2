@@ -27,6 +27,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               data = system$data)
 
   parse_check_usage(exprs, ret, call)
+  ret <- parse_adjoint(ret)
 
   ret
 }
