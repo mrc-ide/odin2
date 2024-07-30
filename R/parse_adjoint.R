@@ -29,8 +29,8 @@ parse_adjoint <- function(dat) {
     list(scalar = dat$storage$contents$adjoint)
   dat$storage$type <- c(
     dat$storage$type,
-    set_names(rep("real_type", length(dat$storage$contents$adjoint)),
-              dat$storage$contents$adjoint))
+    set_names(rep("real_type", length(adjoint_location)),
+              names(adjoint_location)))
 
   dat
 }
@@ -100,7 +100,10 @@ adjoint_phase <- function(eqs, dat) {
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
   location <- set_names(vcapply(eqs, function(x) x$lhs$location),
                         vcapply(eqs, function(x) x$lhs$name))
+
+  unpack_adjoint <- intersect(names(location)[location == "adjoint"], uses)
   list(unpack = unpack,
+       unpack_adjoint = unpack_adjoint,
        equations = equations,
        adjoint = eqs,
        location = location)
@@ -122,14 +125,18 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
                   differentiate(eq$rhs$expr, nm))
     }
   }
-  expr <- fold_add(lapply(equations[i], f))
+
+  name <- paste0(prefix, nm)
+  parts <- lapply(equations[i], f)
+  if (accumulate) {
+    parts <- c(parts, list(as.name(name)))
+  }
+  expr <- fold_add(parts)
   location <- if (intermediate) "stack" else "adjoint"
-  list(adjoint = TRUE,
-       lhs = list(name = paste0(prefix, nm),
+  list(lhs = list(name = name,
                   location = location),
        rhs = list(type = "expression",
-                  expr = expr,
-                  accumulate = accumulate))
+                  expr = expr))
 }
 
 
