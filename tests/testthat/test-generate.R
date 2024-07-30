@@ -340,11 +340,12 @@ test_that("generate stack equations during update", {
 
 
 test_that("can look up lhs for bits of data", {
-  dat <- list(storage = list(location = c(a = "stack",
-                                          b = "state",
-                                          c = "outerspace"),
-                             type = c("a" = "real", b = "real", c = "real"),
-                             packing = list(scalar = c("x", "y", "b", "z"))))
+  dat <- list(storage = list(
+                location = c(a = "stack",
+                             b = "state",
+                             c = "outerspace"),
+                type = c("a" = "real", b = "real", c = "real"),
+                packing = list(state = list(scalar = c("x", "y", "b", "z")))))
   expect_equal(
     generate_dust_lhs("a", dat, "mystate"),
     "const real a")

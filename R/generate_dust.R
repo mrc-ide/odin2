@@ -191,7 +191,7 @@ generate_dust_system_update <- function(dat) {
   i <- variables %in% dat$phases$update$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i],
-                   match(variables[i], dat$storage$packing$scalar) - 1))
+                   match(variables[i], dat$storage$packing$state$scalar) - 1))
   eqs <- dat$phases$update$equations
   for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
     lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
@@ -216,7 +216,7 @@ generate_dust_system_rhs <- function(dat) {
   i <- variables %in% dat$phases$deriv$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i],
-                   match(variables[i], dat$storage$packing$scalar) - 1))
+                   match(variables[i], dat$storage$packing$state$scalar) - 1))
   eqs <- dat$phases$deriv$equations
   for (eq in c(dat$equations[eqs], dat$phases$deriv$variables)) {
     lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_deriv")
@@ -250,7 +250,7 @@ generate_dust_system_compare_data <- function(dat) {
   i <- variables %in% dat$phases$compare$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i],
-                   match(variables[i], dat$storage$packing$scalar) - 1))
+                   match(variables[i], dat$storage$packing$state$scalar) - 1))
   ## TODO collision here in names with 'll'; we might need to prefix
   ## with compare_ perhaps?
   body$add("real_type ll = 0;")
@@ -282,7 +282,8 @@ generate_dust_lhs <- function(name, dat, name_state) {
     ## TODO: this wil need to change, once we support arrays: at that
     ## point we'll make this more efficient too by computing
     ## expressions for access.
-    sprintf("%s[%s]", name_state, match(name, dat$storage$packing$scalar) - 1)
+    sprintf("%s[%s]",
+            name_state, match(name, dat$storage$packing$state$scalar) - 1)
   } else {
     stop("Unsupported location")
   }

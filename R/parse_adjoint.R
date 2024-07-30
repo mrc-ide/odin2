@@ -14,9 +14,25 @@ parse_adjoint <- function(dat) {
   ## have nothing to differentiate!
 
   deps <- lapply(dat$equations, function(eq) eq$rhs$depends$variables_recursive)
-  eqs_update <- adjoint_update(dat, parameters, deps)
-  eqs_compare <- adjoint_compare(dat, parameters, deps)
-  eqs_initial <- adjoint_initial(dat, parameters, deps)
+
+  dat$adjoint <- list(
+    update = adjoint_update(dat, parameters, deps),
+    compare = adjoint_compare(dat, parameters, deps),
+    initial = adjoint_initial(dat, parameters, deps))
+
+  ## Update storage with all this information:
+  adjoint_location <- merge_location(lapply(dat$adjoint, "[[", "location"))
+  dat$storage$contents$adjoint <-
+    names(adjoint_location)[adjoint_location == "adjoint"]
+  dat$storage$location <- c(dat$storage$location, adjoint_location)
+  dat$storage$packing$adjoint <-
+    list(scalar = dat$storage$contents$adjoint)
+  dat$storage$type <- c(
+    dat$storage$type,
+    set_names(rep("real_type", length(dat$storage$contents$adjoint)),
+              dat$storage$contents$adjoint))
+
+  dat
 }
 
 
@@ -25,9 +41,12 @@ adjoint_update <- function(dat, parameters, deps) {
   used <- adjoint_uses(update$variables, update$equations, deps)
   equations <- c(update$variables, dat$equations[used])
   eqs <- c(
-    lapply(used, adjoint_equation, equations),
-    lapply(dat$variables, adjoint_equation, equations),
-    lapply(parameters, adjoint_equation, equations, accumulate = TRUE))
+    lapply(used, adjoint_equation, equations,
+           intermediate = TRUE, accumulate = FALSE),
+    lapply(dat$variables, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = FALSE),
+    lapply(parameters, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = TRUE))
   adjoint_phase(eqs, dat)
 }
 
@@ -37,9 +56,12 @@ adjoint_compare <- function(dat, parameters, deps) {
   used <- adjoint_uses(compare$compare, compare$equations, deps)
   equations <- c(compare$variables, compare$compare, dat$equations[used])
   eqs <- c(
-    lapply(used, adjoint_equation, equations),
-    lapply(dat$variables, adjoint_equation, equations, accumulate = TRUE),
-    lapply(parameters, adjoint_equation, equations, accumulate = TRUE))
+    lapply(used, adjoint_equation, equations,
+           intermediate = TRUE, accumulate = FALSE),
+    lapply(dat$variables, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = TRUE),
+    lapply(parameters, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = TRUE))
   adjoint_phase(eqs, dat)
 }
 
@@ -49,9 +71,12 @@ adjoint_initial <- function(dat, parameters, deps) {
   used <- adjoint_uses(initial$variables, initial$equations, deps)
   equations <- c(initial$variables, initial$initial, dat$equations[used])
   eqs <- c(
-    lapply(used, adjoint_equation, equations),
-    lapply(dat$variables, adjoint_equation, equations, accumulate = TRUE),
-    lapply(parameters, adjoint_equation, equations, accumulate = TRUE))
+    lapply(used, adjoint_equation, equations,
+           intermediate = TRUE, accumulate = FALSE),
+    lapply(dat$variables, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = TRUE),
+    lapply(parameters, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = TRUE))
   adjoint_phase(eqs, dat)
 }
 
@@ -73,13 +98,16 @@ adjoint_phase <- function(eqs, dat) {
               dat$storage$contents$data,
               dat$variables)
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
+  location <- set_names(vcapply(eqs, function(x) x$lhs$location),
+                        vcapply(eqs, function(x) x$lhs$name))
   list(unpack = unpack,
        equations = equations,
-       adjoint = eqs)
+       adjoint = eqs,
+       location = location)
 }
 
 
-adjoint_equation <- function(nm, equations, accumulate = FALSE) {
+adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   prefix <- "adj_" # we might move this elsewhere?
 
   ## We can apply this approach and at the *moment* everything we
@@ -94,10 +122,23 @@ adjoint_equation <- function(nm, equations, accumulate = FALSE) {
                   differentiate(eq$rhs$expr, nm))
     }
   }
-  parts <- lapply(equations[i], f)
-  if (accumulate) {
-    parts <- c(parts, list(as.name(paste0(prefix, nm))))
+  expr <- fold_add(lapply(equations[i], f))
+  location <- if (intermediate) "stack" else "adjoint"
+  list(adjoint = TRUE,
+       lhs = list(name = paste0(prefix, nm),
+                  location = location),
+       rhs = list(type = "expression",
+                  expr = expr,
+                  accumulate = accumulate))
+}
+
+
+merge_location <- function(x) {
+  ret <- x[[1]]
+  for (el in x[-1]) {
+    shared <- intersect(names(el), names(ret))
+    stopifnot(identical(el[shared], ret[shared]))
+    ret <- c(ret, el[setdiff(names(el), names(ret))])
   }
-  list(name = paste0(prefix, nm),
-       expr = fold_add(parts))
+  ret
 }
