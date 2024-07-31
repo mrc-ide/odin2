@@ -1,5 +1,5 @@
 test_that("can compile a simple ode model", {
-  dat <- odin_parse({
+  res <- odin({
     deriv(S) <- -beta * S * I / N
     deriv(I) <- beta * S * I / N - gamma * I
     deriv(R) <- gamma * I
@@ -10,13 +10,8 @@ test_that("can compile a simple ode model", {
     beta <- parameter(0.2)
     gamma <- parameter(0.1)
     I0 <- parameter(10)
-  })
+  }, debug = TRUE, quiet = TRUE)
 
-  code <- generate_dust_system(dat)
-  path <- "dust.cpp"
-  unlink(path)
-  writeLines(code, path)
-  res <- dust2::dust_compile(path, debug = TRUE, quiet = TRUE)
   expect_s3_class(res(), "dust_system_generator")
   expect_mapequal(res()$properties,
                   list(time_type = "continuous",
