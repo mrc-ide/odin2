@@ -297,7 +297,7 @@ generate_dust_system_adjoint_size <- function(dat) {
   args <- c("const shared_state&" = "shared")
   ## We might return the _difference_ here, still undecided...
   body <- sprintf("return %d;", length(dat$storage$contents$adjoint))
-  cpp_function("size_t", "size_adjoint", args, body, static = TRUE)
+  cpp_function("size_t", "adjoint_size", args, body, static = TRUE)
 }
 
 
@@ -346,13 +346,13 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
   body <- collector()
 
   variables <- dat$storage$contents$variables
-  i <- variables %in% dat$adjoint$update$unpack
+  i <- variables %in% dat$adjoint$compare$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i],
                    match(variables[i], dat$storage$packing$state$scalar) - 1))
 
   adjoint <- dat$storage$contents$adjoint
-  i <- adjoint %in% dat$adjoint$update$unpack_adjoint
+  i <- adjoint %in% dat$adjoint$compare$unpack_adjoint
   body$add(sprintf("const auto %s = adjoint[%d];",
                    adjoint[i],
                    match(adjoint[i], dat$storage$packing$adjoint$scalar) - 1))
@@ -379,13 +379,13 @@ generate_dust_system_adjoint_initial <- function(dat) {
   body <- collector()
 
   variables <- dat$storage$contents$variables
-  i <- variables %in% dat$adjoint$update$unpack
+  i <- variables %in% dat$adjoint$initial$unpack
   body$add(sprintf("const auto %s = state[%d];",
                    variables[i],
                    match(variables[i], dat$storage$packing$state$scalar) - 1))
 
   adjoint <- dat$storage$contents$adjoint
-  i <- adjoint %in% dat$adjoint$update$unpack_adjoint
+  i <- adjoint %in% dat$adjoint$initial$unpack_adjoint
   body$add(sprintf("const auto %s = adjoint[%d];",
                    adjoint[i],
                    match(adjoint[i], dat$storage$packing$adjoint$scalar) - 1))
