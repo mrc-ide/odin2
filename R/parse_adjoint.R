@@ -119,6 +119,9 @@ adjoint_phase <- function(eqs, dat) {
 
 adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   prefix <- "adj_" # we might move this elsewhere?
+  diff <- mcstate2::mcstate_differentiation()
+  differentiate <- diff$differentiate
+  maths <- diff$maths
 
   ## We can apply this approach and at the *moment* everything we
   ## create goes on the stack.  Later we will end up with non scalars
@@ -138,7 +141,7 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   if (accumulate) {
     parts <- c(parts, list(as.name(name)))
   }
-  expr <- fold_add(parts)
+  expr <- maths$plus_fold(parts)
   location <- if (intermediate) "stack" else "adjoint"
   list(lhs = list(name = name,
                   location = location),
