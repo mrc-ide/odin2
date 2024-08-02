@@ -129,7 +129,7 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   i <- vlapply(equations, function(x) nm %in% x$rhs$depends$variables)
   f <- function(eq) {
     if (identical(eq$special, "compare")) {
-      differentiate(log_density(eq$rhs$distribution, eq$rhs$args), nm)
+      differentiate(eq$rhs$density$expr, nm)
     } else {
       maths$times(as.name(paste0(prefix, eq$lhs$name)),
                   differentiate(eq$rhs$expr, nm))

@@ -200,6 +200,9 @@ parse_expr_compare <- function(expr, src, call) {
 
   rhs$args <- c(lhs, rhs$args)
   rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))
+  rhs$density$expr <- substitute_(
+    rhs$density$expr,
+    list2env(set_names(rhs$args, rhs$density$args)))
   list(special = "compare",
        rhs = rhs,
        src = src)
@@ -234,8 +237,12 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
       "E1013", src, call)
   }
   depends <- find_dependencies(rhs)
+  density <- list(cpp = result$value$cpp$density,
+                  expr = result$value$expr$density,
+                  args = names(formals(result$value$density)))
+
   list(type = "compare",
-       distribution = result$value$cpp$density,
+       density = density,
        args = result$value$args,
        depends = depends)
 }

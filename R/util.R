@@ -90,3 +90,9 @@ cli_nbsp <- function(x) {
 unlist0 <- function(x) {
   unlist(x, FALSE, FALSE)
 }
+
+
+## This is definiteion possible with rlang, but I am not sure how.
+substitute_ <- function(expr, env) {
+  eval(substitute(substitute(y, env), list(y = expr)))
+}
