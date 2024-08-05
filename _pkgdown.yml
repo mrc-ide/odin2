@@ -8,6 +8,7 @@ reference:
     desc: >-
       All functions, until the API starts to develop properly.
     contents:
+      - odin
       - odin_error_explain
 
 articles:
