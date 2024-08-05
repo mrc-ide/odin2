@@ -278,3 +278,24 @@ c <- a + 1
 Here `a` depends on `c`, `c` depends on `b` and `b` depends on `a`.  The error will reference all the variables involved in cycle.
 
 It is possible that there is more than one cycle within the reported expressions.
+
+# `E2006`
+
+Undefined variable used in an equation.  This error means that you have referenced some variable that does not exist within the odin system.  Common reasons for this error include:
+
+* A spelling mistake: you've referenced a variable that is very similar to the one that you meant to (we may add "did you mean support" in future; let us know if this would have saved you time).
+* Trying to reference variables defined in R's environmnent but not in odin.  This is impossible, but you might want to make a parameter, perhaps.
+
+Example:
+
+```r
+initial(a) <- 1
+update(a) <- a * r
+r <- exp(v)
+```
+
+This will error because `v` (referenced by `r`, which is referenced by `update(a)`) is undefined.
+
+# `E2007`
+
+Trying to use `dt` in a continuous time (ODE) system.  This is really a special case of `E2006`, but we treat it separately because it usually means that something has gone badly with the system design.
