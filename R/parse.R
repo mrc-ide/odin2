@@ -6,8 +6,8 @@ odin_parse <- function(expr, input_type = NULL) {
 
 odin_parse_quo <- function(quo, input_type, call) {
   dat <- parse_prepare(quo, input_type, call)
+  dat$exprs <- parse_compat(dat$exprs, call)
   exprs <- lapply(dat$exprs, function(x) parse_expr(x$value, x, call = call))
-
   system <- parse_system_overall(exprs, call)
   equations <- parse_system_depends(
     system$exprs$equations, system$variables, call)

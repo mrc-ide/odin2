@@ -237,6 +237,10 @@ which is impossible.  Parameters that are differentiable need to be able to be s
 
 Probably you want to set at least one of these to `FALSE`, or omit the argument and accept the default.
 
+# `E1016`
+
+Failed to translate a `user()` expression (valid in odin before version 2) into a call to `parameter()`.  This was likely code that would not work in old odin either.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
