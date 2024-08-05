@@ -1,4 +1,4 @@
-generate_dust_sexp <- function(expr, dat, options) {
+generate_dust_sexp <- function(expr, dat, options = list()) {
   if (is.recursive(expr)) {
     fn <- as.character(expr[[1]])
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
