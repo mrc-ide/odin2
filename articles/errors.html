@@ -393,6 +393,38 @@ error will reference all the variables involved in cycle.</p>
 <p>It is possible that there is more than one cycle within the reported
 expressions.</p>
 </div>
+<div class="section level2">
+<h2 id="e2006">
+<code>E2006</code><a class="anchor" aria-label="anchor" href="#e2006"></a>
+</h2>
+<p>Undefined variable used in an equation. This error means that you
+have referenced some variable that does not exist within the odin
+system. Common reasons for this error include:</p>
+<ul>
+<li>A spelling mistake: you’ve referenced a variable that is very
+similar to the one that you meant to (we may add “did you mean support”
+in future; let us know if this would have saved you time).</li>
+<li>Trying to reference variables defined in R’s environmnent but not in
+odin. This is impossible, but you might want to make a parameter,
+perhaps.</li>
+</ul>
+<p>Example:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">initial</span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">*</span> <span class="va">r</span></span>
+<span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span></code></pre></div>
+<p>This will error because <code>v</code> (referenced by <code>r</code>,
+which is referenced by <code>update(a)</code>) is undefined.</p>
+</div>
+<div class="section level2">
+<h2 id="e2007">
+<code>E2007</code><a class="anchor" aria-label="anchor" href="#e2007"></a>
+</h2>
+<p>Trying to use <code>dt</code> in a continuous time (ODE) system. This
+is really a special case of <code>E2006</code>, but we treat it
+separately because it usually means that something has gone badly with
+the system design.</p>
+</div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>
