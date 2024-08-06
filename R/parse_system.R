@@ -262,7 +262,7 @@ parse_storage <- function(equations, phases, variables, data, call) {
 }
 
 
-parse_zero_every <- function(time, phases, variables, call) {
+parse_zero_every <- function(time, phases, equations, variables, call) {
   target <- if (time == "discrete") "update" else "deriv"
   zero_every <- lapply(phases[[target]]$variables, function(eq) {
     eq$lhs$args$zero_every
@@ -282,15 +282,45 @@ parse_zero_every <- function(time, phases, variables, call) {
   err <- !vlapply(phases$initial$variables[i], function(x) is_zero(x$rhs$expr))
   if (any(err)) {
     ## collect up the initial conditions and the update ones
-    src <- NULL
+    j <- which(i)[err]
+    eqs <- c(phases$initial$variables[j], phases[[target]]$variables[j])
+    src <- lapply(eqs, "[[", "src")
     odin_parse_error(
       "Initial condition of periodically zeroed variable must be 0",
       "E2098", src, call)
   }
 
   if (time == "continuous") {
-    ## In the case of the derivative calculation we can't reference ourselves.
+    ## In the case of the derivative calculation we can't reference
+    ## ourselves.  This is actually quite hard to get right, but
+    ## basically, and a huge amount of bookkeeping.  Bear with this,
+    ## most of the complication is only to produce a nice error
+    ## message that references the offending lines.  It might be
+    ## easier if we just put a recursive dependency list into
+    ## variables?
+    check <- variables[i]
+    used <- vlapply(equations, function(eq) {
+      any(check %in% eq$rhs$depends$variables_recursive)
+    })
+    check_all <- c(check, names(equations)[used])
+    err_used <- lapply(phases[[target]]$variables, function(eq) {
+      intersect(check_all, eq$rhs$depends$variables)
+    })
     browser()
+    if (any(lengths(err_used) > 0)) {
+      err_nms <- unique(unlist(err_used))
+      err_vars <- intersect(variables, err_nms)
+      i <- union(match(err_vars, variables),
+                 which(lengths(err_used) > 0))
+      eqs <- c(phases[[target]]$variables[i],
+               unname(equations[intersect(names(equations), err_nms)]))
+      src <- lapply(eqs, "[[", "src")
+      odin_parse_error(
+        c(paste("Can't reference a periodically zeroed variable from any",
+                "other variable, even indirectly"),
+          x = "Incorrectly used: {squote(err_vars)}"),
+        "E2097", src, call)
+    }
   }
 
   zero_every

@@ -104,3 +104,47 @@ test_that("can parse system that resets", {
   })
   expect_equal(d$zero_every, list(x = 4))
 })
+
+
+test_that("zero_reset requires that initial conditions are zero", {
+  expect_error(
+    odin_parse({
+      update(x, zero_every = 1) <- x + 1
+      initial(x) <- 1
+    }),
+    "Initial condition of periodically zeroed variable must be 0")
+})
+
+
+test_that("can parse ode system that resets", {
+  d <- odin_parse({
+    deriv(x, zero_every = 4) <- 1
+    initial(x) <- 0
+    deriv(y) <- 1
+    initial(y) <- 0
+  })
+  expect_equal(d$zero_every, list(x = 4))
+})
+
+
+test_that("can prevent use of resetting odes", {
+  expect_error(
+    odin_parse({
+      deriv(x, zero_every = 4) <- 1
+      initial(x) <- 0
+      deriv(y) <- x
+      initial(y) <- 0
+    }),
+    "Can't reference a periodically zeroed variable")
+
+  ## This does not quite produce the right error
+  expect_error(
+    odin_parse({
+      deriv(x, zero_every = 4) <- 1
+      initial(x) <- 0
+      deriv(y) <- a
+      initial(y) <- 0
+      a <- 2 * x
+    }),
+    "Can't reference a periodically zeroed variable")
+})

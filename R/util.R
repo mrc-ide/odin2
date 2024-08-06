@@ -13,6 +13,11 @@ vlapply <- function(...) {
 }
 
 
+viapply <- function(...) {
+  vapply(..., FUN.VALUE = 1L)
+}
+
+
 vcapply <- function(...) {
   vapply(..., FUN.VALUE = "")
 }

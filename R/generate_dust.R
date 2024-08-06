@@ -236,7 +236,11 @@ generate_dust_system_rhs <- function(dat) {
 
 generate_dust_system_zero_every <- function(dat) {
   args <- c("const shared_state&" = "shared")
-  body <- "return dust2::zero_every_type<real_type>();"
+  if (is.null(dat$zero_every)) {
+    body <- "return dust2::zero_every_type<real_type>();"
+  } else {
+    browser()
+  }
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 
