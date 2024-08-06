@@ -1,0 +1,23 @@
+---
+title: "Syntax"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Syntax}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette describes the odin syntax and supported functions.
+
+# General structure
+
+`odin` is a "[Domain Specific Language](https://en.wikipedia.org/wiki/Domain-specific_language)"; a mini-language that solves a specific problem; in this case representing systems of difference or differential equations.  It is syntactically R (i.e., it can be parsed with R's parser) but it is not itself R.  Only a subset of expressions and syntax are supported.
+
+Every line in `odin` code must be an **assignment** or a **relationship** (there are some minor exceptions below).
