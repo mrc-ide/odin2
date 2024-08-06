@@ -1,0 +1,144 @@
+---
+title: "Migrating from odin 1.x.x"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Migrating from odin 1.x.x}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette discusses key differences with odin version 1 (`odin1` in this document).
+
+# New features
+
+Some of these features were present in versions of `odin.dust` and many derive from underlying support in `dust2`.
+
+* Comparison to data and likelihood support (introduced in `odin.dust`)
+* Automatic differentiation
+* Fast and slow parameters
+* Multiple parameter sets at once (introduced in `odin.dust` but expanded here)
+* Run multiple copies of a system at once in parallel (introduced in `odin.dust`)
+* Better (we hope) error messages
+
+## Almost implemented
+
+* Built-in support for periodic variable resetting; this is implemented in dust2 and we just need to compile output (`mrc-5578`)
+
+## Planned
+
+* Optional array bounds checking, both during compilation and during runtime (in the latter case with a performance penalty).
+
+## Hoped
+
+* Support for multinomial samples and other vector-valued functions
+
+# Missing features
+
+This list is incomplete, and we'll expand it as we work through the tests.  We're not currently quite at MVP stage yet, so expect that most things don't work!
+
+Things we do plan on implementing:
+
+* Arrays, of any kind (`mrc-5576`)
+* Debugging print statements (only recently introduced into odin)
+* Interpolation
+* Transformation of output
+* Non-variable output from ODEs with `output()` (`mrc-5497`)
+* Delay differential equations, e.g. `y_lag <- delay(y, tau)` (`mrc-5434`)
+* Compile-time parameter substitution (`mrc-5575`)
+* Compilation to JavaScript
+* Compilation to GPU
+
+Things that we plan to drop in this version
+
+* Many details in `config()` and `options`
+
+# Changes in syntax
+
+## `user()` becomes `parameter()`
+
+This might be the largest user-visible change, and we'll add a translation system for this.
+
+Previously, to support parameters you might write
+
+```r
+a <- user(4)
+```
+
+which says that `a` is a user-supplied parameter with a default value of `4`.  In most cases this now simply becomes
+
+```r
+a <- parameter(4)
+```
+
+This translation can be done automatically in most cases, and will be done (with a warning) by default if possible.  You should update your code with the suggested fix, however, as this translation will be removed in a future version.
+
+## Discrete-time models have a more solid time basis
+
+Previously, discrete time models used `step` to count steps forward as unsigned integers, usually from zero.  Many models added a parameter (or constant) `dt` representing the timestep and then a variable `time` which represented the time as a real-valued number.  For example you might have `dt` of 0.25 and then your model stops at times `[0, 0.25, 0.5, 0.75, 1]` for steps `[0, 1, 2, 3, 4]`.
+
+We formalise this approach now having discrete time systems be explicitly in terms of the same time basis as ODE models (that is, some real valued time axis).  When you initialise a model you pass in `dt`, which must be an even divisor of 1 (so 0.5, 0.25, 0.2, etc).  We then take steps of this size.  The wrinkle is that (at least for now) the model will only return control back to you, or state back to you, at integer-valued times.  We may relax this in future to allow returning at any time value that is a multiple of `dt`.
+
+## Random number function calls have changed
+
+Previously we used the same names as R's random-number-drawing functions, for example `rbinom` for drawing from a binomial distribution.  This has changed to use the distribution name instead.
+
+The motivating reason for this change was that in odin we might write
+
+```r
+rbinom(size, prob)
+```
+
+but if you were writing this in R you would write
+
+```
+rbinom(1, size, prob)
+```
+
+with the first argument being the number of draws from the distribution in question.  This departure in arguments feels needlessly confusing!  If you were using `odin` without `odin.dust` then this did compile to a call to one of R's underlying random number functions so this connection was reasonable but from version 2 we use mcstate's parallelisable random number distributions.
+
+The mapping is:
+
+* `rbeta()` to `Beta`
+* `rbinom()` to `Binomial`
+* `rcauchy()` to `Cauchy` (unsupported for now)
+* `rchisq()` to `ChiSquared` (unsupported for now)
+* `rexp()` to `Exponential`
+* `f()` to `F` (unsupported for now)
+* `rgamma()` to `Gamma`
+* `rgeometric()` to `Geometric` (unsupported for now)
+* `rhyper()` to `Hypergeometric`
+* `rlogis()` to `Logistic` (unsupported for now)
+* `lnorm()` to `Lognormal` (unsupported for now)
+* `nbinom()` to `NegativeBinomial` (unsupported for now)
+* `norm()` to `Normal`
+* `pois()` to `Poisson`
+* `t()` to `T` (unsupported for now)
+* `unif()` to `Uniform`
+* `weibull()` to `Weibull` (unsupported for now)
+
+(Not all of these are implemented yet).
+
+## System size cannot be changed after creation
+
+This limitation comes from our implementation in `dust2` and it is possible to relax it in some settings.  However, it is fairly important for efficiently running the system within a pMCMC context where we save state periodically.
+
+If your system has a parameter that affects the number of state variables in the system (e.g., the number of age categories that a compartment is stratified by), you may not change this after initialisation.  This will be prevented by the parser once arrays are implemented.
+
+# General changes
+
+This package replaces `odin.dust` and will eventually replace `odin` (as in, we'll copy the entire `odin2` code into `odin` to become version 2.0.0 of that package).
+
+The relationship between packages has changed.  Previously `mcstate` "knew" about `dust` models and so you had to use `odin.dust` practically to use the statistical machinery in `mcstate2`.  We've changed this around now, so that `odin2` "knows" about `mcstate2` and can create sytems that will work well with `mcstate2`.  We now depend on `mcstate2`, so if you have `odin2` installed you can start working towards fitting models immediately.
+
+# Known limitations
+
+## Much slower compilation time
+
+Because we now compile to C++ via `dust2`, the compilation times have massively increased.  Previously, compilation of a simple model took less than a second, but now this will take 6 seconds or so.  You can allievate this to a degree during development by specifying `debug = TRUE` when compiling, which reduces this down to about 3 seconds.  These times are from my workstation but I expect the relative differences to hold (we're probably 10x slower than previously but can be "only" 5x slower if you turn off optimisation).  If you were previously using `odin.dust` you should notice little change here.
