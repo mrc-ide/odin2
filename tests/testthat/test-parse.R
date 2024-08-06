@@ -93,3 +93,14 @@ test_that("throw stochastic parse error sensibly", {
     deparse(quote(update(x) <- Normal(mu = 0, sd = 1))),
     fixed = TRUE)
 })
+
+
+test_that("can parse system that resets", {
+  d <- odin_parse({
+    update(x, zero_every = 4) <- x + 1
+    initial(x) <- 0
+    update(y) <- y + 1
+    initial(y) <- 0
+  })
+  expect_equal(d$zero_every, list(x = 4))
+})

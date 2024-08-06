@@ -48,9 +48,21 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   special <- NULL
   name <- NULL
 
-  if (rlang::is_call(lhs, SPECIAL_LHS)) {
+  special_def <- list(
+    initial = function(.) NULL,
+    update = function(., zero_every) NULL,
+    deriv = function(., zero_every) NULL,
+    output = function(.) NULL,
+    dim = function(.) NULL,
+    config = function(.) NULL,
+    compare = function(.) NULL)
+
+  args <- NULL
+
+  if (rlang::is_call(lhs, names(special_def))) {
     special <- deparse1(lhs[[1]])
-    if (length(lhs) != 2 || !is.null(names(lhs))) {
+    m <- match_call(lhs, special_def[[special]])
+    if (!m$success) {
       odin_parse_error(
         c("Invalid special function call",
           i = "Expected a single unnamed argument to '{special}()'"),
@@ -68,6 +80,14 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         "E1004", src, call)
     }
     lhs <- lhs[[2]]
+    if (length(m$value) > 2) {
+      args <- as.list(m$value[-(1:2)])
+      i <- !vlapply(args, rlang::is_missing)
+      args <- args[i]
+      if (length(args) == 0) {
+        args <- NULL
+      }
+    }
   }
 
   is_array <- rlang::is_call(lhs, "[")
@@ -80,7 +100,8 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 
   lhs <- list(
     name = name,
-    special = special)
+    special = special,
+    args = args)
 }
 
 

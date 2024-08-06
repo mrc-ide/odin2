@@ -260,3 +260,38 @@ parse_storage <- function(equations, phases, variables, data, call) {
        type = type,
        packing = packing)
 }
+
+
+parse_zero_every <- function(time, phases, variables, call) {
+  target <- if (time == "discrete") "update" else "deriv"
+  zero_every <- lapply(phases[[target]]$variables, function(eq) {
+    eq$lhs$args$zero_every
+  })
+  i <- !vlapply(zero_every, is.null)
+  if (!any(i)) {
+    return(NULL)
+  }
+
+  names(zero_every) <- variables
+  zero_every <- zero_every[i]
+
+  is_zero <- function(expr) {
+    identical(expr, 0) || identical(expr, 0L)
+  }
+
+  err <- !vlapply(phases$initial$variables[i], function(x) is_zero(x$rhs$expr))
+  if (any(err)) {
+    ## collect up the initial conditions and the update ones
+    src <- NULL
+    odin_parse_error(
+      "Initial condition of periodically zeroed variable must be 0",
+      "E2098", src, call)
+  }
+
+  if (time == "continuous") {
+    ## In the case of the derivative calculation we can't reference ourselves.
+    browser()
+  }
+
+  zero_every
+}
