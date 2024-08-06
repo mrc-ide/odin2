@@ -15,7 +15,8 @@ test_that("can compile a simple ode model", {
   expect_s3_class(res(), "dust_system_generator")
   expect_mapequal(res()$properties,
                   list(time_type = "continuous",
-                       has_compare = FALSE))
+                       has_compare = FALSE,
+                       has_adjoint = FALSE))
 
   pars <- list(N = 100, beta = 0.2, gamma = 0.1, I0 = 1)
   sys <- dust2::dust_system_create(res(), pars, 1)
@@ -84,7 +85,8 @@ test_that("can compile a discrete-time model that compares to data", {
   expect_s3_class(res(), "dust_system_generator")
   expect_mapequal(res()$properties,
                   list(time_type = "discrete",
-                       has_compare = TRUE))
+                       has_compare = TRUE,
+                       has_adjoint = FALSE))
 
   pars <- list(N = 1000, beta = 0.2, gamma = 0.1, I0 = 10,
                exp_noise = 1e6)

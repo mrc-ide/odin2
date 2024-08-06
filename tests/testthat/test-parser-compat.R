@@ -37,17 +37,17 @@ test_that("can translate simple user calls", {
          compat = list(type = "user", original = quote(a <- user(1)))))
   expect_error(
     parse_compat_fix_user(list(value = quote(a <- user(integer = TRUE)))),
-    "Can't translate 'user()' calls that use the 'integer' argument",
+    "Can't yet translate 'user()' calls that use the 'integer' argument",
     fixed = TRUE,
     class = "odin_parse_error")
   expect_error(
     parse_compat_fix_user(list(value = quote(a <- user(min = 0)))),
-    "Can't translate 'user()' calls that use the 'min' argument",
+    "Can't yet translate 'user()' calls that use the 'min' argument",
     fixed = TRUE,
     class = "odin_parse_error")
   expect_error(
     parse_compat_fix_user(list(value = quote(a <- user(max = 1)))),
-    "Can't translate 'user()' calls that use the 'max' argument",
+    "Can't yet translate 'user()' calls that use the 'max' argument",
     fixed = TRUE,
     class = "odin_parse_error")
 })
@@ -60,7 +60,7 @@ test_that("handle errors that occur in translated code", {
       b <- 1
       initial(x) <- 0
       update(x) <- x + a
-    }),
+    }, compatibility = "silent",),
     "Invalid default argument to 'parameter()': sqrt(b)",
     fixed = TRUE)
 
