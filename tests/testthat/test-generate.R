@@ -473,3 +473,18 @@ test_that("generate adjoint", {
       "  adjoint_next[1] = adj_a;",
       "}"))
 })
+
+
+test_that("can generate simple stochastic system", {
+  dat <- odin_parse({
+    update(x) <- Normal(x, 1)
+    initial(x) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  state_next[0] = mcstate::random::normal(rng, x, 1);",
+      "}"))
+})

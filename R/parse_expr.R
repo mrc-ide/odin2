@@ -106,8 +106,13 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   ## sure that the user correctly restricts to the right set of
   ## dependencies.  There is some faff with sum, and we detect here if
   ## the user uses anything stochastic.  We do look for the range
-  ## operator but I'm not totlaly sure that's the best place to do so.
+  ## operator but I'm not totally sure that's the best place to do so.
   depends <- find_dependencies(rhs)
+
+  ## TODO: we're going to check usage in a couple of places, but this
+  ## is the first pass.
+  rhs <- parse_expr_usage(rhs, src, call)
+
   list(type = "expression",
        expr = rhs,
        depends = depends)
@@ -251,4 +256,42 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
 parse_expr_print <- function(expr, src, call) {
   odin_parse_error(
     "'print()' is not implemented yet", "E0001", src, call)
+}
+
+
+parse_expr_usage <- function(expr, src, call) {
+  if (is.recursive(expr)) {
+    fn <- expr[[1]]
+    fn_str <- as.character(fn)
+    if (fn_str %in% FUNCTIONS_STOCHASTIC) {
+      expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
+    } else {
+      args <- lapply(expr[-1], parse_expr_usage, src, call)
+      expr <- as.call(c(list(fn), args))
+    }
+  }
+  expr
+}
+
+
+parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
+  res <- mcstate2::mcstate_dsl_parse_distribution(expr)
+  if (!res$success) {
+    odin_parse_error(res$error, "E1018", src, call)
+  }
+
+  ## Take the expectation here, in case we need to differentiate
+  ## later
+  mean <- substitute_(
+    res$value$expr$mean,
+    set_names(res$value$args, names(formals(res$value$sample))[-1]))
+
+  expr[[1]] <- call("OdinStochasticCall",
+                    sample = res$value$cpp$sample,
+                    density = res$value$cpp$density,
+                    mean = mean)
+  ## There is the small assumption here that the args don't
+  ## change?
+  expr[-1] <- res$value$args
+  expr
 }

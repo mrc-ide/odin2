@@ -1,6 +1,11 @@
 generate_dust_sexp <- function(expr, dat, options = list()) {
   if (is.recursive(expr)) {
-    fn <- as.character(expr[[1]])
+    is_stochastic_call <- rlang::is_call(expr[[1]], "OdinStochasticCall")
+    if (is_stochastic_call) {
+      fn <- expr[[1]]$sample
+    } else {
+      fn <- as.character(expr[[1]])
+    }
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
     n <- length(args)
 
@@ -27,6 +32,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## that's hard to detect so we'll tolerate a few additional
       ## parens for now.
       ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
+    } else if (is_stochastic_call) {
+      ret <- sprintf("mcstate::random::%s(rng, %s)",
+                     fn, paste(args, collapse = ", "))
     } else {
       ## TODO: we should catch this during parse; erroring here is a
       ## bug as we don't offer context.

@@ -247,6 +247,20 @@ Compatibility issues were present in the system (e.g., using `user()` instead of
 
 The error message will explain how to update your code to use new odin2 syntax.
 
+# `E1018`
+
+Failed to parse a call to a stochastic function (e.g., `Normal()`).  These errors come from `mcstate2::mcstate_dsl_parse_distribution`, typically where the function call does not match arguments for any candidate call (some distributions have multiple candidates, distinguished by argument names).
+
+Example calls that will fail:
+
+```
+* `Normal(1, 2, 3)` -- too many arguments
+* `Normal()` -- too few arguments
+* `Normal(mu = 0, sd = 1)` -- invalid argument names
+```
+
+The details for the failure will be included in the body of the error message.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

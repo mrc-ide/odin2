@@ -201,3 +201,24 @@ test_that("Reject unclassifiable expressions", {
     parse_expr(quote(a), NULL, NULL),
     "Unclassifiable expression")
 })
+
+
+test_that("can parse expressions that involve stochastics", {
+  res <- parse_expr(quote(a <- Normal(0, 1)), NULL, NULL)
+  expect_null(res$special)
+  expect_equal(res$lhs, list(name = "a"))
+  expect_identical(
+    res$rhs$expr,
+    quote(OdinStochasticCall(sample = "normal",
+                             density = "normal",
+                             mean = 0)(0, 1)))
+  expect_equal(res$rhs$depends,
+               list(functions = "Normal", variables = character()))
+})
+
+
+test_that("throw sensible error if stochastic parse fails", {
+  expect_error(
+    parse_expr(quote(a <- Normal(mu = 0, sigma = 1)), NULL, NULL),
+    "Invalid call to 'Normal()'", fixed = TRUE)
+})
