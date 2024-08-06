@@ -80,3 +80,8 @@ set_names <- function(x, nms) {
   names(x) <- nms
   x
 }
+
+
+cli_nbsp <- function(x) {
+  gsub(" ", "\u00a0", x)
+}

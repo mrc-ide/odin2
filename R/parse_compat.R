@@ -1,5 +1,12 @@
-parse_compat <- function(exprs, call) {
+parse_compat <- function(exprs, action, call) {
+  ## Things we can translate:
+  ##
+  ## user() -> parameter()
+  ## rbinom() -> Binomial() [etc]
+  ## dt -> drop
+  ## step -> time
   exprs <- lapply(exprs, parse_compat_fix_user, call)
+  parse_compat_report(exprs, action, call)
   exprs
 }
 
@@ -27,12 +34,44 @@ parse_compat_fix_user <- function(expr, call) {
       }
     }
 
+    original <- expr$value
     args <- list(as.name("parameter"))
     if (!rlang::is_missing(res$value$default)) {
       args <- c(args, list(res$value$default))
     }
     expr$value[[3]] <- as.call(args)
-    expr$compat <- list(type = "user", original = expr$value)
+    expr$compat <- list(type = "user", original = original)
   }
   expr
+}
+
+
+parse_compat_report <- function(exprs, action, call) {
+  i <- !vlapply(exprs, function(x) is.null(x$compat))
+  if (action != "silent" && any(i)) {
+    description <- c(
+      user = "Replace calls to 'user()' with 'parameter()'")
+    type <- vcapply(exprs[i], function(x) x$compat$type)
+
+    detail <- NULL
+    for (t in intersect(names(description), type)) {
+      j <- i[type == t]
+      ## Getting line numbers here is really hard, so let's just not
+      ## try for now and do this on deparsed expressions.
+      updated <- vcapply(exprs[j], function(x) deparse1(x$value))
+      original <- vcapply(exprs[j], function(x) deparse1(x$compat$original))
+      context_t <- set_names(
+        c(rbind(updated, original, deparse.level = 0)),
+        rep(c("x", "v"), length(updated)))
+      detail <- c(detail, description[[t]], cli_nbsp(context_t))
+    }
+
+    header <- "Found {sum(i)} compatibility issue{?s}"
+
+    if (action == "error") {
+      cli::cli_abort(c(header, detail), call = call)
+    } else {
+      cli::cli_warn(c(header, detail), call = call)
+    }
+  }
 }

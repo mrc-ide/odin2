@@ -12,6 +12,14 @@
 ##'   an error if the wrong type of input is given.  Using this may be
 ##'   beneficial in programmatic environments.
 ##'
+##' @param compatibility Compatibility mode to use.  Valid options are
+##'   "warning", which updates code that can be fixed, with warnings,
+##'   and "error", which will error.  The option "silent" will
+##'   silently rewrite code, but this is not recommended for general
+##'   use as eventually the compatibility mode will be removed (this
+##'   option is primarily intended for comparing output of odin1 and
+##'   odin2 models against old code).
+##'
 ##' @inheritParams dust2::dust_compile
 ##'
 ##' @return A `dust_system_generator` object, suitable for using with
@@ -19,8 +27,9 @@
 ##'
 ##' @export
 odin <- function(expr, input_type = NULL, quiet = FALSE, workdir = NULL,
-                 debug = FALSE, skip_cache = FALSE) {
-  dat <- odin_parse_quo(rlang::enquo(expr), input_type, call)
+                 debug = FALSE, skip_cache = FALSE, compatibility = "warning") {
+  call <- environment()
+  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
   code <- generate_dust_system(dat)
   tmp <- tempfile(fileext = ".cpp")
   on.exit(unlink(tmp))

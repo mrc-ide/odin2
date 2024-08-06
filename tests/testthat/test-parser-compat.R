@@ -3,12 +3,25 @@ test_that("can translate user()", {
     a <- user(1)
     initial(x) <- 0
     update(x) <- x + a
-  })
-
+  }, compatibility = "silent")
   expect_equal(d$equations$a$src$value,
                quote(a <- parameter(1)))
-  expect_equal(d$equations$a$compat,
+  expect_equal(d$equations$a$src$compat,
                list(type = "user", original = quote(a <- user(1))))
+})
+
+
+test_that("can control severity of reporting", {
+  code <- "a <- user(1)\ninitial(x) <- 0\nupdate(x) <- x + a"
+  expect_silent(odin_parse(code, compatibility = "silent"))
+  w <- expect_warning(
+    odin_parse(code, compatibility = "warning"),
+    "Found 1 compatibility issue")
+
+  e <- expect_error(
+    odin_parse(code, compatibility = "error"),
+    "Found 1 compatibility issue")
+  expect_equal(conditionMessage(e), conditionMessage(w))
 })
 
 

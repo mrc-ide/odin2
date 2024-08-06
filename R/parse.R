@@ -1,12 +1,13 @@
-odin_parse <- function(expr, input_type = NULL) {
+odin_parse <- function(expr, input_type = NULL, compatibility = "warning") {
   call <- environment()
-  odin_parse_quo(rlang::enquo(expr), input_type, call)
+  odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
 }
 
 
-odin_parse_quo <- function(quo, input_type, call) {
+odin_parse_quo <- function(quo, input_type, compatibility, call) {
+  match_value(compatibility, c("silent", "warning", "error"), call = call)
   dat <- parse_prepare(quo, input_type, call)
-  dat$exprs <- parse_compat(dat$exprs, call)
+  dat$exprs <- parse_compat(dat$exprs, compatibility, call)
   exprs <- lapply(dat$exprs, function(x) parse_expr(x$value, x, call = call))
   system <- parse_system_overall(exprs, call)
   equations <- parse_system_depends(
