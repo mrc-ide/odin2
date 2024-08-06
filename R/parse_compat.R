@@ -69,7 +69,7 @@ parse_compat_report <- function(exprs, action, call) {
     header <- "Found {sum(i)} compatibility issue{?s}"
 
     if (action == "error") {
-      cli::cli_abort(c(header, detail), call = call)
+      odin_parse_error(c(header, detail), "E1017", exprs[i], call)
     } else {
       cli::cli_warn(c(header, detail), call = call)
     }

@@ -21,7 +21,8 @@ test_that("can control severity of reporting", {
   e <- expect_error(
     odin_parse(code, compatibility = "error"),
     "Found 1 compatibility issue")
-  expect_equal(conditionMessage(e), conditionMessage(w))
+
+  expect_true(startsWith(conditionMessage(e), conditionMessage(w)))
 })
 
 

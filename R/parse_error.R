@@ -26,8 +26,8 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
     context <- unlist(lapply(cnd$src, function(x) deparse1(x$value)))
   } else {
     line <- unlist(lapply(src, function(x) seq(x$start, x$end)))
-    src <- unlist(lapply(src, "[[", "str"))
-    context <- sprintf("%s| %s", gsub(" ", "\u00a0", format(line)), src)
+    src_str <- unlist(lapply(src, "[[", "str"))
+    context <- sprintf("%s| %s", cli_nbsp(format(line)), src_str)
   }
 
   code <- cnd$code
