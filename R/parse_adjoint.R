@@ -20,8 +20,12 @@ parse_adjoint <- function(dat) {
     compare = adjoint_compare(dat, parameters, deps),
     initial = adjoint_initial(dat, parameters, deps))
 
-  ## Update storage with all this information:
+  ## Update storage with all this information
   adjoint_location <- merge_location(lapply(dat$adjoint, "[[", "location"))
+  for (nm in names(dat$adjoint)) {
+    dat$adjoint$location <- NULL
+  }
+
   dat$storage$contents$adjoint <-
     names(adjoint_location)[adjoint_location == "adjoint"]
   dat$storage$location <- c(dat$storage$location, adjoint_location)
