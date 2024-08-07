@@ -323,6 +323,28 @@ as on model creation.</p>
 or omit the argument and accept the default.</p>
 </div>
 <div class="section level2">
+<h2 id="e1016">
+<code>E1016</code><a class="anchor" aria-label="anchor" href="#e1016"></a>
+</h2>
+<p>Failed to translate a <code>user()</code> expression (valid in odin
+before version 2) into a call to <code>parameter()</code>. This was
+likely code that would not work in old odin either.</p>
+</div>
+<div class="section level2">
+<h2 id="e1017">
+<code>E1017</code><a class="anchor" aria-label="anchor" href="#e1017"></a>
+</h2>
+<p>Compatibility issues were present in the system (e.g., using
+<code>user()</code> instead of <code>parameter()</code> and the
+compatibility action was <code>"error"</code>. You can, in the short
+term, disable failure here by using
+<code>compatibility = "warning"</code> or
+<code>compatibility = "silent"</code>, but eventually this will become
+an error that is always thrown when running with old odin code.</p>
+<p>The error message will explain how to update your code to use new
+odin2 syntax.</p>
+</div>
+<div class="section level2">
 <h2 id="e2001">
 <code>E2001</code><a class="anchor" aria-label="anchor" href="#e2001"></a>
 </h2>
