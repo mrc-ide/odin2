@@ -10,12 +10,23 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ret <- sprintf("-%s", args[[1]])
     } else if (n == 1 && fn == "+") {
       ret <- args[[1]]
-    } else if (n == 2 && fn %in% c("+", "-", "*", "/")) {
+    } else if (n == 2 && fn %in% c("+", "-", "*", "/", "==")) {
       ## Some care might be needed for division in some cases.
       ret <- sprintf("%s %s %s", args[[1]], fn, args[[2]])
     } else if (fn %in% "exp") {
       ret <- sprintf("mcstate::math::%s(%s)",
                      fn, paste(args, collapse = ", "))
+    } else if (fn == "%%") {
+      ## TODO: we'll use our usual fmodr thing here once we get that
+      ## into mcstate's math library, but for now this is ok.
+      ret <- sprintf("std::fmod(%s, %s)", args[[1]], args[[2]])
+    } else if (fn == "if") {
+      ## NOTE: The ternary operator has very low precendence, so we
+      ## will agressively parenthesise it.  This is strictly not
+      ## needed when this expression is the only element of `expr` but
+      ## that's hard to detect so we'll tolerate a few additional
+      ## parens for now.
+      ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
     } else {
       ## TODO: we should catch this during parse; erroring here is a
       ## bug as we don't offer context.
@@ -29,7 +40,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else {
       location <- dat$location[[name]]
       shared_exists <- !isFALSE(options$shared_exists)
-      if (location %in% c("state", "stack", if (!shared_exists) "shared")) {
+      if (location %in% c("state", "stack", "adjoint",
+                          if (!shared_exists) "shared")) {
         ret <- name
       } else { # shared, internal, data
         ret <- sprintf("%s.%s", location, name)

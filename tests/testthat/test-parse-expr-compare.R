@@ -2,7 +2,7 @@ test_that("Can parse compare expression", {
   res <- parse_expr(quote(compare(x) ~ Normal(0, 1)), NULL, NULL)
   expect_equal(res$special, "compare")
   expect_equal(res$rhs$type, "compare")
-  expect_equal(res$rhs$distribution, "normal")
+  expect_equal(res$rhs$density$cpp, "normal")
   expect_equal(res$rhs$args, list(quote(x), 0, 1))
   expect_equal(res$rhs$depends,
                list(functions = "Normal", variables = "x"))

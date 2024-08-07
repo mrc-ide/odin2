@@ -340,11 +340,12 @@ test_that("generate stack equations during update", {
 
 
 test_that("can look up lhs for bits of data", {
-  dat <- list(storage = list(location = c(a = "stack",
-                                          b = "state",
-                                          c = "outerspace"),
-                             type = c("a" = "real", b = "real", c = "real"),
-                             packing = list(scalar = c("x", "y", "b", "z"))))
+  dat <- list(storage = list(
+                location = c(a = "stack",
+                             b = "state",
+                             c = "outerspace"),
+                type = c("a" = "real", b = "real", c = "real"),
+                packing = list(state = list(scalar = c("x", "y", "b", "z")))))
   expect_equal(
     generate_dust_lhs("a", dat, "mystate"),
     "const real a")
@@ -420,5 +421,55 @@ test_that("pull recursive dependencies into compare_data", {
       "  const real_type p = mcstate::math::exp(x);",
       "  ll += mcstate::density::poisson(data.d, p, true);",
       "  return ll;",
+      "}"))
+})
+
+
+test_that("generate adjoint", {
+  dat <- odin_parse({
+    update(x) <- x + a
+    initial(x) <- 1
+    a <- parameter(differentiate = TRUE)
+    p <- exp(x)
+    d <- data()
+    compare(d) ~ Poisson(p)
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_adjoint_size(dat),
+    c(method_args$adjoint_size,
+      "  return 2;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_adjoint_update(dat),
+    c(method_args$adjoint_update,
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
+      "  adjoint_next[0] = adj_x;",
+      "  adjoint_next[1] = adj_x + adj_a;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_adjoint_compare_data(dat),
+    c(method_args$adjoint_compare_data,
+      "  const auto x = state[0];",
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
+      "  const real_type p = mcstate::math::exp(x);",
+      "  const real_type adj_p = data.d / p - 1;",
+      "  adjoint_next[0] = adj_p * mcstate::math::exp(x) + adj_x;",
+      "  adjoint_next[1] = adj_a;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_adjoint_initial(dat),
+    c(method_args$adjoint_initial,
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
+      "  adjoint_next[0] = adj_x;",
+      "  adjoint_next[1] = adj_a;",
       "}"))
 })

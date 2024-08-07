@@ -253,7 +253,7 @@ parse_storage <- function(equations, phases, variables, data, call) {
   ## arrays, and output, and adjoints.  For now just record the
   ## locations of variables and we'll work out what index these sit at
   ## later.
-  packing <- list(scalar = variables)
+  packing <- list(state = list(scalar = variables))
 
   list(contents = contents,
        location = location,

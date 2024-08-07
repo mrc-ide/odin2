@@ -85,3 +85,14 @@ set_names <- function(x, nms) {
 cli_nbsp <- function(x) {
   gsub(" ", "\u00a0", x)
 }
+
+
+unlist0 <- function(x) {
+  unlist(x, FALSE, FALSE)
+}
+
+
+## This is definiteion possible with rlang, but I am not sure how.
+substitute_ <- function(expr, env) {
+  eval(substitute(substitute(y, env), list(y = expr)))
+}
