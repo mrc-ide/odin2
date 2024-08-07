@@ -263,7 +263,7 @@ parse_expr_usage <- function(expr, src, call) {
   if (is.recursive(expr)) {
     fn <- expr[[1]]
     fn_str <- as.character(fn)
-    if (fn_str %in% FUNCTIONS_STOCHASTIC) {
+    if (fn_str %in% mcstate2::mcstate_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
     } else {
       args <- lapply(expr[-1], parse_expr_usage, src, call)
