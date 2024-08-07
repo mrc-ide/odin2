@@ -21,12 +21,13 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   ## and say "here, this is where you are wrong" but that's not done
   ## yet...
   src <- cnd$src
+
   if (is.null(src[[1]]$str)) {
     context <- unlist(lapply(cnd$src, function(x) deparse1(x$value)))
   } else {
     line <- unlist(lapply(src, function(x) seq(x$start, x$end)))
-    src <- unlist(lapply(src, "[[", "str"))
-    context <- sprintf("%s| %s", gsub(" ", "\u00a0", format(line)), src)
+    src_str <- unlist(lapply(src, "[[", "str"))
+    context <- sprintf("%s| %s", cli_nbsp(format(line)), src_str)
   }
 
   code <- cnd$code
@@ -35,8 +36,23 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   explain <- cli::format_inline(
     "For more information, run {.run odin2::odin_error_explain(\"{code}\")}")
 
+  ## It's quite annoying to try and show the original and updated code
+  ## here at the same time so instead let's just let the user know
+  ## that things might not be totally accurate.
+  uses_compat <- !vlapply(src, function(x) is.null(x$compat))
+  if (any(uses_compat)) {
+    compat_warning <- c(
+      "!" = cli::format_inline(
+        paste("{cli::qty(length(src))}{?The expression/Expressions} above",
+              "{?has/have} been translated while updating for use with",
+              "odin2, the context may not reflect your original code.")))
+  } else {
+    compat_warning <- NULL
+  }
+
   c(">" = "Context:", context,
-    "i" = explain)
+    "i" = explain,
+    compat_warning)
 }
 
 

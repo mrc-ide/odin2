@@ -10,7 +10,8 @@ odin(
   quiet = FALSE,
   workdir = NULL,
   debug = FALSE,
-  skip_cache = FALSE
+  skip_cache = FALSE,
+  compatibility = "warning"
 )
 }
 \arguments{
@@ -40,6 +41,14 @@ debug library.}
 compiled systems should be skipped. If \code{TRUE} then your system will
 not be looked for in the cache, nor will it be added to the
 cache after compilation.}
+
+\item{compatibility}{Compatibility mode to use.  Valid options are
+"warning", which updates code that can be fixed, with warnings,
+and "error", which will error.  The option "silent" will
+silently rewrite code, but this is not recommended for general
+use as eventually the compatibility mode will be removed (this
+option is primarily intended for comparing output of odin1 and
+odin2 models against old code).}
 }
 \value{
 A \code{dust_system_generator} object, suitable for using with
