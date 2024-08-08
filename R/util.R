@@ -37,22 +37,62 @@ match_value <- function(x, choices, name = deparse(substitute(x)), arg = name,
 
 
 match_call <- function(call, fn) {
-  ## We'll probably expand on the error case here to return something
-  ## much nicer?
+  args <- names(formals(fn))
+  require_unnamed <- startsWith(args, ".")
 
-  ## TODO: it would be great to totally prevent partial matching here.
-  ## The warning emitted by R is not easily caught (no special class
-  ## for example) and neither match.call nor the rlang wrapper provide
-  ## a hook here to really pick this up.  We can look for expanded
-  ## names in the results, though that's not super obvious either
-  ## since we're also filling them in and reordering.
-  tryCatch(
+  nms_call <- names(as.list(call)[-1])
+  if (any(require_unnamed)) {
+    args <- gsub("^\\.", "", args)
+    names(formals(fn)) <- args
+    if (!is.null(nms_call)) {
+      n <- sum(require_unnamed)
+      if (any(nzchar(nms_call[seq_len(n)]))) {
+        msg <- cli::format_inline(
+          "Expected the first {n} argument{?s} to be unnamed")
+        return(list(success = FALSE,
+                    error = rlang::cnd("error", message = msg)))
+      }
+    }
+  }
+
+  res <- tryCatch(
     list(success = TRUE,
          value = rlang::call_match(call, fn, defaults = TRUE)),
     error = function(e) {
-      list(success = FALSE,
-           error = e)
+      list(success = FALSE, error = e)
     })
+
+  if (!res$success) {
+    return(res)
+  }
+
+  err_partial <- setdiff(nms_call, c(args, ""))
+  if (length(err_partial)) {
+    msg <- cli::format_inline(
+      "Argument{?s} {squote(err_partial)} were expanded by partial matching")
+    fix_partial <- vcapply(
+      err_partial, function(x) args[startsWith(args, x)])
+    detail <- sprintf("'%s' => '%s'", err_partial, fix_partial)
+    msg <- cli::format_inline(
+      "Argument{? was/s were} expanded by partial matching: {detail}")
+    return(list(success = FALSE,
+                error = rlang::cnd("error", message = msg)))
+  }
+
+  ## This checks that if an argument given in fn starts with a dot
+  ## that its (undotted) name is not used in the call.
+  if (any(require_unnamed)) {
+    err <- intersect(args[require_unnamed], names(as.list(call)[-1]))
+    if (length(err) > 0) {
+      msg <- cli::format_inline(
+        paste("Expected argument{?s} {squote(err)}",
+              "to be unnamed and used first in thoe call"))
+      return(list(success = FALSE,
+                  error = rlang::cnd("error", message = msg)))
+    }
+  }
+
+  res
 }
 
 
