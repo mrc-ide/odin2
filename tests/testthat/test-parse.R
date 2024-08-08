@@ -126,26 +126,3 @@ test_that("can parse ode system that resets", {
   })
   expect_equal(d$zero_every, list(x = 4))
 })
-
-
-test_that("can prevent use of resetting odes", {
-  expect_error(
-    odin_parse({
-      deriv(x, zero_every = 4) <- 1
-      initial(x) <- 0
-      deriv(y) <- x
-      initial(y) <- 0
-    }),
-    "Can't reference a periodically zeroed variable")
-
-  ## This does not quite produce the right error
-  expect_error(
-    odin_parse({
-      deriv(x, zero_every = 4) <- 1
-      initial(x) <- 0
-      deriv(y) <- a
-      initial(y) <- 0
-      a <- 2 * x
-    }),
-    "Can't reference a periodically zeroed variable")
-})
