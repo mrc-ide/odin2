@@ -78,3 +78,18 @@ test_that("throw error with context where source code unavailable", {
     "Context:\nb <- parameter(invalid = TRUE)",
     fixed = TRUE)
 })
+
+
+test_that("throw stochastic parse error sensibly", {
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- Normal(mu = 0, sd = 1)
+    }),
+    "Invalid call to 'Normal()'",
+    fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    deparse(quote(update(x) <- Normal(mu = 0, sd = 1))),
+    fixed = TRUE)
+})
