@@ -485,6 +485,6 @@ test_that("can generate simple stochastic system", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  state_next[0] = mcstate::random::normal(rng, x, 1);",
+      "  state_next[0] = mcstate::random::normal(rng_state, x, 1);",
       "}"))
 })

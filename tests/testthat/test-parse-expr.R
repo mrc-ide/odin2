@@ -231,8 +231,8 @@ test_that("can parse compound expressions that involve stochastics", {
                              density = NULL,
                              mean = n * p)(n, p)))
   expect_equal(res$rhs$depends,
-               list(functions = c("Normal", "Binomial"),
-                    variables = character("n", "p")))
+               list(functions = c("+", "Normal", "Binomial"),
+                    variables = c("n", "p")))
   expect_true(res$rhs$is_stochastic)
 
   expect_identical(rewrite_stochastic_to_expectation(res$rhs$expr),
