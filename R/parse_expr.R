@@ -49,13 +49,13 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   name <- NULL
 
   special_def <- list(
-    initial = function(.) NULL,
-    update = function(., zero_every) NULL,
-    deriv = function(., zero_every) NULL,
-    output = function(.) NULL,
-    dim = function(.) NULL,
-    config = function(.) NULL,
-    compare = function(.) NULL)
+    initial = function(.name) NULL,
+    update = function(.name, zero_every) NULL,
+    deriv = function(.name, zero_every) NULL,
+    output = function(.name) NULL,
+    dim = function(.name) NULL,
+    config = function(.name) NULL,
+    compare = function(.name) NULL)
 
   args <- NULL
 

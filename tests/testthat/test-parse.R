@@ -52,6 +52,7 @@ test_that("throw error with context", {
   expect_equal(
     err$src,
     list(list(value = quote(b <- parameter(invalid = TRUE)),
+              index = 3,
               start = 3,
               end = 3,
               str = c("b<-parameter(invalid=TRUE)"))))
