@@ -44,7 +44,7 @@ test_that("require that special calls are (currently) simple", {
   expect_error(
     parse_expr(quote(initial() <- 1), NULL, NULL),
     "Invalid special function call")
-  expect_error(
+  err <- expect_error(
     parse_expr(quote(initial(x = 1) <- 1), NULL, NULL),
     "Invalid special function call")
 })

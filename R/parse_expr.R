@@ -58,16 +58,22 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     compare = function(name) NULL)
 
   args <- NULL
-
   if (rlang::is_call(lhs, names(special_def))) {
     special <- deparse1(lhs[[1]])
     m <- match_call(lhs, special_def[[special]])
     if (!m$success) {
-      odin_parse_error(
-        c("Invalid special function call",
-          i = "Expected a single unnamed argument to '{special}()'"),
+      odin_parse_error(c("Invalid special function call",
+                         x = conditionMessage(m$error)),
         "E1003", src, call)
     }
+    if (rlang::is_missing(m$value$name)) {
+      odin_parse_error(
+        c("Invalid special function call",
+          i = paste("Missing target for '{special}()', typically the first",
+                    "(unnamed) argument")),
+        "E1003", src, call)
+    }
+
     if (special == "compare") {
       ## TODO: a good candidate for pointing at the source location of
       ## the error.
@@ -100,8 +106,13 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 
   lhs <- list(
     name = name,
-    special = special,
-    args = args)
+    special = special)
+
+  if (!is.null(args)) {
+    lhs$args <- args
+  }
+
+  lhs
 }
 
 
