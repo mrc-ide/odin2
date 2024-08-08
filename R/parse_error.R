@@ -20,7 +20,7 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   ## TODO: later, we might want to point at specific bits of the error
   ## and say "here, this is where you are wrong" but that's not done
   ## yet...
-  src <- cnd$src[order(viapply(cnd$src, "[[", "index"))]
+  src <- cnd$src[order(viapply(cnd$src, function(x) x$index %||% 1L))]
 
   if (is.null(src[[1]]$str)) {
     context <- unlist(lapply(src, function(x) deparse1(x$value)))
