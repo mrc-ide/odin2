@@ -22,7 +22,7 @@ test_that("can compile a simple ode model", {
   sys <- dust2::dust_system_create(res(), pars, 1)
   expect_s3_class(sys, "dust_system")
   dust2::dust_system_set_state_initial(sys)
-  expect_equal(dust2::dust_system_state(sys), cbind(c(99, 1, 0)))
+  expect_equal(dust2::dust_system_state(sys), c(99, 1, 0))
 
   dust2::dust_system_run_to_time(sys, 10)
   s <- dust2::dust_system_state(sys)
@@ -34,7 +34,7 @@ test_that("can compile a simple ode model", {
     dust2::dust_system_state(sys)
   })
 
-  expect_equal(s, cmp[1:3, , drop = FALSE])
+  expect_equal(s, cmp[1:3])
 })
 
 
@@ -95,7 +95,7 @@ test_that("can compile a discrete-time model that compares to data", {
   sys <- dust2::dust_system_create(res(), pars, 1, deterministic = TRUE)
   expect_s3_class(sys, "dust_system")
   dust2::dust_system_set_state_initial(sys)
-  expect_equal(dust2::dust_system_state(sys), cbind(c(990, 10, 0, 0, 0)))
+  expect_equal(dust2::dust_system_state(sys), c(990, 10, 0, 0, 0))
 
   dust2::dust_system_run_to_time(sys, 10)
   state <- dust2::dust_system_state(sys)
