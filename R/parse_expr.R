@@ -36,6 +36,22 @@ parse_expr_assignment <- function(expr, src, call) {
     special <- "parameter"
   }
 
+  if (identical(special, "initial")) {
+    zero_every <- lhs$args$zero_every
+    if (!rlang::is_missing(zero_every) && !is.null(zero_every)) {
+      if (!rlang::is_integerish(zero_every)) {
+        odin_parse_error(
+          "Argument to 'zero_every' must be an integer",
+          "E1099", src, call)
+      }
+      if (!(identical(rhs$expr, 0) || identical(rhs$expr, 0L))) {
+        odin_parse_error(
+          "Initial condition of periodically zeroed variable must be 0",
+          "E1099", src, call)
+      }
+    }
+  }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -49,9 +65,9 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   name <- NULL
 
   special_def <- list(
-    initial = function(name) NULL,
-    update = function(name, zero_every) NULL,
-    deriv = function(name, zero_every) NULL,
+    initial = function(name, zero_every) NULL,
+    update = function(name) NULL,
+    deriv = function(name) NULL,
     output = function(name) NULL,
     dim = function(name) NULL,
     config = function(name) NULL,

@@ -263,8 +263,7 @@ parse_storage <- function(equations, phases, variables, data, call) {
 
 
 parse_zero_every <- function(time, phases, equations, variables, call) {
-  target <- if (time == "discrete") "update" else "deriv"
-  zero_every <- lapply(phases[[target]]$variables, function(eq) {
+  zero_every <- lapply(phases$initial$variables, function(eq) {
     eq$lhs$args$zero_every
   })
   i <- !vlapply(zero_every, is.null)
@@ -277,17 +276,6 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
 
   is_zero <- function(expr) {
     identical(expr, 0) || identical(expr, 0L)
-  }
-
-  err <- !vlapply(phases$initial$variables[i], function(x) is_zero(x$rhs$expr))
-  if (any(err)) {
-    ## collect up the initial conditions and the update ones
-    j <- which(i)[err]
-    eqs <- c(phases$initial$variables[j], phases[[target]]$variables[j])
-    src <- lapply(eqs, "[[", "src")
-    odin_parse_error(
-      "Initial condition of periodically zeroed variable must be 0",
-      "E2098", src, call)
   }
 
   ## If time is continuous, we should also check that the reset

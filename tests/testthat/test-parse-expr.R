@@ -39,7 +39,7 @@ test_that("allow calls on lhs", {
 
 test_that("require that special calls are (currently) simple", {
   expect_error(
-    parse_expr(quote(initial(x, TRUE) <- 1), NULL, NULL),
+    parse_expr(quote(update(x, TRUE) <- 1), NULL, NULL),
     "Invalid special function call")
   expect_error(
     parse_expr(quote(initial() <- 1), NULL, NULL),

@@ -508,8 +508,8 @@ test_that("can generate nontrivial zero_every method", {
   dat <- odin_parse({
     update(x) <- 0
     initial(x) <- 0
-    update(y, zero_every = 4) <- 1
-    initial(y) <- 0
+    update(y) <- 1
+    initial(y, zero_every = 4) <- 0
   })
   dat <- generate_prepare(dat)
   expect_equal(

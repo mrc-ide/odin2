@@ -98,8 +98,8 @@ test_that("throw stochastic parse error sensibly", {
 
 test_that("can parse system that resets", {
   d <- odin_parse({
-    update(x, zero_every = 4) <- x + 1
-    initial(x) <- 0
+    update(x) <- x + 1
+    initial(x, zero_every = 4) <- 0
     update(y) <- y + 1
     initial(y) <- 0
   })
@@ -110,17 +110,33 @@ test_that("can parse system that resets", {
 test_that("zero_reset requires that initial conditions are zero", {
   expect_error(
     odin_parse({
-      update(x, zero_every = 1) <- x + 1
-      initial(x) <- 1
+      update(x) <- x + 1
+      initial(x, zero_every = 1) <- 1
     }),
     "Initial condition of periodically zeroed variable must be 0")
 })
 
 
+test_that("zero_reset requires an integer argument", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + 1
+      initial(x, zero_every = 1.4) <- 1
+    }),
+    "Argument to 'zero_every' must be an integer")
+  expect_error(
+    odin_parse({
+      update(x) <- x + 1
+      initial(x, zero_every = a) <- 1
+    }),
+    "Argument to 'zero_every' must be an integer")
+})
+
+
 test_that("can parse ode system that resets", {
   d <- odin_parse({
-    deriv(x, zero_every = 4) <- 1
-    initial(x) <- 0
+    deriv(x) <- 1
+    initial(x, zero_every = 4) <- 0
     deriv(y) <- 1
     initial(y) <- 0
   })
