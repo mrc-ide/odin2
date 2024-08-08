@@ -488,3 +488,33 @@ test_that("can generate simple stochastic system", {
       "  state_next[0] = mcstate::random::normal(rng_state, x, 1);",
       "}"))
 })
+
+
+test_that("can generate empty zero_every method", {
+  dat <- odin_parse({
+    update(x) <- 0
+    initial(x) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  return dust2::zero_every_type<real_type>();",
+      "}"))
+})
+
+
+test_that("can generate nontrivial zero_every method", {
+  dat <- odin_parse({
+    update(x) <- 0
+    initial(x) <- 0
+    update(y, zero_every = 4) <- 1
+    initial(y) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  return dust2::zero_every_type<real_type>{{4, {1}}};",
+      "}"))
+})

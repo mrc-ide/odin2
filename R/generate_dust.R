@@ -239,7 +239,11 @@ generate_dust_system_zero_every <- function(dat) {
   if (is.null(dat$zero_every)) {
     body <- "return dust2::zero_every_type<real_type>();"
   } else {
-    browser()
+    index <- match(names(dat$zero_every), dat$variables) - 1
+    every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
+                     USE.NAMES = FALSE)
+    str <- paste(sprintf("{%s, {%s}}", every, index), collapse = ", ")
+    body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
   }
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
