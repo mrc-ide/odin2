@@ -345,6 +345,23 @@ an error that is always thrown when running with old odin code.</p>
 odin2 syntax.</p>
 </div>
 <div class="section level2">
+<h2 id="e1018">
+<code>E1018</code><a class="anchor" aria-label="anchor" href="#e1018"></a>
+</h2>
+<p>Failed to parse a call to a stochastic function (e.g.,
+<code>Normal()</code>). These errors come from
+<code><a href="https://mrc-ide.github.io/orderly2/reference/mcstate_dsl_parse_distribution.html" class="external-link">mcstate2::mcstate_dsl_parse_distribution</a></code>, typically where
+the function call does not match arguments for any candidate call (some
+distributions have multiple candidates, distinguished by argument
+names).</p>
+<p>Example calls that will fail:</p>
+<pre><code>* `Normal(1, 2, 3)` -- too many arguments
+* `Normal()` -- too few arguments
+* `Normal(mu = 0, sd = 1)` -- invalid argument names</code></pre>
+<p>The details for the failure will be included in the body of the error
+message.</p>
+</div>
+<div class="section level2">
 <h2 id="e2001">
 <code>E2001</code><a class="anchor" aria-label="anchor" href="#e2001"></a>
 </h2>
@@ -398,14 +415,14 @@ highlight all lines that might be involved in the error.</p>
 <p>Cyclic dependency detected within equations. There are a few ways
 this can happen. The simplest is that your equation references itself,
 for example:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
 <p>Unlike in R, this is disallowed, as each variable may only be
 assigned to once within the target function of your system. Each
 assignment is much more like mathematical equation than usual
 programming statements.</p>
 <p>You can get more complicated cycles, for example:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">c</span> <span class="op">/</span> <span class="fl">2</span></span>
 <span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span>
 <span><span class="va">c</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
@@ -431,7 +448,7 @@ odin. This is impossible, but you might want to make a parameter,
 perhaps.</li>
 </ul>
 <p>Example:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">initial</span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">*</span> <span class="va">r</span></span>
 <span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span></code></pre></div>

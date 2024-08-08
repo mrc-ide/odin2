@@ -3,7 +3,7 @@ pkgdown: 2.1.0
 pkgdown_sha: ~
 articles:
   errors: errors.html
-last_built: 2024-08-07T13:48Z
+last_built: 2024-08-08T13:08Z
 urls:
   reference: https://mrc-ide.github.io/dust2/reference
   article: https://mrc-ide.github.io/dust2/articles
