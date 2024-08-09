@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+set.seed(1)
 ```
 
 **WARNING**: The concepts here are stable, but some of the interface will change, in particular function names.
@@ -149,6 +150,8 @@ So even a relatively small difference in a parameter leads to a difference in th
 # Inference with particle MCMC (pMCMC)
 
 We can use MCMC to explore this model, but to do this we will need a prior.  We'll use [mcstate2's DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html) to create one; this looks similar to the odin code above:
+
+<!-- This set of priors gives us issues with non-finite starting values, sometimes -->
 
 ```{r}
 prior <- mcstate2::mcstate_dsl({
