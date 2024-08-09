@@ -48,7 +48,7 @@ n_{IR} &\sim \mathrm{Binomial}(I, 1 - e^{-\gamma \cdot dt})
 Here is this system, as a stochastic compartmental model:
 
 ```{r}
-gen <- odin({
+gen <- odin2::odin({
   p_IR <- 1 - exp(-gamma * dt)
   N <- parameter(1000)
 
@@ -109,7 +109,7 @@ https://forum.posit.co/t/highlight-one-line-in-a-code-chunk/178046/5
 -->
 
 ```{r}
-gen <- odin({
+gen <- odin2::odin({
   p_IR <- 1 - exp(-gamma * dt)
   N <- parameter(1000)
 
