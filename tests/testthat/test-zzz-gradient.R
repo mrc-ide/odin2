@@ -30,10 +30,10 @@ test_that("can compute gradient", {
                        has_adjoint = TRUE))
 
   time_start <- 0
-  time <- c(4, 8, 12, 16)
-  data <- lapply(1:4, function(i) list(cases_observed = i))
+  data <- data.frame(time = c(4, 8, 12, 16),
+                     cases_observed = 1:4)
 
-  obj <- dust2::dust_unfilter_create(sir(), time_start, time, data)
+  obj <- dust2::dust_unfilter_create(sir(), time_start, data)
   x <- c(beta = 0.1, gamma = 0.2, I0 = 10)
   ll <- dust2::dust_unfilter_run(obj, as.list(x), adjoint = TRUE)
   gr <- dust2::dust_unfilter_last_gradient(obj)
