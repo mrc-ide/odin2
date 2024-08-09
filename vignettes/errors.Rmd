@@ -2,7 +2,7 @@
 title: "Odin parse errors"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Odin Parse Errors}
+  %\VignetteIndexEntry{Odin parse errors}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
