@@ -362,6 +362,32 @@ names).</p>
 message.</p>
 </div>
 <div class="section level2">
+<h2 id="e1019">
+<code>E1019</code><a class="anchor" aria-label="anchor" href="#e1019"></a>
+</h2>
+<p>Invalid value for the <code>zero_every</code> argument to
+<code>initial()</code>. At present, this must be a literal value, and
+that value must be an integer-like number (e.g., 2 or 2L). We may relax
+this in future to allow more flexibility (e.g., a variable which
+contains an integer-like number).</p>
+<p>Examples that would error</p>
+<pre><code><span><span class="fu">initial</span><span class="op">(</span><span class="va">x</span>, zero_every <span class="op">=</span> <span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span><span class="fu">initial</span><span class="op">(</span><span class="va">y</span>, zero_every <span class="op">=</span> <span class="fl">2.5</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">0</span></span></code></pre>
+</div>
+<div class="section level2">
+<h2 id="e1020">
+<code>E1020</code><a class="anchor" aria-label="anchor" href="#e1020"></a>
+</h2>
+<p>The right hand side of a call to <code>initial()</code> that uses the
+<code>zero_every</code> argument was not 0, but it must be. Because we
+periodically reset values to zero, any initial condition other than zero
+makes no sense. See <a href="https://mrc-ide.github.io/dust2/articles/periodic.html">the
+<code>dust2</code> docs on periodic variables</a> for details.</p>
+<p>Examples that would error</p>
+<pre><code><span><span class="fu">initial</span><span class="op">(</span><span class="va">x</span>, zero_every <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">10</span></span>
+<span><span class="fu">initial</span><span class="op">(</span><span class="va">x</span>, zero_every <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">a</span></span></code></pre>
+</div>
+<div class="section level2">
 <h2 id="e2001">
 <code>E2001</code><a class="anchor" aria-label="anchor" href="#e2001"></a>
 </h2>
@@ -415,14 +441,14 @@ highlight all lines that might be involved in the error.</p>
 <p>Cyclic dependency detected within equations. There are a few ways
 this can happen. The simplest is that your equation references itself,
 for example:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
 <p>Unlike in R, this is disallowed, as each variable may only be
 assigned to once within the target function of your system. Each
 assignment is much more like mathematical equation than usual
 programming statements.</p>
 <p>You can get more complicated cycles, for example:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="va">c</span> <span class="op">/</span> <span class="fl">2</span></span>
 <span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span></span>
 <span><span class="va">c</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">+</span> <span class="fl">1</span></span></code></pre></div>
@@ -448,7 +474,7 @@ odin. This is impossible, but you might want to make a parameter,
 perhaps.</li>
 </ul>
 <p>Example:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">initial</span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/update.html" class="external-link">update</a></span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">a</span> <span class="op">*</span> <span class="va">r</span></span>
 <span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span></code></pre></div>
