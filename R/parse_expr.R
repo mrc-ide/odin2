@@ -42,12 +42,12 @@ parse_expr_assignment <- function(expr, src, call) {
       if (!rlang::is_integerish(zero_every)) {
         odin_parse_error(
           "Argument to 'zero_every' must be an integer",
-          "E1099", src, call)
+          "E1019", src, call)
       }
       if (!(identical(rhs$expr, 0) || identical(rhs$expr, 0L))) {
         odin_parse_error(
           "Initial condition of periodically zeroed variable must be 0",
-          "E1099", src, call)
+          "E1020", src, call)
       }
     }
   }
