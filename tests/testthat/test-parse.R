@@ -52,6 +52,7 @@ test_that("throw error with context", {
   expect_equal(
     err$src,
     list(list(value = quote(b <- parameter(invalid = TRUE)),
+              index = 3,
               start = 3,
               end = 3,
               str = c("b<-parameter(invalid=TRUE)"))))
@@ -92,4 +93,52 @@ test_that("throw stochastic parse error sensibly", {
     conditionMessage(err),
     deparse(quote(update(x) <- Normal(mu = 0, sd = 1))),
     fixed = TRUE)
+})
+
+
+test_that("can parse system that resets", {
+  d <- odin_parse({
+    update(x) <- x + 1
+    initial(x, zero_every = 4) <- 0
+    update(y) <- y + 1
+    initial(y) <- 0
+  })
+  expect_equal(d$zero_every, list(x = 4))
+})
+
+
+test_that("zero_reset requires that initial conditions are zero", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + 1
+      initial(x, zero_every = 1) <- 1
+    }),
+    "Initial condition of periodically zeroed variable must be 0")
+})
+
+
+test_that("zero_reset requires an integer argument", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + 1
+      initial(x, zero_every = 1.4) <- 1
+    }),
+    "Argument to 'zero_every' must be an integer")
+  expect_error(
+    odin_parse({
+      update(x) <- x + 1
+      initial(x, zero_every = a) <- 1
+    }),
+    "Argument to 'zero_every' must be an integer")
+})
+
+
+test_that("can parse ode system that resets", {
+  d <- odin_parse({
+    deriv(x) <- 1
+    initial(x, zero_every = 4) <- 0
+    deriv(y) <- 1
+    initial(y) <- 0
+  })
+  expect_equal(d$zero_every, list(x = 4))
 })

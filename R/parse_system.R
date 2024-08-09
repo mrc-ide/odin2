@@ -260,3 +260,27 @@ parse_storage <- function(equations, phases, variables, data, call) {
        type = type,
        packing = packing)
 }
+
+
+parse_zero_every <- function(time, phases, equations, variables, call) {
+  zero_every <- lapply(phases$initial$variables, function(eq) {
+    eq$lhs$args$zero_every
+  })
+  i <- !vlapply(zero_every, is.null)
+  if (!any(i)) {
+    return(NULL)
+  }
+
+  names(zero_every) <- variables
+  zero_every <- zero_every[i]
+
+  is_zero <- function(expr) {
+    identical(expr, 0) || identical(expr, 0L)
+  }
+
+  ## If time is continuous, we should also check that the reset
+  ## variables don't reference any other variables, even indirectly;
+  ## do this as mrc-5615.
+
+  zero_every
+}

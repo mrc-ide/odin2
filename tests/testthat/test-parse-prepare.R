@@ -124,8 +124,8 @@ test_that("can load code from an expression", {
     parse_prepare(quo, NULL, NULL),
     list(type = "expression",
          filename = NULL,
-         exprs = list(list(value = quote(a <- 1)),
-                      list(value = quote(b <- 2)))))
+         exprs = list(list(value = quote(a <- 1), index = 1),
+                      list(value = quote(b <- 2), index = 2))))
 })
 
 
@@ -155,10 +155,12 @@ test_that("can read expressions from file", {
     list(type = "file",
          filename = path,
          exprs = list(list(value = quote(a <- 1),
+                           index = 1,
                            start = 1,
                            end = 1,
                            str = "a <- 1"),
                       list(value = quote(b <- 2),
+                           index = 2,
                            start = 2,
                            end = 2,
                            str = "b <- 2"))))
@@ -172,10 +174,12 @@ test_that("can read expressions from file", {
     list(type = "text",
          filename = NULL,
          exprs = list(list(value = quote(a <- 1),
+                           index = 1,
                            start = 1,
                            end = 1,
                            str = "a <- 1"),
                       list(value = quote(b <- 2),
+                           index = 2,
                            start = 2,
                            end = 2,
                            str = "b <- 2"))))

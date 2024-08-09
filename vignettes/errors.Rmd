@@ -261,6 +261,28 @@ Example calls that will fail:
 
 The details for the failure will be included in the body of the error message.
 
+# `E1019`
+
+Invalid value for the `zero_every` argument to `initial()`.  At present, this must be a literal value, and that value must be an integer-like number (e.g., 2 or 2L).  We may relax this in future to allow more flexibility (e.g., a variable which contains an integer-like number).
+
+Examples that would error
+
+```
+initial(x, zero_every = a) <- 0
+initial(y, zero_every = 2.5) <- 0
+```
+
+# `E1020`
+
+The right hand side of a call to `initial()` that uses the `zero_every` argument was not 0, but it must be. Because we periodically reset values to zero, any initial condition other than zero makes no sense.  See [the `dust2` docs on periodic variables](https://mrc-ide.github.io/dust2/articles/periodic.html) for details.
+
+Examples that would error
+
+```
+initial(x, zero_every = 1) <- 10
+initial(x, zero_every = 1) <- a
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

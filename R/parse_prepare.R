@@ -14,7 +14,10 @@ parse_prepare <- function(quo, input_type, call) {
         "Expected 'expr' to be a multiline expression within curly braces",
         arg = "expr", call = call)
     }
-    exprs <- lapply(as.list(info$value[-1]), function(x) list(value = x))
+    exprs <- as.list(info$value[-1])
+    exprs <- Map(list,
+                 value = exprs,
+                 index = seq_along(exprs))
   } else {
     if (info$type == "file") {
       filename <- info$value
@@ -31,6 +34,7 @@ parse_prepare <- function(quo, input_type, call) {
     })
     exprs <- Map(list,
                  value = as.list(exprs),
+                 index = seq_along(exprs),
                  start = start,
                  end = end,
                  str = src_str)

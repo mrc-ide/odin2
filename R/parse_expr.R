@@ -36,6 +36,22 @@ parse_expr_assignment <- function(expr, src, call) {
     special <- "parameter"
   }
 
+  if (identical(special, "initial")) {
+    zero_every <- lhs$args$zero_every
+    if (!rlang::is_missing(zero_every) && !is.null(zero_every)) {
+      if (!rlang::is_integerish(zero_every)) {
+        odin_parse_error(
+          "Argument to 'zero_every' must be an integer",
+          "E1019", src, call)
+      }
+      if (!(identical(rhs$expr, 0) || identical(rhs$expr, 0L))) {
+        odin_parse_error(
+          "Initial condition of periodically zeroed variable must be 0",
+          "E1020", src, call)
+      }
+    }
+  }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -48,14 +64,32 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   special <- NULL
   name <- NULL
 
-  if (rlang::is_call(lhs, SPECIAL_LHS)) {
+  special_def <- list(
+    initial = function(name, zero_every) NULL,
+    update = function(name) NULL,
+    deriv = function(name) NULL,
+    output = function(name) NULL,
+    dim = function(name) NULL,
+    config = function(name) NULL,
+    compare = function(name) NULL)
+
+  args <- NULL
+  if (rlang::is_call(lhs, names(special_def))) {
     special <- deparse1(lhs[[1]])
-    if (length(lhs) != 2 || !is.null(names(lhs))) {
-      odin_parse_error(
-        c("Invalid special function call",
-          i = "Expected a single unnamed argument to '{special}()'"),
+    m <- match_call(lhs, special_def[[special]])
+    if (!m$success) {
+      odin_parse_error(c("Invalid special function call",
+                         x = conditionMessage(m$error)),
         "E1003", src, call)
     }
+    if (rlang::is_missing(m$value$name)) {
+      odin_parse_error(
+        c("Invalid special function call",
+          i = paste("Missing target for '{special}()', typically the first",
+                    "(unnamed) argument")),
+        "E1003", src, call)
+    }
+
     if (special == "compare") {
       ## TODO: a good candidate for pointing at the source location of
       ## the error.
@@ -68,6 +102,14 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         "E1004", src, call)
     }
     lhs <- lhs[[2]]
+    if (length(m$value) > 2) {
+      args <- as.list(m$value[-(1:2)])
+      i <- !vlapply(args, rlang::is_missing)
+      args <- args[i]
+      if (length(args) == 0) {
+        args <- NULL
+      }
+    }
   }
 
   is_array <- rlang::is_call(lhs, "[")
@@ -81,6 +123,12 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   lhs <- list(
     name = name,
     special = special)
+
+  if (!is.null(args)) {
+    lhs$args <- args
+  }
+
+  lhs
 }
 
 

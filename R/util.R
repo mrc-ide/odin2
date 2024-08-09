@@ -13,6 +13,11 @@ vlapply <- function(...) {
 }
 
 
+viapply <- function(...) {
+  vapply(..., FUN.VALUE = 1L)
+}
+
+
 vcapply <- function(...) {
   vapply(..., FUN.VALUE = "")
 }
@@ -31,6 +36,7 @@ match_value <- function(x, choices, name = deparse(substitute(x)), arg = name,
 }
 
 
+## See mrc-5614 for ideas about improving this, for later.
 match_call <- function(call, fn) {
   ## We'll probably expand on the error case here to return something
   ## much nicer?
