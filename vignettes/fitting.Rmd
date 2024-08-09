@@ -106,11 +106,11 @@ sir <- odin2::odin({
 
   # Comparison to data
   cases <- data()
-  compare(cases) ~ Poisson(n_SI)
+  compare(cases) ~ Poisson(incidence)
 }, debug = TRUE)
 ```
 
-These last two lines are the new addition to the odin code.  The first says that `cases` will be found in the data.  The second restates our aim from the previous paragraph.  The syntax here is designed to echo that of the [`mcstate2` DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html), though (at least for now) we use `compare()` on the left side to make this clearer.
+These last two lines are the new addition to the odin code.  The first says that `cases` will be found in the data.  The second restates our aim from the previous paragraph, comparing the observed `cases` against modelled `incidence`.  The syntax here is designed to echo that of the [`mcstate2` DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html), though (at least for now) we use `compare()` on the left side to make this clearer.
 
 With this version of the model we can compute likelihoods with `dust2`'s machinery.
 
