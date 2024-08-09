@@ -94,7 +94,14 @@ generate_dust_system_build_shared <- function(dat) {
   for (eq in dat$equations[eqs]) {
     lhs <- eq$lhs$name
     if (eq$rhs$type == "parameter") {
-      rhs <- sprintf('dust2::r::read_real(parameters, "%s")', lhs)
+      if (is.null(eq$rhs$args$default)) {
+        rhs <- sprintf('dust2::r::read_real(parameters, "%s")', lhs)
+      } else {
+        default <- generate_dust_sexp(
+          eq$rhs$args$default, dat$sexp_data, options)
+        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
+                       lhs, default)
+      }
     } else {
       rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
     }
