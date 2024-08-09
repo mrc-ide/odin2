@@ -12,7 +12,13 @@ reference:
       - odin_error_explain
 
 articles:
+  - title: Basics
+    navbar: Basics
+    contents:
+      - fitting
   - title: Details
     navbar: Details
     contents:
       - errors
+      - migrating
+      - syntax
