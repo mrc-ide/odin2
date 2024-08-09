@@ -112,9 +112,12 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   ## TODO: we're going to check usage in a couple of places, but this
   ## is the first pass.
   rhs <- parse_expr_usage(rhs, src, call)
+  is_stochastic <- any(
+    depends$functions %in% mcstate2::mcstate_dsl_distributions()$name)
 
   list(type = "expression",
        expr = rhs,
+       is_stochastic = is_stochastic,
        depends = depends)
 }
 
@@ -282,16 +285,30 @@ parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
 
   ## Take the expectation here, in case we need to differentiate
   ## later
+  args <- lapply(res$value$args, parse_expr_usage, src, call)
   mean <- substitute_(
     res$value$expr$mean,
-    set_names(res$value$args, names(formals(res$value$sample))[-1]))
+    set_names(lapply(args, rewrite_stochastic_to_expectation),
+              names(formals(res$value$sample))[-1]))
 
   expr[[1]] <- call("OdinStochasticCall",
                     sample = res$value$cpp$sample,
                     density = res$value$cpp$density,
                     mean = mean)
-  ## There is the small assumption here that the args don't
-  ## change?
-  expr[-1] <- res$value$args
+  expr[-1] <- args
   expr
+}
+
+
+rewrite_stochastic_to_expectation <- function(expr) {
+  if (is.recursive(expr)) {
+    if (rlang::is_call(expr[[1]], "OdinStochasticCall")) {
+      expr[[1]]$mean
+    } else {
+      expr[-1] <- lapply(expr[-1], rewrite_stochastic_to_expectation)
+      expr
+    }
+  } else {
+    expr
+  }
 }

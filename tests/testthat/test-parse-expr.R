@@ -217,6 +217,40 @@ test_that("can parse expressions that involve stochastics", {
 })
 
 
+test_that("can parse compound expressions that involve stochastics", {
+  res <- parse_expr(quote(a <- Normal(0, 1) + Binomial(n, p)), NULL, NULL)
+
+  expect_identical(
+    res$rhs$expr[[2]],
+    quote(OdinStochasticCall(sample = "normal",
+                             density = "normal",
+                             mean = 0)(0, 1)))
+  expect_identical(
+    res$rhs$expr[[3]],
+    quote(OdinStochasticCall(sample = "binomial",
+                             density = NULL,
+                             mean = n * p)(n, p)))
+  expect_equal(res$rhs$depends,
+               list(functions = c("+", "Normal", "Binomial"),
+                    variables = c("n", "p")))
+  expect_true(res$rhs$is_stochastic)
+
+  expect_identical(rewrite_stochastic_to_expectation(res$rhs$expr),
+                   quote(0 + n * p))
+})
+
+
+test_that("can parse recursive expressions that involve stochastics", {
+  res <- parse_expr(quote(a <- Normal(Poisson(p), Exponential(r))),
+                    NULL, NULL)
+  expect_equal(res$rhs$expr[[1]]$mean, quote(p))
+
+  res <- parse_expr(quote(a <- Normal(Poisson(Exponential(r)), 1)),
+                    NULL, NULL)
+  expect_equal(res$rhs$expr[[1]]$mean, quote(1 / r))
+})
+
+
 test_that("throw sensible error if stochastic parse fails", {
   expect_error(
     parse_expr(quote(a <- Normal(mu = 0, sigma = 1)), NULL, NULL),

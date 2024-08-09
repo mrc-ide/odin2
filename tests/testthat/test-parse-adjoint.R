@@ -7,8 +7,8 @@ test_that("can parse nontrivial system with adjoint", {
     N <- S + I + R
     p_inf <- beta * I / N * dt
     p_SI <- 1 - exp(-p_inf)
-    n_SI <- S * p_SI # Binomial(S, p_SI)
-    n_IR <- I * p_IR # Binomial(I, p_IR)
+    n_SI <- Binomial(S, p_SI)
+    n_IR <- Binomial(I, p_IR)
     update(S) <- S - n_SI
     update(I) <- I + n_SI - n_IR
     update(R) <- R + n_IR

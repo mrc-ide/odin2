@@ -135,8 +135,13 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
     if (identical(eq$special, "compare")) {
       differentiate(eq$rhs$density$expr, nm)
     } else {
+      if (isTRUE(eq$rhs$is_stochastic)) {
+        expr <- rewrite_stochastic_to_expectation(eq$rhs$expr)
+      } else {
+        expr <- eq$rhs$expr
+      }
       maths$times(as.name(paste0(prefix, eq$lhs$name)),
-                  differentiate(eq$rhs$expr, nm))
+                  differentiate(expr, nm))
     }
   }
 
