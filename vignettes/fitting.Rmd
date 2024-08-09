@@ -51,7 +51,7 @@ sir <- odin2::odin({
   gamma <- parameter()
   I0 <- parameter()
   N <- 1000
-})
+}, quiet = TRUE)
 ```
 
 We can initialise this system and simulate it out over this time series and plot the results against the data:
@@ -108,7 +108,7 @@ sir <- odin2::odin({
   # Comparison to data
   cases <- data()
   compare(cases) ~ Poisson(incidence)
-})
+}, quiet = TRUE)
 ```
 
 These last two lines are the new addition to the odin code.  The first says that `cases` will be found in the data.  The second restates our aim from the previous paragraph, comparing the observed `cases` against modelled `incidence`.  The syntax here is designed to echo that of the [`mcstate2` DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html), though (at least for now) we use `compare()` on the left side to make this clearer.
@@ -189,6 +189,8 @@ The last ingredient required for running an MCMC is a sampler.  We don't have mu
 sampler <- mcstate2::mcstate_sampler_random_walk(diag(2) * 0.02)
 ```
 
+We can now run an MCMC for 100 samples:
+
 ```{r}
 samples <- mcstate2::mcstate_sample(posterior, sampler, 100)
 ```
@@ -249,7 +251,7 @@ We can now proceed as before, reusing our `packer`, `prior` and `sampler` object
 ```{r}
 likelihood_det <- dust2::dust_filter_mcstate(unfilter, sir_packer)
 posterior_det <- prior + likelihood_det
-samples <- mcstate2::mcstate_sample(posterior, sampler, 100)
+samples <- mcstate2::mcstate_sample(posterior_det, sampler, 100)
 ```
 
 However, now that we have a deterministic function we can do much better than a random walk, and we can use an adaptive sampler:
@@ -285,7 +287,7 @@ sir <- odin2::odin({
   # Comparison to data
   cases <- data()
   compare(cases) ~ Poisson(incidence)
-})
+}, quiet = TRUE)
 ```
 
 This the same model as above, except for the definition of `beta` and `gamma`, which now contain the argument `derivative = TRUE`.
@@ -299,7 +301,7 @@ unfilter <- dust2::dust_unfilter_create(sir(), 0, data)
 When you run the unfilter, you can now provide the argument `adjoint = TRUE` which will enable use of `dust_unfilter_last_gradient()` (we may make this the default in future).
 
 ```{r}
-dust2::dust_unfilter_run(unfilter, adjoint = TRUE)
+dust2::dust_unfilter_run(unfilter, pars, adjoint = TRUE)
 dust2::dust_unfilter_last_gradient(unfilter)
 ```
 
