@@ -53,8 +53,8 @@ gen <- odin2::odin({
   N <- parameter(1000)
 
   p_SI <- 1 - exp(-(beta * I / N * dt))
-  n_SI <- S * p_SI # Binomial(S, p_SI)
-  n_IR <- I * p_IR # Binomial(I, p_IR)
+  n_SI <- Binomial(S, p_SI)
+  n_IR <- Binomial(I, p_IR)
 
   update(S) <- S - n_SI
   update(I) <- I + n_SI - n_IR
@@ -75,7 +75,8 @@ This step generates C++ code for the model and compiles it; it will take a few s
 Once we have our system, we can pass it to [`dust2::dust_system_create`] to create start simulating it.  Our system above has defaults for its parameters (`N`, `beta`, `gamma`, and `I0`) so we can initialise with almost no arguments:
 
 ```{r}
-sys <- dust2::dust_system_create(gen(), n_particles = 10)
+pars <- list(beta = 0.2, gamma = 0.1, I0 = 10)
+sys <- dust2::dust_system_create(gen(), pars, n_particles = 10)
 ```
 
 By default the system will start at time `0` and with `dt = 1`.  We can simulate 10 random epidemics starting from our initial conditions:
@@ -88,58 +89,3 @@ matplot(time, t(y), col = "#00000055", lty = 1, type = "l")
 ```
 
 as this system is stochastic, each trajectory will be different.
-
-# Comparing to data
-
-Simulating a system is mildly entertaining, but we're often interested in fitting a model based on this system to data.  We can use `dust2`'s particle filter support to do this, for both stochastic and deterministic models.
-
-There are several steps we need to do here:
-
-* Decide on what to fit.  Suppose we have data on daily cases, and assume that we set `dt = 1` for one step a day.  Then we could compare `n_SI` as the number of new cases as daily incidence against this data (later, we'll show more sophisticated ways of doing this).  We'll make a new variable `incidence` to hold this quantity and a new special entry `cases` to hold the observed data.
-* Decide on *how* to fit the data.  Let's use a likelihood where at each time we have data we compute the probability of observing this many cases as Poisson-distributed with a mean of `incidence`, our new variable from above.
-
-This can be added to our model to produce:
-
-<!-- I'm not sure if it's possible in pkgdown etc to highlight lines.
-
-https://forum.posit.co/t/line-highlighting-within-code-chunks-knitted-notebook/58748/10
-https://forum.posit.co/t/highlight-one-line-in-a-code-chunk/178046/5
-
-    it's also likely that most tricks here won't survive pkgdown
--->
-
-```{r}
-gen <- odin2::odin({
-  p_IR <- 1 - exp(-gamma * dt)
-  N <- parameter(1000)
-
-  p_SI <- 1 - exp(-(beta * I / N * dt))
-  n_SI <- S * p_SI # Binomial(S, p_SI)
-  n_IR <- I * p_IR # Binomial(I, p_IR)
-
-  update(S) <- S - n_SI
-  update(I) <- I + n_SI - n_IR
-  update(R) <- R + n_IR
-  update(incidence) <- n_SI
-
-  initial(S) <- N - I0
-  initial(I) <- I0
-  initial(R) <- 0
-  initial(incidence) <- n_SI
-
-  beta <- parameter(0.2)
-  gamma <- parameter(0.1)
-  I0 <- parameter(10)
-
-  cases <- data()
-  compare(cases) ~ Poisson(n_SI)
-})
-```
-
-<!-- This will be best to show once we have a data set and ideally that will be in data.frame form -->
-
-## Fitting with MCMC
-
-## Approximate your model
-
-## Gradients and HMC
