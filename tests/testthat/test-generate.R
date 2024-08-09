@@ -518,3 +518,25 @@ test_that("can generate nontrivial zero_every method", {
       "  return dust2::zero_every_type<real_type>{{4, {1}}};",
       "}"))
 })
+
+
+test_that("generate defaults for parameters", {
+  dat <- odin_parse({
+    a <- parameter(2)
+    update(x) <- x + a
+    initial(x) <- 0
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      '  const real_type a = dust2::r::read_real(parameters, "a", 2);',
+      "  return shared_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  shared.a = dust2::r::read_real(parameters, "a", shared.a);',
+      "}"))
+})
