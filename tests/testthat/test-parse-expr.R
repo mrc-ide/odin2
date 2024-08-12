@@ -209,9 +209,7 @@ test_that("can parse expressions that involve stochastics", {
   expect_equal(res$lhs, list(name = "a"))
   expect_identical(
     res$rhs$expr,
-    quote(OdinStochasticCall(sample = "normal",
-                             density = "normal",
-                             mean = 0)(0, 1)))
+    quote(OdinStochasticCall(sample = "normal", mean = 0)(0, 1)))
   expect_equal(res$rhs$depends,
                list(functions = "Normal", variables = character()))
 })
@@ -222,14 +220,10 @@ test_that("can parse compound expressions that involve stochastics", {
 
   expect_identical(
     res$rhs$expr[[2]],
-    quote(OdinStochasticCall(sample = "normal",
-                             density = "normal",
-                             mean = 0)(0, 1)))
+    quote(OdinStochasticCall(sample = "normal", mean = 0)(0, 1)))
   expect_identical(
     res$rhs$expr[[3]],
-    quote(OdinStochasticCall(sample = "binomial",
-                             density = NULL,
-                             mean = n * p)(n, p)))
+    quote(OdinStochasticCall(sample = "binomial", mean = n * p)(n, p)))
   expect_equal(res$rhs$depends,
                list(functions = c("+", "Normal", "Binomial"),
                     variables = c("n", "p")))

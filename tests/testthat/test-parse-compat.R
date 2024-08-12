@@ -80,3 +80,16 @@ test_that("handle failure to pass a user call", {
     "Failed to translate your 'user()' expression to use 'parameter()'",
     fixed = TRUE)
 })
+
+
+test_that("can translate simple calls to distributions", {
+  expect_warning(
+    res <- odin_parse({
+      initial(a) <- 1
+      update(a) <- rnorm(a, 1)
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(
+    res$phases$update$variables[[1]]$rhs$expr,
+    quote(OdinStochasticCall(sample = "normal", mean = a)(a, 1)))
+})
