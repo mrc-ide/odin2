@@ -1,4 +1,4 @@
-url: https://mrc-ide.github.io/dust2
+url: https://mrc-ide.github.io/odin2
 
 template:
   bootstrap: 5
@@ -12,7 +12,13 @@ reference:
       - odin_error_explain
 
 articles:
+  - title: Basics
+    navbar: Basics
+    contents:
+      - fitting
   - title: Details
     navbar: Details
     contents:
       - errors
+      - migrating
+      - syntax
