@@ -121,7 +121,7 @@ parse_compat_report <- function(exprs, action, call) {
       updated <- vcapply(exprs[j], function(x) deparse1(x$value))
       original <- vcapply(exprs[j], function(x) deparse1(x$compat$original))
       context_t <- set_names(
-        c(rbind(updated, original, deparse.level = 0)),
+        c(rbind(original, updated, deparse.level = 0)),
         rep(c("x", "v"), length(updated)))
       detail <- c(detail, description[[t]], cli_nbsp(context_t))
     }
