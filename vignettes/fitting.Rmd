@@ -74,7 +74,6 @@ points(cases ~ time, data, pch = 19, col = "red")
 ```
 
 The modelled trajectories are in grey, with the overlaid in red -- we're not doing a great job here of capturing the data.
-
 # Comparing to data
 
 We're interested in fitting this model to data, and the first thing we need is a measure of goodness of fit, which we can also code into the odin model, but first we'll explain the idea.
@@ -206,7 +205,7 @@ samples <- mcstate2::mcstate_sample(posterior, sampler, 100,
                                     initial = sir_packer$pack(pars))
 ```
 
-We need to develop nice tools for working with the outputs of the sampler, but for now bear with some grubby base R maniulation.
+We need to develop nice tools for working with the outputs of the sampler, but for now bear with some grubby base R manipulation.
 
 The likelihood here is very "sticky"
 
@@ -226,8 +225,8 @@ There are several things we can do here to improve how this chain mixes
 
 * We can try and find a better proposal kernel.
 * We can increase the number of particles used in the filter.  This will reduce the variance in the estimate of the marginal likelihood, which means that the random walk will be less confused by fluctuations in the surface it's moving over.  This comes at a computational cost though.
-* We can increase the number of threads (effectively CPU cores) that we are using while computing the likelihood.  This will scale fairly efficiently through to at least 10 cores, with the likelihood calculations being almost [embarassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel).  This will help to offset some of the costs incurred above.
-* We can run multiple chains at once.  We don't yet have a good parallel runner implemented in `mcstate2` but it is coming soon.  This will reduce wall time (because each chain runs at the same time) and also allows us to compute covergence diagnostics which will reveal how well (or badly) we are doing.
+* We can increase the number of threads (effectively CPU cores) that we are using while computing the likelihood.  This will scale fairly efficiently through to at least 10 cores, with the likelihood calculations being almost [embarrassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel).  This will help to offset some of the costs incurred above.
+* We can run multiple chains at once.  We don't yet have a good parallel runner implemented in `mcstate2` but it is coming soon.  This will reduce wall time (because each chain runs at the same time) and also allows us to compute convergence diagnostics which will reveal how well (or badly) we are doing.
 * We can try a deterministic model (see below) to get a sense of the general region of high probability space.
 
 Here, we apply most of these suggestions at once, using a variance-covariance matrix [that I prepared earlier](https://www.youtube.com/watch?v=ziqD1xvSpF4):
@@ -262,7 +261,7 @@ Another way of fitting this model is to simply throw away the stochasticity.  In
   n_IR <- Binomial(I, p_IR)
 ```
 
-which are the stochastic portion of the model.  Each time step we compute the number of individuals who make the transition from `S` to `I` and from `I` to `R` by sampling from the binomial distribution.  We can replace these calls by their expectations (so effecively making `n_SI = S * p_SI`) by running the model in "deterministic" mode.
+which are the stochastic portion of the model.  Each time step we compute the number of individuals who make the transition from `S` to `I` and from `I` to `R` by sampling from the binomial distribution.  We can replace these calls by their expectations (so effectively making `n_SI = S * p_SI`) by running the model in "deterministic" mode.
 
 This simplification of the stochastic model can be seen as taking expectations of the underlying random process, but there's no reason to expect that this represents the mean of the whole model ($E[f(x)] \neq f(E[x])$, at least generally).
 
@@ -301,14 +300,14 @@ samples_det <- mcstate2::mcstate_sample(posterior_det, sampler, 1000,
                                         initial = sir_packer$pack(pars))
 ```
 
-Here, you can see the 1000 samples from the deterministic model (in blue) overlaied on top of the samples from the stochastic model (in grey):
+Here, you can see the 1000 samples from the deterministic model (in blue) overlaid on top of the samples from the stochastic model (in grey):
 
 ```{r}
 plot(t(drop(samples$pars)), pch = 19, col = "#00000033")
 points(t(drop(samples_det$pars)), pch = 19, col = "#0000ff33")
 ```
 
-The estimated parameters here look overal shifted higher in the deterministic model, and the correlation between the parameters stronger.  However, if we had no idea about what "good" parameters might be, this can get us into the approximately right location.
+The estimated parameters here look overall shifted higher in the deterministic model, and the correlation between the parameters stronger.  However, if we had no idea about what "good" parameters might be, this can get us into the approximately right location.
 
 # Differentiable models
 
@@ -341,7 +340,7 @@ sir <- odin2::odin({
 
 This the same model as above, except for the definition of `beta` and `gamma`, which now contain the argument `derivative = TRUE`.
 
-This sytem can be used as a stochastic model (created via `dust2::dust_filter_create`) just as before.  The only difference is where the model is created using `dust2::dust_unfilter_create()`.
+This system can be used as a stochastic model (created via `dust2::dust_filter_create`) just as before.  The only difference is where the model is created using `dust2::dust_unfilter_create()`.
 
 ```{r}
 unfilter <- dust2::dust_unfilter_create(sir(), 0, data)
