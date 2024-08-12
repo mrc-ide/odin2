@@ -23,6 +23,12 @@ test_that("can control severity of reporting", {
     "Found 1 compatibility issue")
 
   expect_true(startsWith(conditionMessage(e), conditionMessage(w)))
+  expect_equal(
+    e$body[2],
+    c(x = "a <- user(1)"))
+  expect_equal(
+    e$body[3],
+    c(v = "a <- parameter(1)"))
 })
 
 
