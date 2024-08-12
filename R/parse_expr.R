@@ -341,7 +341,6 @@ parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
 
   expr[[1]] <- call("OdinStochasticCall",
                     sample = res$value$cpp$sample,
-                    density = res$value$cpp$density,
                     mean = mean)
   expr[-1] <- args
   expr
