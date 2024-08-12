@@ -275,7 +275,7 @@ We have found these simplifications useful:
 Obviously, this approximation comes with costs though:
 
 * You no longer have integer valued quantities from the expectations of samples in your discrete distributions, so you have to think about fractional individuals
-* The model can no account for stochastic effects, e.g., at low population sizes.  This can make the model overly rigid, and it may poorly account for observed patterns
+* The model can no longer account for stochastic effects, e.g., at low population sizes.  This can make the model overly rigid, and it may poorly account for observed patterns
 * The fixed `dt` approach is a [first order Euler solver](https://en.wikipedia.org/wiki/Euler_method) which offers few stability guarantees, and this will differ from an system of ODEs solved with a better ODE solver
 
 To create a deterministic "filter" (currently, and temporarily called an "unfilter"), use `dust_unfilter_create()` in place of `dust_filter_create`.  This will replace all calls to stochastic functions with their expectations at the point of call.
