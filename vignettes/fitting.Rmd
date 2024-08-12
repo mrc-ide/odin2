@@ -25,8 +25,9 @@ We'll start with a simple data set of daily cases of some disease over time
 
 ```{r}
 data <- read.csv("incidence.csv")
-rmarkdown::paged_table(data)
-plot(cases ~ time, data, pch = 19, xlab = "Time (days)", ylab = "Cases")
+head(data)
+plot(cases ~ time, data, pch = 19, las = 1,
+     xlab = "Time (days)", ylab = "Cases")
 ```
 
 The data here shows a classic epidemic, with cases rising up to some peak and falling.  We will try fitting this with a simple compartmental SIR (Susceptible-Infected-Recovered) model, which we will write here in odin2.  There are a number of possible ways of writing this, but here we'll go for a stochastic discrete-time version, mostly because it will allow us to demonstrate a number of features of `odin2`, `dust2` and `mcstate2` (and because the ODE version is not yet written).
@@ -130,7 +131,7 @@ dust2::dust_filter_run(filter, pars)
 dust2::dust_filter_run(filter, pars)
 ```
 
-IF you run the filter enough times a distribution will emerge of course.  Let's compare two points in parameter space, varying the `beta` parameter and running the filter 100 times each:
+If you run the filter enough times a distribution will emerge of course.  Let's compare two points in parameter space, varying the `beta` parameter and running the filter 100 times each:
 
 ```{r}
 pars1 <- modifyList(pars, list(beta = 0.25))
@@ -151,11 +152,9 @@ So even a relatively small difference in a parameter leads to a difference in th
 
 We can use MCMC to explore this model, but to do this we will need a prior.  We'll use [mcstate2's DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html) to create one; this looks similar to the odin code above:
 
-<!-- This set of priors gives us issues with non-finite starting values, sometimes -->
-
 ```{r}
 prior <- mcstate2::mcstate_dsl({
-  beta ~ Exponential(mean = 0.2)
+  beta ~ Exponential(mean = 0.3)
   gamma ~ Exponential(mean = 0.1)
 })
 ```
@@ -168,7 +167,19 @@ We also need to adapt our `dust2` filter object above for use with `mcstate2`.  
 sir_packer <- mcstate2::mcstate_packer(c("beta", "gamma"), fixed = list(I0 = 5))
 ```
 
-With this we can create our likelihood
+With this packer we can convert from a **list** of name-value pairs suitable for initialising an `odin2` model into a **vector** of parameters suitable for use with `mcstate2`:
+
+```{r}
+sir_packer$pack(pars)
+```
+
+and we can carry out the inverse:
+
+```{r}
+sir_packer$unpack(c(0.3, 0.1))
+```
+
+Combining the filter and packer we create an `mcstate2` model, which we'll call `likelihood`, as that's what it represents:
 
 ```{r}
 likelihood <- dust2::dust_filter_mcstate(filter, sir_packer)
@@ -182,30 +193,65 @@ posterior <- prior + likelihood
 
 <!-- At this point we should refer to the mcstate2 docs for an introduction to these objects, but the docs there remain to be written -->
 
-
 The last ingredient required for running an MCMC is a sampler.  We don't have much choice with a model where the likelihood is stochastic, we'll need to run a simple random walk. However, for this we still need a proposal matrix (the variance covariance matrix that is the parameter for a multivariate Gaussian - we'll draw new positions from this).  In an ideal world, this distribution will have a similar shape to the target distribution (the posterior) as this will help with mixing.  To get started, we'll use an uncorrelated random walk with each parameter having a fairly wide variance of 0.02
 
 ```{r}
 sampler <- mcstate2::mcstate_sampler_random_walk(diag(2) * 0.02)
 ```
 
-We can now run an MCMC for 100 samples:
+We can now run an MCMC for 100 samples
 
 ```{r}
-samples <- mcstate2::mcstate_sample(posterior, sampler, 100)
+samples <- mcstate2::mcstate_sample(posterior, sampler, 100, 
+                                    initial = sir_packer$pack(pars))
+```
+
+We need to develop nice tools for working with the outputs of the sampler, but for now bear with some grubby base R maniulation.
+
+The likelihood here is very "sticky"
+
+```{r}
+plot(samples$density, type = "l")
+```
+
+It's hard to say a great deal about the parameters `beta` (per-contact transmission rate) and `gamma` (recovery rate) from this few samples, especially as we have very few *effective* samples:
+
+```{r}
+plot(t(drop(samples$pars)), pch = 19, col = "#00000055")
 ```
 
 ## Effective sampling
 
-_Early readers of this vignette will be dismayed at this point at the terrible mixing here, because I've not had the opportunity yet to tweak the proposal to tyhr point where it just starts from the right place._
-
 There are several things we can do here to improve how this chain mixes
 
+* We can try and find a better proposal kernel.
 * We can increase the number of particles used in the filter.  This will reduce the variance in the estimate of the marginal likelihood, which means that the random walk will be less confused by fluctuations in the surface it's moving over.  This comes at a computational cost though.
 * We can increase the number of threads (effectively CPU cores) that we are using while computing the likelihood.  This will scale fairly efficiently through to at least 10 cores, with the likelihood calculations being almost [embarassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel).  This will help to offset some of the costs incurred above.
 * We can run multiple chains at once.  We don't yet have a good parallel runner implemented in `mcstate2` but it is coming soon.  This will reduce wall time (because each chain runs at the same time) and also allows us to compute covergence diagnostics which will reveal how well (or badly) we are doing.
-* We can try and find a better proposal kernel.
 * We can try a deterministic model (see below) to get a sense of the general region of high probability space.
+
+Here, we apply most of these suggestions at once, using a variance-covariance matrix [that I prepared earlier](https://www.youtube.com/watch?v=ziqD1xvSpF4):
+
+```{r}
+filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 1000)
+likelihood <- dust2::dust_filter_mcstate(filter, sir_packer)
+vcv <- matrix(c(0.0005, 0.0003, 0.0003, 0.0003), 2, 2)
+sampler <- mcstate2::mcstate_sampler_random_walk(vcv)
+samples <- mcstate2::mcstate_sample(posterior, sampler, 1000, 
+                                    initial = sir_packer$pack(pars))
+```
+
+The likelihood now quickly rises up to a stable range and is clearly mixing:
+
+```{r}
+plot(samples$density, type = "l")
+```
+
+The parameters `beta` (per-contact transmission rate) and `gamma` (recovery rate) are strongly correlated
+
+```{r}
+plot(t(drop(samples$pars)), pch = 19, col = "#00000055")
+```
 
 # Deterministic models from stochastic
 
@@ -251,15 +297,18 @@ We can now proceed as before, reusing our `packer`, `prior` and `sampler` object
 ```{r}
 likelihood_det <- dust2::dust_filter_mcstate(unfilter, sir_packer)
 posterior_det <- prior + likelihood_det
-samples <- mcstate2::mcstate_sample(posterior_det, sampler, 100)
+samples_det <- mcstate2::mcstate_sample(posterior_det, sampler, 1000,
+                                        initial = sir_packer$pack(pars))
 ```
 
-However, now that we have a deterministic function we can do much better than a random walk, and we can use an adaptive sampler:
+Here, you can see the 1000 samples from the deterministic model (in blue) overlaied on top of the samples from the stochastic model (in grey):
 
 ```{r}
-sampler_adaptive <- mcstate2::mcstate_sampler_adaptive(diag(2) * 0.02)
-samples <- mcstate2::mcstate_sample(posterior, sampler, 100)
+plot(t(drop(samples$pars)), pch = 19, col = "#00000033")
+points(t(drop(samples_det$pars)), pch = 19, col = "#0000ff33")
 ```
+
+The estimated parameters here look overal shifted higher in the deterministic model, and the correlation between the parameters stronger.  However, if we had no idea about what "good" parameters might be, this can get us into the approximately right location.
 
 # Differentiable models
 
