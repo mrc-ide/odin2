@@ -25,15 +25,12 @@ Some of these features were present in versions of `odin.dust` and many derive f
 * Fast and slow parameters
 * Multiple parameter sets at once (introduced in `odin.dust` but expanded here)
 * Run multiple copies of a system at once in parallel (introduced in `odin.dust`)
+* Built-in support for periodic variable resetting (e.g., for computing daily incidence)
 * Better (we hope) error messages
-
-## Almost implemented
-
-* Built-in support for periodic variable resetting; this is implemented in dust2 and we just need to compile output (`mrc-5578`)
 
 ## Planned
 
-* Optional array bounds checking, both during compilation and during runtime (in the latter case with a performance penalty).
+* Optional array bounds checking, both during compilation and during runtime (in the latter case with a performance penalty onced enabled).
 
 ## Hoped
 
@@ -46,6 +43,7 @@ This list is incomplete, and we'll expand it as we work through the tests.  We'r
 Things we do plan on implementing:
 
 * Arrays, of any kind (`mrc-5576`)
+* Packaging of odin systems
 * Debugging print statements (only recently introduced into odin)
 * Interpolation
 * Transformation of output
