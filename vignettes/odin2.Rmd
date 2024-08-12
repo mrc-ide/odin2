@@ -72,7 +72,7 @@ gen <- odin2::odin({
 
 This step generates C++ code for the model and compiles it; it will take a few seconds.
 
-Once we have our system, we can pass it to [`dust2::dust_system_create`] to create start simulating it.  Our system above has defaults for its parameters (`N`, `beta`, `gamma`, and `I0`) so we can initialise with almost no arguments:
+Once we have our system, we can pass it to [`dust2::dust_system_create`] to create and start simulating it.  Our system above has defaults for its parameters (`N`, `beta`, `gamma`, and `I0`) so we can initialise with almost no arguments:
 
 ```{r}
 pars <- list(beta = 0.2, gamma = 0.1, I0 = 10, N = 1000)
