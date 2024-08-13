@@ -92,7 +92,7 @@ Assignment, rather than relationship (`~`) used for a `compare()` call.
 Example:
 
 ```
-compare(x) ~ Normal(0, 1)
+compare(x) <- Normal(0, 1)
 ```
 
 You can't write code like the above, because this is not an assignment into `x`, but instead the description of a relationship of `x`.  Use `~` rather than `<-` to say:

@@ -108,18 +108,18 @@ The mapping is:
 * `rcauchy()` to `Cauchy` (unsupported for now)
 * `rchisq()` to `ChiSquared` (unsupported for now)
 * `rexp()` to `Exponential`
-* `f()` to `F` (unsupported for now)
+* `rf()` to `F` (unsupported for now)
 * `rgamma()` to `Gamma`
 * `rgeometric()` to `Geometric` (unsupported for now)
 * `rhyper()` to `Hypergeometric`
 * `rlogis()` to `Logistic` (unsupported for now)
-* `lnorm()` to `Lognormal` (unsupported for now)
-* `nbinom()` to `NegativeBinomial` (unsupported for now)
-* `norm()` to `Normal`
-* `pois()` to `Poisson`
-* `t()` to `T` (unsupported for now)
-* `unif()` to `Uniform`
-* `weibull()` to `Weibull` (unsupported for now)
+* `rlnorm()` to `Lognormal` (unsupported for now)
+* `rnbinom()` to `NegativeBinomial` (unsupported for now)
+* `rnorm()` to `Normal`
+* `rpois()` to `Poisson`
+* `rt()` to `T` (unsupported for now)
+* `runif()` to `Uniform`
+* `rweibull()` to `Weibull` (unsupported for now)
 
 (Not all of these are implemented yet).
 
