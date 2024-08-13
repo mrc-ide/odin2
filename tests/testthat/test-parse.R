@@ -158,7 +158,7 @@ test_that("parse systems that require shared storage", {
 })
 
 
-test_that("can parse systems that involve arrays", {
+test_that("can parse systems that involve arrays in internal", {
   d <- odin_parse({
     initial(x) <- 1
     update(x) <- a[1] + a[2]
@@ -173,4 +173,22 @@ test_that("can parse systems that involve arrays", {
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", is_range = TRUE, from = 1, to = 2)))
+})
+
+
+test_that("can parse systems that involve arrays in shared", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    a[] <- i
+    dim(a) <- 3
+  })
+
+  expect_equal(d$storage$location[["a"]], "shared")
+  expect_equal(
+    d$storage$arrays,
+    data_frame(name = "a", rank = 1, dims = I(list(3)), size = I(list(3))))
+  expect_equal(
+    d$equations$a$lhs$array,
+    list(list(name = "i", is_range = TRUE, from = 1, to = 3)))
 })

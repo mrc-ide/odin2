@@ -56,6 +56,8 @@ generate_dust_system_attributes <- function(dat) {
 generate_dust_system_shared_state <- function(dat) {
   nms <- dat$storage$contents$shared
   type <- dat$storage$type[nms]
+  is_array <- nms %in% dat$storage$arrays$name
+  type[is_array] <- sprintf("std::vector<%s>", type[is_array])
   c("struct shared_state {",
     sprintf("  %s %s;", type, nms),
     "};")
@@ -63,10 +65,10 @@ generate_dust_system_shared_state <- function(dat) {
 
 
 generate_dust_system_internal_state <- function(dat) {
-  if (nrow(dat$storage$arrays) == 0) {
+  if (length(dat$storage$contents$internal) == 0) {
     "struct internal_state {};"
   } else {
-    nms <- dat$storage$arrays$name
+    stopifnot(all(nms %in% dat$storage$arrays$name)) # just assert for now
     c("struct internal_state {",
       sprintf("  std::vector<%s> %s;", dat$storage$type[nms], nms),
       "};")
@@ -98,6 +100,13 @@ generate_dust_system_build_shared <- function(dat) {
   eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
+    if (!is.null(eq$lhs$array)) {
+      i <- match(eq$lhs$name, dat$storage$arrays$name)
+      size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
+                                 options)
+      body$add(sprintf("std::vector<%s> %s(%s);",
+                       dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
+    }
     lhs <- eq$lhs$name
     if (eq$rhs$type == "parameter") {
       if (is.null(eq$rhs$args$default)) {
@@ -137,7 +146,7 @@ generate_dust_system_build_data <- function(dat) {
 
 generate_dust_system_build_internal <- function(dat) {
   args <- c("const shared_state&" = "shared")
-  if (is.null(dat$storage$arrays)) {
+  if (length(dat$storage$contents$internal) == 0) {
     body <- "return internal_state{};"
   } else {
     nms <- dat$storage$arrays$name
@@ -483,7 +492,7 @@ generate_dust_lhs <- function(lhs, dat, name_state) {
 }
 
 
-generate_dust_assignment <- function(lhs, rhs, array, dat) {
+generate_dust_assignment <- function(lhs, rhs, array, dat, options = list()) {
   res <- sprintf("%s = %s;", lhs, rhs)
   if (!is.null(array)) {
     for (idx in rev(array)) {

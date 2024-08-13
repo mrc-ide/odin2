@@ -586,3 +586,46 @@ test_that("can generate a simple array equation", {
       "  return internal_state{a};",
       "}"))
 })
+
+
+test_that("can generate a simple array within shared", {
+  skip("WIP")
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    a[] <- i
+    dim(a) <- 3
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = shared.a[0] + shared.a[1] + shared.a[2];",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  std::vector<real_type> a(3);",
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    a[i - 1] = 1;",
+      "  }",
+      "  return shared_state{a};",
+      "}"))
+
+  ## internal state empty despite having arrays:
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+})
