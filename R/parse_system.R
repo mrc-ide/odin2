@@ -355,7 +355,7 @@ parse_system_arrays <- function(exprs, call) {
     if (length(eq$lhs$array) > 1) {
       stop("support matrices here")
     }
-    if (eq$lhs$array[[1]]$to == Inf) {
+    if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
       eq$lhs$array[[1]]$to <- size[[eq$lhs$name]]
     }
     exprs[[i]] <- eq

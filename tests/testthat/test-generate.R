@@ -581,6 +581,11 @@ test_that("can generate a simple array equation", {
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
   expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
     generate_dust_system_build_internal(dat),
     c(method_args$build_internal,
       "  std::vector<real_type> a(2);",
@@ -597,9 +602,6 @@ test_that("can generate a simple array within shared", {
     dim(a) <- 3
   })
   dat <- generate_prepare(dat)
-  generate_dust_system_build_shared(dat)
-
-
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
@@ -629,5 +631,22 @@ test_that("can generate a simple array within shared", {
     generate_dust_system_build_internal(dat),
     c(method_args$build_internal,
       "  return internal_state{};",
+      "}"))
+})
+
+
+test_that("can generate non-range access to arrays", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1]
+    a[1] <- Normal(0, 1)
+    dim(a) <- 1
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  internal.a[0] = mcstate::random::normal(rng_state, 0, 1);",
+      "  state_next[0] = internal.a[0];",
       "}"))
 })

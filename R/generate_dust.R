@@ -68,6 +68,7 @@ generate_dust_system_internal_state <- function(dat) {
   if (length(dat$storage$contents$internal) == 0) {
     "struct internal_state {};"
   } else {
+    nms <- dat$storage$contents$internal
     stopifnot(all(nms %in% dat$storage$arrays$name)) # just assert for now
     c("struct internal_state {",
       sprintf("  std::vector<%s> %s;", dat$storage$type[nms], nms),
@@ -492,12 +493,15 @@ generate_dust_assignment <- function(eq, name_state, dat,
         to <- generate_dust_sexp(idx$to, dat)
         res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
                          idx$name, from, idx$name, to, idx$name),
-                 res)
+                 res,
+                 "}")
       }
     }
-    n <- length(res)
-    res <- c(paste0(strrep(" ", (seq_len(n) - 1) * 2), res),
-             paste0(strrep("  ", rev(seq_len(n - 1) - 1) * 2), "}"))
+    if (length(res) > 1) {
+      n <- (length(res) - 1) / 2
+      indent <- strrep("  ", c(seq_len(n + 1), rev(seq_len(n))) - 1)
+      res <- paste0(indent, res)
+    }
   }
   res
 }
