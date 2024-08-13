@@ -188,14 +188,6 @@ test_that("delays not yet supported", {
 })
 
 
-test_that("arrays not yet supported", {
-  expect_error(
-    parse_expr(quote(a[] <- 1), NULL, NULL),
-    "Arrays are not supported yet",
-    fixed = TRUE)
-})
-
-
 test_that("Reject unclassifiable expressions", {
   expect_error(
     parse_expr(quote(a), NULL, NULL),
@@ -206,7 +198,7 @@ test_that("Reject unclassifiable expressions", {
 test_that("can parse expressions that involve stochastics", {
   res <- parse_expr(quote(a <- Normal(0, 1)), NULL, NULL)
   expect_null(res$special)
-  expect_equal(res$lhs, list(name = "a"))
+  expect_equal(res$lhs, list(name = "a", array = NULL))
   expect_identical(
     res$rhs$expr,
     quote(OdinStochasticCall(sample = "normal", mean = 0)(0, 1)))

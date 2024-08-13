@@ -347,13 +347,13 @@ test_that("can look up lhs for bits of data", {
                 type = c("a" = "real", b = "real", c = "real"),
                 packing = list(state = list(scalar = c("x", "y", "b", "z")))))
   expect_equal(
-    generate_dust_lhs("a", dat, "mystate"),
+    generate_dust_lhs(list(name = "a"), dat, "mystate"),
     "const real a")
   expect_equal(
-    generate_dust_lhs("b", dat, "mystate"),
+    generate_dust_lhs(list(name = "b"), dat, "mystate"),
     "mystate[2]")
   expect_error(
-    generate_dust_lhs("c", dat, "mystate"),
+    generate_dust_lhs(list(name = "c"), dat, "mystate"),
     "Unsupported location")
 })
 
@@ -559,5 +559,30 @@ test_that("can generate models with commonly used mathematical functions", {
       "  const real_type b = mcstate::math::ceil(a);",
       "  const real_type c = mcstate::math::pow(a, b);",
       "  state_next[0] = c;",
+      "}"))
+})
+
+
+test_that("can generate a simple array equation", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    a[] <- Normal(0, 1)
+    dim(a) <- 2
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i < 2; ++i) {",
+      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(2);",
+      "  return internal_state{a};",
       "}"))
 })

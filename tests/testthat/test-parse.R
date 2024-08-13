@@ -142,3 +142,35 @@ test_that("can parse ode system that resets", {
   })
   expect_equal(d$zero_every, list(x = 4))
 })
+
+
+test_that("parse systems that require shared storage", {
+  dat <- odin_parse({
+    a <- 1
+    b <- parameter()
+    c <- a + b
+    initial(x) <- 1
+    update(x) <- x + c
+  })
+
+  expect_equal(dat$storage$contents$shared,
+               c("a", "b", "c"))
+})
+
+
+test_that("can parse systems that involve arrays", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    a[] <- Normal(0, 1)
+    dim(a) <- 2
+  })
+
+  expect_equal(d$storage$location[["a"]], "internal")
+  expect_equal(
+    d$storage$arrays,
+    data_frame(name = "a", rank = 1, dims = I(list(2)), size = I(list(2))))
+  expect_equal(
+    d$equations$a$lhs$array,
+    list(list(name = "i", is_range = TRUE, from = 1, to = 2)))
+})

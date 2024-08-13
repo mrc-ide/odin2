@@ -102,3 +102,23 @@ unlist0 <- function(x) {
 substitute_ <- function(expr, env) {
   eval(substitute(substitute(y, env), list(y = expr)))
 }
+
+
+uses_unary_minus <- function(expr) {
+  if (rlang::is_call(expr, "-") && length(expr) == 2) {
+    return(TRUE)
+  } else if (is.recursive(expr)) {
+    any(vlapply(expr[-1], uses_unary_minus))
+  } else {
+    FALSE
+  }
+}
+
+
+expr_minus <- function(a, b) {
+  if (is.numeric(a) && is.numeric(b)) {
+    a - b
+  } else {
+    call("-", a, b)
+  }
+}

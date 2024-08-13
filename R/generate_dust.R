@@ -62,9 +62,15 @@ generate_dust_system_shared_state <- function(dat) {
 }
 
 
-## This one is trivial until we pick up arrays
 generate_dust_system_internal_state <- function(dat) {
-  "struct internal_state {};"
+  if (nrow(dat$storage$arrays) == 0) {
+    "struct internal_state {};"
+  } else {
+    nms <- dat$storage$arrays$name
+    c("struct internal_state {",
+      sprintf("  std::vector<%s> %s;", dat$storage$type[nms], nms),
+      "};")
+  }
 }
 
 
@@ -131,7 +137,16 @@ generate_dust_system_build_data <- function(dat) {
 
 generate_dust_system_build_internal <- function(dat) {
   args <- c("const shared_state&" = "shared")
-  body <- "return internal_state{};"
+  if (is.null(dat$storage$arrays)) {
+    body <- "return internal_state{};"
+  } else {
+    nms <- dat$storage$arrays$name
+    type <- dat$storage$type[nms]
+    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat)
+    body <- c(
+      sprintf("std::vector<%s> %s(%s);", type, nms, size),
+      sprintf("return internal_state{%s};", paste(nms, collapse = ", ")))
+  }
   cpp_function("internal_state", "build_internal", args, body, static = TRUE)
 }
 
@@ -147,7 +162,9 @@ generate_dust_system_update_shared <- function(dat) {
     } else {
       rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
     }
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    ## This will want a bit of a workout once we get arrays that are
+    ## stored in shared.
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
   args <- c("cpp11::list" = "parameters", "shared_state&" = "shared")
   cpp_function("void", "update_shared", args, body$get(), static = TRUE)
@@ -179,9 +196,9 @@ generate_dust_system_initial <- function(dat) {
   body <- collector()
   eqs <- dat$phases$initial$equations
   for (eq in c(dat$equations[eqs], dat$phases$initial$variables)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
   cpp_function("void", "initial", args, body$get(), static = TRUE)
 }
@@ -208,9 +225,9 @@ generate_dust_system_update <- function(dat) {
                    match(variables[i], dat$storage$packing$state$scalar) - 1))
   eqs <- dat$phases$update$equations
   for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state_next")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
@@ -233,9 +250,9 @@ generate_dust_system_rhs <- function(dat) {
                    match(variables[i], dat$storage$packing$state$scalar) - 1))
   eqs <- dat$phases$deriv$equations
   for (eq in c(dat$equations[eqs], dat$phases$deriv$variables)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_deriv")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state_deriv")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
 }
@@ -279,9 +296,9 @@ generate_dust_system_compare_data <- function(dat) {
 
   eqs <- dat$phases$compare$equations
   for (eq in c(dat$equations[eqs])) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
 
   ## Then the actual comparison:
@@ -340,9 +357,9 @@ generate_dust_system_adjoint_update <- function(dat) {
 
   eqs <- dat$adjoint$update$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$update$adjoint)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state_next")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
 
   cpp_function("void", "adjoint_update", args, body$get(), static = TRUE)
@@ -374,9 +391,9 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
 
   eqs <- dat$adjoint$compare$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$compare$adjoint)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state_next")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
 
   cpp_function("void", "adjoint_compare_data", args, body$get(), static = TRUE)
@@ -407,29 +424,80 @@ generate_dust_system_adjoint_initial <- function(dat) {
 
   eqs <- dat$adjoint$initial$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$initial$adjoint)) {
-    lhs <- generate_dust_lhs(eq$lhs$name, dat, "state_next")
+    lhs <- generate_dust_lhs(eq$lhs, dat, "state_next")
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data)
-    body$add(sprintf("%s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(lhs, rhs, eq$lhs$array, dat))
   }
 
   cpp_function("void", "adjoint_initial", args, body$get(), static = TRUE)
 }
 
 
-generate_dust_lhs <- function(name, dat, name_state) {
+generate_dust_lhs <- function(lhs, dat, name_state) {
+  name <- lhs$name
+  is_array <- !is.null(lhs$array)
+  if (is_array) {
+    if (length(lhs$array) > 1) {
+      stop("cope with matrix here")
+    }
+    is_range <- lhs$array[[1]]$is_range
+    if (is_range) {
+      idx <- expr_minus(as.name(INDEX[[1]]), 1)
+    } else {
+      idx <- expr_minus(lhs$array[[1]]$at, 1)
+    }
+  } else {
+    idx <- NULL
+  }
+
   location <- dat$storage$location[[name]]
   if (location == "stack") {
+    if (is_array) {
+      stop("We don't have stack-allocated arrays")
+    }
     sprintf("const %s %s", dat$storage$type[[name]], name)
+  } else if (location == "internal") {
+    if (is_array) {
+      sprintf("internal.%s[%s]", name, generate_dust_sexp(idx, dat))
+    } else {
+      sprintf("internal.%s", name)
+    }
   } else if (location == "state") {
+    if (is_array) {
+      stop("support arrays in variables")
+    }
     ## TODO: this wil need to change, once we support arrays: at that
     ## point we'll make this more efficient too by computing
     ## expressions for access.
     sprintf("%s[%s]",
             name_state, match(name, dat$storage$packing$state$scalar) - 1)
   } else if (location == "adjoint") {
+    if (is_array) {
+      stop("support arrays in adjoint")
+    }
     sprintf("%s[%s]",
             "adjoint_next", match(name, dat$storage$packing$adjoint$scalar) - 1)
   } else {
-    stop("Unsupported location")
+    stop(sprintf("Unsupported location '%s'", location))
   }
+}
+
+
+generate_dust_assignment <- function(lhs, rhs, array, dat) {
+  res <- sprintf("%s = %s;", lhs, rhs)
+  if (!is.null(array)) {
+    for (idx in rev(array)) {
+      if (idx$is_range) {
+        from <- generate_dust_sexp(idx$from, dat)
+        to <- generate_dust_sexp(idx$to, dat)
+        res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
+                         idx$name, from, idx$name, to, idx$name),
+                 res)
+      }
+    }
+    n <- length(res)
+    res <- c(paste0(strrep(" ", (seq_len(n) - 1) * 2), res),
+             paste0(strrep("  ", rev(seq_len(n - 1) - 1) * 2), "}"))
+  }
+  res
 }

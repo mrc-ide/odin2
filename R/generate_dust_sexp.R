@@ -6,6 +6,11 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else {
       fn <- as.character(expr[[1]])
     }
+
+    if (fn == "[") {
+      return(generate_dust_array_access(expr, dat, options))
+    }
+
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
     n <- length(args)
 
@@ -44,7 +49,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     }
   } else if (is.symbol(expr) || is.character(expr)) {
     name <- as.character(expr)
-    if (name %in% c("time", "dt")) {
+    if (name %in% c("time", "dt", INDEX)) {
       ret <- name
     } else {
       location <- dat$location[[name]]
@@ -80,4 +85,14 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## lengths and types soon.
 generate_dust_dat <- function(location) {
   list(location = location)
+}
+
+
+generate_dust_array_access <- function(expr, dat, options) {
+  if (length(expr) != 3) {
+    stop("need more to generate multidimensional access")
+  }
+  target <- generate_dust_sexp(expr[[2]], dat, options)
+  idx <- generate_dust_sexp(expr_minus(expr[[3]], 1), dat, options)
+  sprintf("%s[%s]", target, idx)
 }

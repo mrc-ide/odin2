@@ -9,13 +9,15 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   dat <- parse_prepare(quo, input_type, call)
   dat$exprs <- parse_compat(dat$exprs, compatibility, call)
   exprs <- lapply(dat$exprs, function(x) parse_expr(x$value, x, call = call))
+
+  exprs <- parse_system_arrays(exprs, call)
   system <- parse_system_overall(exprs, call)
   equations <- parse_system_depends(
     system$exprs$equations, system$variables, call)
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$data$name, call)
   storage <- parse_storage(
-    equations, phases, system$variables, system$data, call)
+    equations, phases, system$variables, system$arrays, system$data, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
                                  system$variables, call)
 

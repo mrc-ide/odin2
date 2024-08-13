@@ -16,7 +16,7 @@ parse_expr <- function(expr, src, call) {
 
 parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
-  rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
+  rhs <- parse_expr_assignment_rhs(expr[[3]], length(lhs$array), src, call)
 
   special <- lhs$special
   lhs$special <- NULL
@@ -49,6 +49,17 @@ parse_expr_assignment <- function(expr, src, call) {
           "Initial condition of periodically zeroed variable must be 0",
           "E1020", src, call)
       }
+    }
+  }
+
+  ## This means we can consider a range of issues around interesting
+  ## sized arrays later.  This is not terribly useful, but it will
+  ## limit the size of the PR.
+  if (identical(special, "dim")) {
+    if (!is.numeric(rhs$expr)) {
+      odin_parse_error(
+        "Non-constant sized dimensions are not yet supported",
+        "E0001", src, call)
     }
   }
 
@@ -112,17 +123,22 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     }
   }
 
-  is_array <- rlang::is_call(lhs, "[")
-  if (is_array) {
-    odin_parse_error(
-      "Arrays are not supported yet", "E0001", src, call)
+  if (rlang::is_call(lhs, "[")) {
+    ## TODO: do we get a nice error out of here?
+    name <- parse_expr_check_lhs_name(lhs[[2]], src, call)
+    array <- Map(parse_expr_check_lhs_index,
+                 lhs[-(1:2)],
+                 seq_len(length(lhs) - 2),
+                 MoreArgs = list(src = src, call = call))
+  } else {
+    name <- parse_expr_check_lhs_name(lhs, src, call)
+    array <- NULL
   }
-
-  name <- parse_expr_check_lhs_name(lhs, src, call)
 
   lhs <- list(
     name = name,
-    special = special)
+    special = special,
+    array = array)
 
   if (!is.null(args)) {
     lhs$args <- args
@@ -132,7 +148,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 }
 
 
-parse_expr_assignment_rhs <- function(rhs, src, call) {
+parse_expr_assignment_rhs <- function(rhs, array, src, call) {
   if (rlang::is_call(rhs, "delay")) {
     odin_parse_error("'delay()' is not implemented yet",
                      "E0001", src, call)
@@ -357,5 +373,61 @@ rewrite_stochastic_to_expectation <- function(expr) {
     }
   } else {
     expr
+  }
+}
+
+
+## This is something that will expand over time, there is quite a lot
+## to check, really.  Things not checked:
+##
+## * negative numbers not allowed
+## * ranges must go up
+parse_expr_check_lhs_index <- function(index, dim, src, call) {
+  name <- INDEX[[dim]]
+  if (rlang::is_missing(index)) {
+    list(name = name, is_range = TRUE, from = 1, to = Inf)
+  } else if (is.numeric(index)) {
+    ## check integer-like?
+    list(name = name, is_range = FALSE, at = index)
+  } else if (rlang::is_call(index) || rlang::is_symbol(index)) {
+    vars <- all.vars(index)
+    nms <- all.names(index)
+    fns <- setdiff(nms, vars)
+    if (":" %in% fns && ":" %in% all.names(index[-1])) {
+      odin_parse_error(
+        c("Invalid use of range operator ':' on lhs of array assignment",
+          paste("If you use ':' as a range operator on the lhs of an",
+                "assignment into an array, then it must be the outermost",
+                "call, for e.g, {.code (a + 1):(b + 1)}, not",
+                "{.code 1 + (a:b)}")),
+        "E1099", src, call)
+    }
+    err <- setdiff(fns, c("+", "-", "(", ":"))
+    if (length(err) > 0) {
+      odin_parse_error(
+        "Invalid function{?s} used in lhs of array assignment: {squote(err)}",
+        "E1099", src, call)
+    }
+    if ("-" %in% fns && uses_unary_minus(index)) {
+      odin_parse_error(
+        "Invalid use of unary minus in lhs of array assignment",
+        "E1099", src, call)
+    }
+    err <- intersect(INDEX, nms)
+    if (length(err) > 0) {
+      odin_parse_error(
+        paste("Invalid use of special variable{?s} in lhs of array",
+              "assignment: {squote(err)}"),
+        "E1099", src, call)
+    }
+    if (rlang::is_call(index, ":")) {
+      list(name = name, is_range = TRUE, from = index[[2]], to = index[[3]])
+    } else {
+      list(name = name, is_range = FALSE, at = index)
+    }
+  } else {
+    odin_parse_error(
+      "Invalid value for array index lhs",
+      "E1099", src, call)
   }
 }
