@@ -52,3 +52,42 @@ test_that("can parse array expression", {
   expect_equal(res$rhs$type, "expression")
   expect_equal(res$rhs$expr, 1)
 })
+
+
+test_that("require constant array size", {
+  expect_error(
+    parse_expr(quote(dim(a) <- n), NULL, NULL),
+    "Non-constant sized dimensions are not yet supported")
+})
+
+
+test_that("can't use array access with higher rank than the lhs implies", {
+  expect_error(
+    parse_expr(quote(a[] <- x[j]), NULL, NULL),
+    "Invalid index access used on rhs of equation: 'j'")
+})
+
+
+test_that("array equations require a corresponding dim()", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- a[0]
+      a[] <- 1
+    }),
+    "Missing 'dim()' for expression assigned as an array: 'a'",
+    fixed = TRUE)
+})
+
+
+test_that("array equations assigning with brackets", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- a[0]
+      dim(a) <- 3
+      a <- 1
+    }),
+    "Array expressions must always use '[]' on the lhs",
+    fixed = TRUE)
+})

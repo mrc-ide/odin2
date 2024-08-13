@@ -283,6 +283,26 @@ initial(x, zero_every = 1) <- 10
 initial(x, zero_every = 1) <- a
 ```
 
+# `E1021`
+
+Invalid use of a special array access variable (e.g., `i`, `j`, `k`) on the right hand side of an expression.  The available index variables are determined by the rank (number of dimensions) of the variable on the left hand side.  If you have a vector you can only use `i` on the right hand side, if you have a matrix you can use `i` and `j` and so on.
+
+Example causing an error:
+
+```r
+x[, ] <- a[i, k] + a[i, j]
+```
+
+Above, we have used `k` on the rhs, but `x` is only a matrix so this would not work.  Think of the above statement as it might appear in generated pseudo-code:
+
+```
+for i in 1:nrow(x):
+  for j in 1:ncol(x):
+     x[i, j] <- a[i, k] + a[i, j]
+```
+
+and the reason that this is an error should be apparent.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
@@ -345,3 +365,30 @@ This will error because `v` (referenced by `r`, which is referenced by `update(a
 # `E2007`
 
 Trying to use `dt` in a continuous time (ODE) system.  This is really a special case of `E2006`, but we treat it separately because it usually means that something has gone badly with the system design.
+
+# `E2008`
+
+An expression assigning as an array did not have a corresponding call to `dim()`.  We always need this, even if it looks like we should be able to work out how long your array is.  You probably just need to add a call like
+
+```r
+dim(x) <- ...
+```
+
+for the variables mentioned in the error, with the appropriate lengths.
+
+# `E2009`
+
+You have tried to assign to an array variable (i.e., something with a `dim()` call) without using `[]` on the left hand side.
+
+Example:
+
+```r
+dim(a) <- 5
+a <- 0
+```
+
+If you wanted a length-5 array of zeros here, you should write
+
+```
+a[] <- 0
+```

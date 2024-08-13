@@ -293,10 +293,6 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
   names(zero_every) <- variables
   zero_every <- zero_every[i]
 
-  is_zero <- function(expr) {
-    identical(expr, 0) || identical(expr, 0L)
-  }
-
   ## If time is continuous, we should also check that the reset
   ## variables don't reference any other variables, even indirectly;
   ## do this as mrc-5615.
@@ -320,8 +316,8 @@ parse_system_arrays <- function(exprs, call) {
     err_nms <- unique(vcapply(src, function(x) x$lhs$name))
     odin_parse_error(
       paste("Missing 'dim()' for expression{?s} assigned as an array:",
-            "{squote(err_nms)}}"),
-      "E2099", src, call)
+            "{squote(err_nms)}"),
+      "E2008", lapply(src, "[[", "src"), call)
   }
 
   ## Next, we collect up any subexpressions, in order, for all arrays,
@@ -330,13 +326,14 @@ parse_system_arrays <- function(exprs, call) {
     i <- nms == nm & !is_dim
     err <- vlapply(exprs[i], function(x) is.null(x$lhs$array))
     if (any(err)) {
+      src <- lapply(exprs[i][err], "[[", "src")
       odin_parse_error(
         c("Array expressions must always use '[]' on the lhs",
           i = paste("Your expression for '{nm}' has a 'dim()' equation, so it",
                     "is an array, but {cli::qty(sum(err))}",
                     "{?this usage/these usages} assign it as if it was a",
                     "scalar")),
-        "E2099", src[err], call)
+        "E2009", src, call)
     }
   }
 
