@@ -188,6 +188,8 @@ test_that("generate nontrivial update_shared if some parameters non-constant", {
     q2 <- q * q
   })
   dat <- generate_prepare(dat)
+  generate_dust_system_update_shared(dat)
+
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
@@ -526,7 +528,6 @@ test_that("generate defaults for parameters", {
     update(x) <- x + a
     initial(x) <- 0
   })
-
   dat <- generate_prepare(dat)
   expect_equal(
     generate_dust_system_build_shared(dat),
@@ -589,15 +590,16 @@ test_that("can generate a simple array equation", {
 
 
 test_that("can generate a simple array within shared", {
-  skip("WIP")
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- a[1] + a[2] + a[3]
     a[] <- i
     dim(a) <- 3
   })
-
   dat <- generate_prepare(dat)
+  generate_dust_system_build_shared(dat)
+
+
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
@@ -614,7 +616,7 @@ test_that("can generate a simple array within shared", {
     c(method_args$build_shared,
       "  std::vector<real_type> a(3);",
       "  for (size_t i = 1; i < 3; ++i) {",
-      "    a[i - 1] = 1;",
+      "    a[i - 1] = i;",
       "  }",
       "  return shared_state{a};",
       "}"))

@@ -107,20 +107,7 @@ generate_dust_system_build_shared <- function(dat) {
       body$add(sprintf("std::vector<%s> %s(%s);",
                        dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
     }
-    lhs <- eq$lhs$name
-    if (eq$rhs$type == "parameter") {
-      if (is.null(eq$rhs$args$default)) {
-        rhs <- sprintf('dust2::r::read_real(parameters, "%s")', lhs)
-      } else {
-        default <- generate_dust_sexp(
-          eq$rhs$args$default, dat$sexp_data, options)
-        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                       lhs, default)
-      }
-    } else {
-      rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
-    }
-    body$add(sprintf("const real_type %s = %s;", lhs, rhs))
+    body$add(generate_dust_assignment(eq, "state", dat, options))
   }
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
@@ -419,7 +406,7 @@ generate_dust_system_adjoint_initial <- function(dat) {
 }
 
 
-generate_dust_lhs <- function(lhs, dat, name_state) {
+generate_dust_lhs <- function(lhs, dat, name_state, options) {
   name <- lhs$name
   is_array <- !is.null(lhs$array)
   if (is_array) {
@@ -444,9 +431,15 @@ generate_dust_lhs <- function(lhs, dat, name_state) {
     sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
     if (is_array) {
-      sprintf("%s.%s[%s]", location, name, generate_dust_sexp(idx, dat))
+      sprintf("%s[%s]",
+              generate_dust_sexp(name, dat$sexp_data, options),
+              generate_dust_sexp(idx, dat$sexp_data, options))
+    } else if (location == "shared" && isFALSE(options$shared_exists)) {
+      sprintf("const %s %s",
+              dat$storage$type[[name]],
+              generate_dust_sexp(name, dat$sexp_data, options))
     } else {
-      sprintf("%s.%s", location, name)
+      generate_dust_sexp(name, dat$sexp_data, options)
     }
   } else if (location == "state") {
     if (is_array) {
@@ -471,11 +464,22 @@ generate_dust_lhs <- function(lhs, dat, name_state) {
 
 generate_dust_assignment <- function(eq, name_state, dat,
                                      options = list()) {
-  lhs <- generate_dust_lhs(eq$lhs, dat, name_state)
+  lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
 
   if (eq$rhs$type == "parameter") {
-    rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                   eq$lhs$name, lhs)
+    if (isFALSE(options$shared_exists)) {
+      if (is.null(eq$rhs$args$default)) {
+        rhs <- sprintf('dust2::r::read_real(parameters, "%s")', eq$lhs$name)
+      } else {
+        default <- generate_dust_sexp(
+          eq$rhs$args$default, dat$sexp_data, options)
+        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
+                       eq$lhs$name, default)
+      }
+    } else {
+      rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
+                     eq$lhs$name, lhs)
+    }
   } else {
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
   }
