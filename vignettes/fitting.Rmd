@@ -32,7 +32,7 @@ plot(cases ~ time, data, pch = 19, las = 1,
 
 The data here shows a classic epidemic, with cases rising up to some peak and falling.  We will try fitting this with a simple compartmental SIR (Susceptible-Infected-Recovered) model, which we will write here in odin2.  There are a number of possible ways of writing this, but here we'll go for a stochastic discrete-time version, mostly because it will allow us to demonstrate a number of features of `odin2`, `dust2` and `mcstate2` (and because the ODE version is not yet written).
 
-Before fitting the data, we'll write out a model that captures the core ideas (this is replicated from `vignette("odin2")`
+Before fitting the data, we'll write out a model that captures the core ideas (this is replicated from `vignette("odin2")`)
 
 ```{r}
 sir <- odin2::odin({
@@ -74,6 +74,7 @@ points(cases ~ time, data, pch = 19, col = "red")
 ```
 
 The modelled trajectories are in grey, with the data points overlaid in red -- we're not doing a great job here of capturing the data.
+
 # Comparing to data
 
 We're interested in fitting this model to data, and the first thing we need is a measure of goodness of fit, which we can also code into the odin model, but first we'll explain the idea.
