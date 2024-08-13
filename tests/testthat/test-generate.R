@@ -554,8 +554,10 @@ test_that("can generate models with commonly used mathematical functions", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
+      "  const auto x = state[0];"
       "  const real_type a = mcstate::math::log(x);",
       "  const real_type b = mcstate::math::ceil(a);",
       "  const real_type c = mcstate::math::pow(a, b);",
+      "  state_next[0] = c;",
       "}"))
 })
