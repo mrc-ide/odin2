@@ -16,7 +16,7 @@ parse_expr <- function(expr, src, call) {
 
 parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
-  rhs <- parse_expr_assignment_rhs(expr[[3]], length(lhs$array), src, call)
+  rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
 
   special <- lhs$special
   lhs$special <- NULL
@@ -165,7 +165,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 }
 
 
-parse_expr_assignment_rhs <- function(rhs, array, src, call) {
+parse_expr_assignment_rhs <- function(rhs, src, call) {
   if (rlang::is_call(rhs, "delay")) {
     odin_parse_error("'delay()' is not implemented yet",
                      "E0001", src, call)
