@@ -303,6 +303,58 @@ for i in 1:nrow(x):
 
 and the reason that this is an error should be apparent.
 
+# `E1022`
+
+Invalid use of `:` within the left hand side of an array assignment.  We might increase the number of ways you can use this but for now we are quite strict (the same rules as with version 1 of odin).  If you use `:` it must be the *outermost* operator within an index, so this is fine:
+
+```r
+x[a:b]
+```
+
+but this is not
+
+```r
+x[a:b + 1]
+```
+
+This is because we can't generally convert the latter type into a `from:to` form, which we need for the code generation to work, and also because R's parsing rules are fairly ambiguous about if this really means `(a:b) + 1` or a:(b + 1)`.
+
+# `E1023`
+
+Invalid functions used within an array index.  At the moment you can only use `:` (the range operator, which must be the outermost function call), `+`, `-` and `(`.  The error will indicate the function that you have tried to use, and if you feel this is unreasonable please let us know.  We may expand the list of supported functions within arrays in future, with candidates being `*`, `%/%` and `%%`.
+
+# `E1024`
+
+Unary minus (`-` as "negative" rather than "minus") detected within arrays.  This error is a special case of [`E1023`](#e1023) but deserves special mention here because it has special meaning in R's array access.  In R, we can write
+
+```
+x[-1]
+```
+
+and this means "all of `x` except the first element", which is something we might support in future.
+
+# `E1025`
+
+Invalid use of `i`, `j`, etc on the left hand side of an expression, for example:
+
+```r
+x[i] <- 2 * a[i]
+```
+
+Usually, this error can be fixed by omitting the `i` from the left hand side as you probably meant
+
+```r
+x[] <- 2 * a[i]
+```
+
+# `E1026`
+
+Something unexpected was used as an array index on the left hand side of an array expression, such as:
+
+```r
+x[TRUE] <- 1
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

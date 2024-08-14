@@ -417,25 +417,25 @@ parse_expr_check_lhs_index <- function(index, dim, src, call) {
                 "assignment into an array, then it must be the outermost",
                 "call, for e.g, {.code (a + 1):(b + 1)}, not",
                 "{.code 1 + (a:b)}")),
-        "E1099", src, call)
+        "E1022", src, call)
     }
     err <- setdiff(fns, c("+", "-", "(", ":"))
     if (length(err) > 0) {
       odin_parse_error(
         "Invalid function{?s} used in lhs of array assignment: {squote(err)}",
-        "E1099", src, call)
+        "E1023", src, call)
     }
     if ("-" %in% fns && uses_unary_minus(index)) {
       odin_parse_error(
         "Invalid use of unary minus in lhs of array assignment",
-        "E1099", src, call)
+        "E1024", src, call)
     }
     err <- intersect(INDEX, nms)
     if (length(err) > 0) {
       odin_parse_error(
         paste("Invalid use of special variable{?s} in lhs of array",
               "assignment: {squote(err)}"),
-        "E1099", src, call)
+        "E1025", src, call)
     }
     if (rlang::is_call(index, ":")) {
       list(name = name, is_range = TRUE, from = index[[2]], to = index[[3]])
@@ -445,6 +445,6 @@ parse_expr_check_lhs_index <- function(index, dim, src, call) {
   } else {
     odin_parse_error(
       "Invalid value for array index lhs",
-      "E1099", src, call)
+      "E1026", src, call)
   }
 }
