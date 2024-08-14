@@ -6,6 +6,7 @@ parse_system_overall <- function(exprs, call) {
   is_initial <- special == "initial"
   is_compare <- special == "compare"
   is_data <- special == "data"
+  is_dim <- special == "dim"
   is_parameter <- special == "parameter"
   is_equation <- special %in% c("", "parameter")
 
@@ -82,22 +83,32 @@ parse_system_overall <- function(exprs, call) {
   data <- data_frame(
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
+  ## This will change later:
+  arrays <- data_frame(
+    name = vcapply(exprs[is_dim], function(x) x$lhs$name),
+    rank = rep_len(1, sum(is_dim)),
+    dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
+
   exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
-                data = exprs[is_data])
+                data = exprs[is_data],
+                dim = exprs[is_dim])
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
        parameters = parameters,
+       arrays = arrays,
        data = data,
        exprs = exprs)
 }
 
 
+## TODO: update this to cope with the idea that there might be
+## duplicated entries
 parse_system_depends <- function(equations, variables, call) {
   automatic <- c("time", "dt")
   implicit <- c(variables, automatic)
@@ -155,6 +166,8 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
   stage <- c(
     set_names(rep(stages[["time"]], length(implicit)), implicit),
     set_names(rep(stages[["data"]], length(data)), data))
+  ## TODO: look for `names(equations)` everywhere and update to cope
+  ## with duplication.
   for (nm in names(equations)) {
     rhs <- equations[[nm]]$rhs
     if (identical(rhs$type, "parameter")) {
@@ -162,10 +175,11 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       stage[[nm]] <-
         stages[[if (is_constant) "system_create" else "parameter_update"]]
     } else {
-      stage[[nm]] <- max(stages[["system_create"]],
-                         stage[rhs$depends$variables])
+      stage_min <- stages[[if (rhs$is_stochastic) "time" else "system_create"]]
+      stage[[nm]] <- max(stage_min, stage[rhs$depends$variables])
     }
   }
+
   stage <- set_names(names(stages)[stage], names(stage))
 
   ## Now, we try and work out which parts of the graph are needed at
@@ -228,16 +242,17 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 }
 
 
-parse_storage <- function(equations, phases, variables, data, call) {
+parse_storage <- function(equations, phases, variables, arrays, data, call) {
   ## This will need additional work once we support arrays as these
   ## will be put into internal storage.
   shared <- intersect(names(equations), phases$build_shared$equations)
-  stack <- setdiff(names(equations), shared)
+  stack <- setdiff(names(equations), c(shared, arrays$name))
+  internal <- intersect(phases$update$equations, arrays$name)
 
   contents <- list(
     variables = variables,
     shared = shared,
-    internal = character(),
+    internal = internal,
     data = data$name,
     output = character(),
     stack = stack)
@@ -255,8 +270,12 @@ parse_storage <- function(equations, phases, variables, data, call) {
   ## later.
   packing <- list(state = list(scalar = variables))
 
+  ## For now; later we will do interesting things here
+  arrays$size <- arrays$dims
+
   list(contents = contents,
        location = location,
+       arrays = arrays,
        type = type,
        packing = packing)
 }
@@ -274,13 +293,70 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
   names(zero_every) <- variables
   zero_every <- zero_every[i]
 
-  is_zero <- function(expr) {
-    identical(expr, 0) || identical(expr, 0L)
-  }
-
   ## If time is continuous, we should also check that the reset
   ## variables don't reference any other variables, even indirectly;
   ## do this as mrc-5615.
 
   zero_every
+}
+
+
+parse_system_arrays <- function(exprs, call) {
+  is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
+  is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
+
+  nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
+  dim_nms <- nms[is_dim]
+
+  ## First, look for any array calls that do not have a corresponding
+  ## dim()
+  err <- !vlapply(exprs[is_array], function(x) x$lhs$name %in% dim_nms)
+  if (any(err)) {
+    src <- exprs[is_array][err]
+    err_nms <- unique(vcapply(src, function(x) x$lhs$name))
+    odin_parse_error(
+      paste("Missing 'dim()' for expression{?s} assigned as an array:",
+            "{squote(err_nms)}"),
+      "E2008", lapply(src, "[[", "src"), call)
+  }
+
+  ## Next, we collect up any subexpressions, in order, for all arrays,
+  ## and make sure that we are always assigned as an array.
+  for (nm in dim_nms) {
+    i <- nms == nm & !is_dim
+    err <- vlapply(exprs[i], function(x) is.null(x$lhs$array))
+    if (any(err)) {
+      src <- lapply(exprs[i][err], "[[", "src")
+      odin_parse_error(
+        c("Array expressions must always use '[]' on the lhs",
+          i = paste("Your expression for '{nm}' has a 'dim()' equation, so it",
+                    "is an array, but {cli::qty(sum(err))}",
+                    "{?this usage/these usages} assign it as if it was a",
+                    "scalar")),
+        "E2009", src, call)
+    }
+  }
+
+  ## TODO: this will change later, because we'll create new variables
+  ## here that will hold sizes, and any incremental sizes.  We will
+  ## want to use this all over the show I think, but for now this is
+  ## ok, because it is at this point that we would compute additional
+  ## expressions for the sizes.
+  size <- set_names(lapply(exprs[is_dim], function(x) x$rhs$expr),
+                    dim_nms)
+  stopifnot(all(vlapply(size, is.numeric)))
+
+  ## Then we go back and assign together uses in ranges.
+  for (i in which(is_array)) {
+    eq <- exprs[[i]]
+    if (length(eq$lhs$array) > 1) {
+      stop("support matrices here")
+    }
+    if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
+      eq$lhs$array[[1]]$to <- size[[eq$lhs$name]]
+    }
+    exprs[[i]] <- eq
+  }
+
+  exprs
 }

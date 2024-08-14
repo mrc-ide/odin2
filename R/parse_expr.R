@@ -52,6 +52,34 @@ parse_expr_assignment <- function(expr, src, call) {
     }
   }
 
+  ## This means we can consider a range of issues around interesting
+  ## sized arrays later.  This is not terribly useful, but it will
+  ## limit the size of the PR.
+  if (identical(special, "dim")) {
+    if (!is.numeric(rhs$expr)) {
+      odin_parse_error(
+        "Non-constant sized dimensions are not yet supported",
+        "E0001", src, call)
+    }
+  }
+
+  index_used <- intersect(INDEX, rhs$depends$variables)
+  if (length(index_used) > 0) {
+    n <- length(lhs$array)
+    err <- intersect(index_used, INDEX[-seq_len(n)])
+    if (length(err) > 0) {
+      v <- err[length(err)]
+      i <- match(v, INDEX)
+      odin_parse_error(
+        c("Invalid index access used on rhs of equation: {squote(err)}",
+          i = paste("Your lhs has only {n} dimension{?s}, but index '{v}'",
+                    "would require {match(v, INDEX)}")),
+        "E1021", src, call)
+    }
+    ## index variables are not real dependencies, so remove them:
+    rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
+  }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -112,17 +140,22 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     }
   }
 
-  is_array <- rlang::is_call(lhs, "[")
-  if (is_array) {
-    odin_parse_error(
-      "Arrays are not supported yet", "E0001", src, call)
+  if (rlang::is_call(lhs, "[")) {
+    ## TODO: do we get a nice error out of here?
+    name <- parse_expr_check_lhs_name(lhs[[2]], src, call)
+    array <- Map(parse_expr_check_lhs_index,
+                 lhs[-(1:2)],
+                 seq_len(length(lhs) - 2),
+                 MoreArgs = list(src = src, call = call))
+  } else {
+    name <- parse_expr_check_lhs_name(lhs, src, call)
+    array <- NULL
   }
-
-  name <- parse_expr_check_lhs_name(lhs, src, call)
 
   lhs <- list(
     name = name,
-    special = special)
+    special = special,
+    array = array)
 
   if (!is.null(args)) {
     lhs$args <- args
@@ -357,5 +390,61 @@ rewrite_stochastic_to_expectation <- function(expr) {
     }
   } else {
     expr
+  }
+}
+
+
+## This is something that will expand over time, there is quite a lot
+## to check, really.  Things not checked:
+##
+## * negative numbers not allowed
+## * ranges must go up
+parse_expr_check_lhs_index <- function(index, dim, src, call) {
+  name <- INDEX[[dim]]
+  if (rlang::is_missing(index)) {
+    list(name = name, is_range = TRUE, from = 1, to = Inf)
+  } else if (is.numeric(index)) {
+    ## check integer-like?
+    list(name = name, is_range = FALSE, at = index)
+  } else if (rlang::is_call(index) || rlang::is_symbol(index)) {
+    vars <- all.vars(index)
+    nms <- all.names(index)
+    fns <- setdiff(nms, vars)
+    if (":" %in% fns && ":" %in% all.names(index[-1])) {
+      odin_parse_error(
+        c("Invalid use of range operator ':' on lhs of array assignment",
+          paste("If you use ':' as a range operator on the lhs of an",
+                "assignment into an array, then it must be the outermost",
+                "call, for e.g, {.code (a + 1):(b + 1)}, not",
+                "{.code 1 + (a:b)}")),
+        "E1022", src, call)
+    }
+    err <- setdiff(fns, c("+", "-", "(", ":"))
+    if (length(err) > 0) {
+      odin_parse_error(
+        "Invalid function{?s} used in lhs of array assignment: {squote(err)}",
+        "E1023", src, call)
+    }
+    if ("-" %in% fns && uses_unary_minus(index)) {
+      odin_parse_error(
+        "Invalid use of unary minus in lhs of array assignment",
+        "E1024", src, call)
+    }
+    err <- intersect(INDEX, nms)
+    if (length(err) > 0) {
+      odin_parse_error(
+        paste("Invalid use of special variable{?s} in lhs of array",
+              "assignment: {squote(err)}"),
+        "E1025", src, call)
+    }
+    if (rlang::is_call(index, ":")) {
+      list(name = name, is_range = TRUE, from = index[[2]], to = index[[3]])
+    } else {
+      list(name = name, is_range = FALSE, at = index)
+    }
+  } else {
+    odin_parse_error(
+      "Invalid value for array index lhs",
+      "E1026", src, call)
   }
 }

@@ -188,6 +188,8 @@ test_that("generate nontrivial update_shared if some parameters non-constant", {
     q2 <- q * q
   })
   dat <- generate_prepare(dat)
+  generate_dust_system_update_shared(dat)
+
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
@@ -347,13 +349,13 @@ test_that("can look up lhs for bits of data", {
                 type = c("a" = "real", b = "real", c = "real"),
                 packing = list(state = list(scalar = c("x", "y", "b", "z")))))
   expect_equal(
-    generate_dust_lhs("a", dat, "mystate"),
+    generate_dust_lhs(list(name = "a"), dat, "mystate"),
     "const real a")
   expect_equal(
-    generate_dust_lhs("b", dat, "mystate"),
+    generate_dust_lhs(list(name = "b"), dat, "mystate"),
     "mystate[2]")
   expect_error(
-    generate_dust_lhs("c", dat, "mystate"),
+    generate_dust_lhs(list(name = "c"), dat, "mystate"),
     "Unsupported location")
 })
 
@@ -526,7 +528,6 @@ test_that("generate defaults for parameters", {
     update(x) <- x + a
     initial(x) <- 0
   })
-
   dat <- generate_prepare(dat)
   expect_equal(
     generate_dust_system_build_shared(dat),
@@ -559,5 +560,121 @@ test_that("can generate models with commonly used mathematical functions", {
       "  const real_type b = mcstate::math::ceil(a);",
       "  const real_type c = mcstate::math::pow(a, b);",
       "  state_next[0] = c;",
+      "}"))
+})
+
+
+test_that("can generate a simple array equation", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    a[] <- Normal(0, 1)
+    dim(a) <- 2
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i < 2; ++i) {",
+      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
+      "}"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(2);",
+      "  return internal_state{a};",
+      "}"))
+})
+
+
+test_that("can generate a simple array within shared", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    a[] <- i
+    dim(a) <- 3
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = shared.a[0] + shared.a[1] + shared.a[2];",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  std::vector<real_type> a(3);",
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    a[i - 1] = i;",
+      "  }",
+      "  return shared_state{a};",
+      "}"))
+
+  ## internal state empty despite having arrays:
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+})
+
+
+test_that("can generate non-range access to arrays", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1]
+    a[1] <- Normal(0, 1)
+    dim(a) <- 1
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  internal.a[0] = mcstate::random::normal(rng_state, 0, 1);",
+      "  state_next[0] = internal.a[0];",
+      "}"))
+})
+
+
+test_that("can generate stochastic initial conditions", {
+  dat <- odin_parse({
+    a0 <- Poisson(N / 100)
+    N <- parameter(1000)
+    initial(a) <- a0
+    initial(b) <- N - a0
+    update(a) <- a
+    update(b) <- b
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type N = dust2::r::read_real(parameters, \"N\", 1000);",
+      "  return shared_state{N};",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_discrete,
+      "  const real_type a0 = mcstate::random::poisson(rng_state, shared.N / 100);",
+      "  state[0] = a0;",
+      "  state[1] = shared.N - a0;",
       "}"))
 })

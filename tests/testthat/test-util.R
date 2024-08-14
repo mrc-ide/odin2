@@ -45,3 +45,9 @@ test_that("set_names copes with common pathologies", {
                c("x" = "a", y = "b"))
   expect_null(set_names(NULL, "x"))
 })
+
+
+test_that("detect unary minus", {
+  expect_false(uses_unary_minus(quote(a - b)))
+  expect_true(uses_unary_minus(quote(-a - b)))
+})
