@@ -27,6 +27,17 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ret <- sprintf("mcstate::math::%s(%s)",
                      FUNCTIONS_MCSTATE_MATH[[fn]],
                      paste(args, collapse = ", "))
+    } else if (fn == "as.numeric") {
+      ret <- sprintf("static_cast<real_type>(%s)", args[[1]])
+    } else if (fn == "as.integer") {
+      ret <- sprintf("static_cast<int>(%s)", args[[1]])
+    } else if (fn %in% c("min", "max")) {
+      is_integer_like <- grepl("^[0-9]$", args)
+      if (any(is_integer_like) && !all(is_integer_like)) {
+        args[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
+                                         args[is_integer_like])
+      }
+      ret <- sprintf("std::%s(%s)", fn, paste(args, collapse = ", "))
     } else if (fn == "%%") {
       ## TODO: we'll use our usual fmodr thing here once we get that
       ## into mcstate's math library, but for now this is ok.
