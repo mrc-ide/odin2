@@ -650,3 +650,31 @@ test_that("can generate non-range access to arrays", {
       "  state_next[0] = internal.a[0];",
       "}"))
 })
+
+
+test_that("can generate stochastic initial conditions", {
+  dat <- odin_parse({
+    a0 <- Poisson(N / 100)
+    N <- parameter(1000)
+    initial(a) <- a0
+    initial(b) <- N - a0
+    update(a) <- a
+    update(b) <- b
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type N = dust2::r::read_real(parameters, \"N\", 1000);",
+      "  return shared_state{N};",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_discrete,
+      "  const real_type a0 = mcstate::random::poisson(rng_state, shared.N / 100);",
+      "  state[0] = a0;",
+      "  state[1] = shared.N - a0;",
+      "}"))
+})
