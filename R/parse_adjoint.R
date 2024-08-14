@@ -31,6 +31,7 @@ parse_adjoint <- function(dat) {
   dat$storage$location <- c(dat$storage$location, adjoint_location)
   dat$storage$packing$adjoint <-
     list(scalar = dat$storage$contents$adjoint)
+  dat$storage$packing$gradient <- list(scalar = parameters)
   dat$storage$type <- c(
     dat$storage$type,
     set_names(rep("real_type", length(adjoint_location)),

@@ -12,7 +12,8 @@ generate_dust_system <- function(dat) {
   body$add(sprintf("  %s", generate_dust_system_shared_state(dat)))
   body$add(sprintf("  %s", generate_dust_system_internal_state(dat)))
   body$add(sprintf("  %s", generate_dust_system_data_type(dat)))
-  body$add(sprintf("  %s", generate_dust_system_size_state(dat)))
+  body$add(sprintf("  %s", generate_dust_system_packing_state(dat)))
+  body$add(sprintf("  %s", generate_dust_system_packing_gradient(dat)))
   body$add(sprintf("  %s", generate_dust_system_build_shared(dat)))
   body$add(sprintf("  %s", generate_dust_system_build_internal(dat)))
   body$add(sprintf("  %s", generate_dust_system_build_data(dat)))
@@ -89,10 +90,23 @@ generate_dust_system_data_type <- function(dat) {
 }
 
 
-generate_dust_system_size_state <- function(dat) {
+generate_dust_system_packing_state <- function(dat) {
   args <- c("const shared_state&" = "shared")
-  body <- sprintf("return %d;", length(dat$storage$contents$variables))
-  cpp_function("size_t", "size_state", args, body, static = TRUE)
+  els <- sprintf('{"%s", {}}', dat$storage$packing$state$scalar)
+  body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
+  cpp_function("dust2::packing", "packing_state", args, body, static = TRUE)
+}
+
+
+generate_dust_system_packing_gradient <- function(dat) {
+  args <- c("const shared_state&" = "shared")
+  if (is.null(dat$adjoint)) {
+    body <- "return dust2::packing{};"
+  } else {
+    els <- sprintf('{"%s", {}}', dat$storage$packing$gradient$scalar)
+    body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
+  }
+  cpp_function("dust2::packing", "packing_gradient", args, body, static = TRUE)
 }
 
 
@@ -298,18 +312,9 @@ generate_dust_system_adjoint <- function(dat) {
     return(NULL)
   }
 
-  c(generate_dust_system_adjoint_size(dat),
-    generate_dust_system_adjoint_update(dat),
+  c(generate_dust_system_adjoint_update(dat),
     generate_dust_system_adjoint_compare_data(dat),
     generate_dust_system_adjoint_initial(dat))
-}
-
-
-generate_dust_system_adjoint_size <- function(dat) {
-  args <- c("const shared_state&" = "shared")
-  ## We might return the _difference_ here, still undecided...
-  body <- sprintf("return %d;", length(dat$storage$contents$adjoint))
-  cpp_function("size_t", "adjoint_size", args, body, static = TRUE)
 }
 
 

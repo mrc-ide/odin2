@@ -91,7 +91,7 @@ test_that("generate shared storage where used", {
 })
 
 
-test_that("can generate size_state function for system of all scalars", {
+test_that("can generate packing_state function for system of all scalars", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- 1
@@ -100,9 +100,23 @@ test_that("can generate size_state function for system of all scalars", {
   })
   dat <- generate_prepare(dat)
   expect_equal(
-    generate_dust_system_size_state(dat),
-    c(method_args$size_state,
-      "  return 2;",
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      '  return dust2::packing{{"x", {}}, {"y", {}}};',
+      "}"))
+})
+
+
+test_that("can generate empty packing_gradient function", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- 1
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_packing_gradient(dat),
+    c(method_args$packing_gradient,
+      '  return dust2::packing{};',
       "}"))
 })
 
@@ -440,9 +454,9 @@ test_that("generate adjoint", {
   dat <- generate_prepare(dat)
 
   expect_equal(
-    generate_dust_system_adjoint_size(dat),
-    c(method_args$adjoint_size,
-      "  return 2;",
+    generate_dust_system_packing_gradient(dat),
+    c(method_args$packing_gradient,
+      '  return dust2::packing{{"a", {}}};',
       "}"))
 
   expect_equal(
