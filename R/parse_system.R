@@ -83,11 +83,15 @@ parse_system_overall <- function(exprs, call) {
   data <- data_frame(
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
-  ## This will change later:
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name),
     rank = rep_len(1, sum(is_dim)),
     dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
+
+  ## This will change later; care needed with a folding product here.
+  stopifnot(
+    all(vlapply(arrays$dims, function(el) all(vlapply(el, is.numeric)))))
+  arrays$size <- I(lapply(arrays$dims, prod))
 
   exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
@@ -359,24 +363,12 @@ parse_packing <- function(names, arrays) {
   scalar <- setdiff(names, arrays$name)
   if (length(scalar) > 0) {
     packing_scalar <- data_frame(
-      name = scalar, rank = 0, dims = I(vector("list", length(scalar))))
+      name = scalar, rank = 0, dims = I(vector("list", length(scalar))),
+      size = I(rep(list(1), length(scalar))))
     packing <- rbind(packing_scalar, arrays)
   } else {
     packing <- arrays
   }
-
-  ## assertion that will fail when we start supporting non-static-size
-  ## arrays, at which point we should think carefully.
-  stopifnot(
-    all(vlapply(packing$dims, function(el) all(vlapply(el, is.numeric)))))
-
-  ## This needs care with variable-size arrays, as we'll want to do a
-  ## symbolic folding product
-  packing$size <- I(lapply(packing$dims, prod))
-
-  ## These are C-style array offsets - we store them as a list because
-  ## this will likely become expressions in future.
-  packing$offset <- I(as.list(cumsum(c(0, unlist(packing$size[-nrow(packing)])))))
 
   ## Later, we'll pack things up with anything that requires symbols
   ## first, so there's no great stress here at the moment; later we'll
@@ -384,6 +376,11 @@ parse_packing <- function(names, arrays) {
   ## their size.
   packing <- packing[match(names, packing$name), ]
   rownames(packing) <- NULL
+
+  ## These are C-style array offsets - we store them as a list because
+  ## this will likely become expressions in future.
+  packing$offset <-
+    I(as.list(cumsum(c(0, unlist(packing$size[-nrow(packing)])))))
 
   packing
 }

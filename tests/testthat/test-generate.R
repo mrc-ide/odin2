@@ -356,12 +356,13 @@ test_that("generate stack equations during update", {
 
 
 test_that("can look up lhs for bits of data", {
+  packing <- parse_packing(c("x", "y", "b", "z"), NULL)
   dat <- list(storage = list(
                 location = c(a = "stack",
                              b = "state",
                              c = "outerspace"),
                 type = c("a" = "real", b = "real", c = "real"),
-                packing = list(state = list(scalar = c("x", "y", "b", "z")))))
+                packing = list(state = packing)))
   expect_equal(
     generate_dust_lhs(list(name = "a"), dat, "mystate"),
     "const real a")
@@ -706,20 +707,20 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + 1",
-      "  const auto y = state[0];",
+      "  const auto * x = state + 0",
+      "  const auto y = state[3];",
       "  for (size_t i = 1; i < 3; ++i) {",
-      "    state_next[i - 1 + 1] = x[i - 1];",
+      "    state_next[i - 1 + 0] = x[i - 1];",
       "  }",
-      "  state_next[0] = y;",
+      "  state_next[3] = y;",
       "}"))
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
       "  for (size_t i = 1; i < 3; ++i) {",
-      "    state[i - 1 + 1] = 0;",
+      "    state[i - 1 + 0] = 0;",
       "  }",
-      "  state[0] = 0;",
+      "  state[3] = 0;",
       "}"))
   expect_equal(
     generate_dust_system_packing_state(dat),
@@ -743,11 +744,10 @@ test_that("can generate sytem with array variable used in compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto * x = state + 1",
-      "  const auto y = state[0];",
-      "  for (size_t i = 1; i < 3; ++i) {",
-      "    state_next[i - 1 + 1] = x[i - 1];",
-      "  }",
-      "  state_next[0] = y;",
+      "  const auto * x = state + 0",
+      "  const auto y = state[2];",
+      "  real_type ll = 0;",
+      "  ll += mcstate::density::normal(data.d, x[0] + x[1], y, true);",
+      "  return ll;",
       "}"))
 })

@@ -154,7 +154,7 @@ generate_dust_system_build_internal <- function(dat) {
   if (length(dat$storage$contents$internal) == 0) {
     body <- "return internal_state{};"
   } else {
-    nms <- dat$storage$arrays$name
+    nms <- dat$storage$contents$internal
     type <- dat$storage$type[nms]
     size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat)
     body <- c(
