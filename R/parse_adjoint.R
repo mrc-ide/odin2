@@ -10,6 +10,12 @@ parse_adjoint <- function(dat) {
     return(dat)
   }
 
+  ## Not sure what I will need to do here, but it's a bunch!
+  if (nrow(dat$storage$arrays) > 0) {
+    stop("Implement differentiation with arrays")
+  }
+  arrays <- NULL
+
   ## TODO: validate that we have data/compare because otherwise we
   ## have nothing to differentiate!
 
@@ -29,11 +35,10 @@ parse_adjoint <- function(dat) {
   dat$storage$contents$adjoint <-
     names(adjoint_location)[adjoint_location == "adjoint"]
   dat$storage$location <- c(dat$storage$location, adjoint_location)
-  browser()
-  stop("fix adjoint packing")
   dat$storage$packing$adjoint <-
-    list(scalar = dat$storage$contents$adjoint)
-  dat$storage$packing$gradient <- list(scalar = parameters)
+    parse_packing(dat$storage$contents$adjoint, arrays)
+  dat$storage$packing$gradient <- parse_packing(parameters, arrays)
+
   dat$storage$type <- c(
     dat$storage$type,
     set_names(rep("real_type", length(adjoint_location)),
