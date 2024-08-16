@@ -29,6 +29,8 @@ parse_adjoint <- function(dat) {
   dat$storage$contents$adjoint <-
     names(adjoint_location)[adjoint_location == "adjoint"]
   dat$storage$location <- c(dat$storage$location, adjoint_location)
+  browser()
+  stop("fix adjoint packing")
   dat$storage$packing$adjoint <-
     list(scalar = dat$storage$contents$adjoint)
   dat$storage$packing$gradient <- list(scalar = parameters)

@@ -692,3 +692,62 @@ test_that("can generate stochastic initial conditions", {
       "  state[1] = shared.N - a0;",
       "}"))
 })
+
+
+test_that("can generate system with array variable", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- x[i]
+    initial(y) <- 0
+    update(y) <- y
+    dim(x) <- 3
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 1",
+      "  const auto y = state[0];",
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    state_next[i - 1 + 1] = x[i - 1];",
+      "  }",
+      "  state_next[0] = y;",
+      "}"))
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_discrete,
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    state[i - 1 + 1] = 0;",
+      "  }",
+      "  state[0] = 0;",
+      "}"))
+  expect_equal(
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      '  return dust2::packing{{"x", {3}}, {"y", {}}};',
+      "}"))
+})
+
+
+test_that("can generate sytem with array variable used in compare", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- x[i]
+    initial(y) <- 0
+    update(y) <- y
+    dim(x) <- 2
+    d <- data()
+    compare(d) ~ Normal(x[1] + x[2], y)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto * x = state + 1",
+      "  const auto y = state[0];",
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    state_next[i - 1 + 1] = x[i - 1];",
+      "  }",
+      "  state_next[0] = y;",
+      "}"))
+})

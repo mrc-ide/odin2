@@ -264,14 +264,7 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
   ## could also use proper booleans too.
   type <- set_names(rep("real_type", length(location)), names(location))
 
-  ## This will change soon, as we'll need more flexibility with
-  ## arrays, and output, and adjoints.  For now just record the
-  ## locations of variables and we'll work out what index these sit at
-  ## later.
-  packing <- list(state = list(scalar = variables))
-
-  ## For now; later we will do interesting things here
-  arrays$size <- arrays$dims
+  packing <- list(state = parse_packing(variables, arrays))
 
   list(contents = contents,
        location = location,
@@ -359,4 +352,38 @@ parse_system_arrays <- function(exprs, call) {
   }
 
   exprs
+}
+
+
+parse_packing <- function(names, arrays) {
+  scalar <- setdiff(names, arrays$name)
+  if (length(scalar) > 0) {
+    packing_scalar <- data_frame(
+      name = scalar, rank = 0, dims = I(vector("list", length(scalar))))
+    packing <- rbind(packing_scalar, arrays)
+  } else {
+    packing <- arrays
+  }
+
+  ## assertion that will fail when we start supporting non-static-size
+  ## arrays, at which point we should think carefully.
+  stopifnot(
+    all(vlapply(packing$dims, function(el) all(vlapply(el, is.numeric)))))
+
+  ## This needs care with variable-size arrays, as we'll want to do a
+  ## symbolic folding product
+  packing$size <- I(lapply(packing$dims, prod))
+
+  ## These are C-style array offsets - we store them as a list because
+  ## this will likely become expressions in future.
+  packing$offset <- I(as.list(cumsum(c(0, unlist(packing$size[-nrow(packing)])))))
+
+  ## Later, we'll pack things up with anything that requires symbols
+  ## first, so there's no great stress here at the moment; later we'll
+  ## need to order these by things that are expressions anywhere in
+  ## their size.
+  packing <- packing[match(names, packing$name), ]
+  rownames(packing) <- NULL
+
+  packing
 }
