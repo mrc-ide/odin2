@@ -14,26 +14,29 @@ test_that("can generate basic literal values", {
 })
 
 
-test_that("can generate references to bits of data", {
-  dat <- generate_dust_dat(c(a = "state",
-                             b = "stack",
-                             c = "shared",
-                             d = "internal",
-                             e = "data"))
+test_that("can generate min/max expressions", {
+  dat <- generate_dust_dat(c(a = "shared", b = "stack"))
   options <- list()
-  expect_equal(generate_dust_sexp("a", dat, options), "a")
-  expect_equal(generate_dust_sexp("b", dat, options), "b")
-  expect_equal(generate_dust_sexp("c", dat, options), "shared.c")
-  expect_equal(generate_dust_sexp("d", dat, options), "internal.d")
-  expect_equal(generate_dust_sexp("e", dat, options), "data.e")
+  expect_equal(generate_dust_sexp(quote(min(a, b)), dat, options),
+               "std::min(shared.a, b)")
+  expect_equal(generate_dust_sexp(quote(max(a, 1)), dat, options),
+               "std::max(shared.a, static_cast<real_type>(1))")
+  expect_equal(generate_dust_sexp(quote(min(2, 1)), dat, options),
+               "std::min(2, 1)")
+})
 
-  options <- list(shared_exists = FALSE)
 
-  expect_equal(generate_dust_sexp("a", dat, options), "a")
-  expect_equal(generate_dust_sexp("b", dat, options), "b")
-  expect_equal(generate_dust_sexp("c", dat, options), "c")
-  expect_equal(generate_dust_sexp("d", dat, options), "internal.d")
-  expect_equal(generate_dust_sexp("e", dat, options), "data.e")
+test_that("can cast types", {
+  dat <- generate_dust_dat(c(a = "shared"))
+  options <- list()
+  expect_equal(generate_dust_sexp(quote(as.integer(1)), dat, options),
+               "static_cast<int>(1)")
+  expect_equal(generate_dust_sexp(quote(as.integer(a)), dat, options),
+               "static_cast<int>(shared.a)")
+  expect_equal(generate_dust_sexp(quote(as.numeric(1)), dat, options),
+               "static_cast<real_type>(1)")
+  expect_equal(generate_dust_sexp(quote(as.numeric(a)), dat, options),
+               "static_cast<real_type>(shared.a)")
 })
 
 
@@ -76,6 +79,25 @@ test_that("can generate simple expressions involving arithmetic", {
 
 test_that("can use functions from the library", {
   dat <- generate_dust_dat(NULL)
+  options <- list()
+  expect_equal(
+    generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
+    "3 * mcstate::math::exp(1 + 2)")
+  expect_equal(
+    generate_dust_sexp(quote(4^8), dat, options),
+    "mcstate::math::pow(4, 8)")
+  expect_equal(
+    generate_dust_sexp(quote(ceiling(4)), dat, options),
+    "mcstate::math::ceil(4)")
+})
+
+
+test_that("can generate min/max", {
+  dat <- generate_dust_dat(c(a = "state",
+                             b = "stack",
+                             c = "shared",
+                             d = "internal",
+                             e = "data"))
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),

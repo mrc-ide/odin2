@@ -7,6 +7,7 @@ INDEX <- c("i", "j", "k", "l", "i5", "i6", "i7", "i8")
 FUNCTIONS_MCSTATE_MATH <-
   c("^" = "pow",
     ceiling = "ceil",
+    sign = "sign",
     floor = "floor",
     round = "round",
     trunc = "trunc",
