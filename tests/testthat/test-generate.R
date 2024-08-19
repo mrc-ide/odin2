@@ -356,12 +356,13 @@ test_that("generate stack equations during update", {
 
 
 test_that("can look up lhs for bits of data", {
+  packing <- parse_packing(c("x", "y", "b", "z"), NULL)
   dat <- list(storage = list(
                 location = c(a = "stack",
                              b = "state",
                              c = "outerspace"),
                 type = c("a" = "real", b = "real", c = "real"),
-                packing = list(state = list(scalar = c("x", "y", "b", "z")))))
+                packing = list(state = packing)))
   expect_equal(
     generate_dust_lhs(list(name = "a"), dat, "mystate"),
     "const real a")
@@ -690,5 +691,63 @@ test_that("can generate stochastic initial conditions", {
       "  const real_type a0 = mcstate::random::poisson(rng_state, shared.N / 100);",
       "  state[0] = a0;",
       "  state[1] = shared.N - a0;",
+      "}"))
+})
+
+
+test_that("can generate system with array variable", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- x[i]
+    initial(y) <- 0
+    update(y) <- y
+    dim(x) <- 3
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0",
+      "  const auto y = state[3];",
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1];",
+      "  }",
+      "  state_next[3] = y;",
+      "}"))
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_discrete,
+      "  for (size_t i = 1; i < 3; ++i) {",
+      "    state[i - 1 + 0] = 0;",
+      "  }",
+      "  state[3] = 0;",
+      "}"))
+  expect_equal(
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      '  return dust2::packing{{"x", {3}}, {"y", {}}};',
+      "}"))
+})
+
+
+test_that("can generate sytem with array variable used in compare", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- x[i]
+    initial(y) <- 0
+    update(y) <- y
+    dim(x) <- 2
+    d <- data()
+    compare(d) ~ Normal(x[1] + x[2], y)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  const auto * x = state + 0",
+      "  const auto y = state[2];",
+      "  real_type ll = 0;",
+      "  ll += mcstate::density::normal(data.d, x[0] + x[1], y, true);",
+      "  return ll;",
       "}"))
 })

@@ -91,22 +91,25 @@ generate_dust_system_data_type <- function(dat) {
 
 
 generate_dust_system_packing_state <- function(dat) {
-  args <- c("const shared_state&" = "shared")
-  els <- sprintf('{"%s", {}}', dat$storage$packing$state$scalar)
-  body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
-  cpp_function("dust2::packing", "packing_state", args, body, static = TRUE)
+  generate_dust_system_packing("state", dat)
 }
 
 
 generate_dust_system_packing_gradient <- function(dat) {
+  generate_dust_system_packing("gradient", dat)
+}
+
+
+generate_dust_system_packing <- function(name, dat) {
+  packing <- dat$storage$packing[[name]]
   args <- c("const shared_state&" = "shared")
-  if (is.null(dat$adjoint)) {
-    body <- "return dust2::packing{};"
-  } else {
-    els <- sprintf('{"%s", {}}', dat$storage$packing$gradient$scalar)
-    body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
-  }
-  cpp_function("dust2::packing", "packing_gradient", args, body, static = TRUE)
+  dims <- vcapply(packing$dims, function(el) {
+    paste(vcapply(el, generate_dust_sexp, dat$sexp_data), collapse = ", ")
+  })
+  els <- sprintf('{"%s", {%s}}', packing$name, dims)
+  body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
+  cpp_function("dust2::packing", sprintf("packing_%s", name), args, body,
+               static = TRUE)
 }
 
 
@@ -151,7 +154,7 @@ generate_dust_system_build_internal <- function(dat) {
   if (length(dat$storage$contents$internal) == 0) {
     body <- "return internal_state{};"
   } else {
-    nms <- dat$storage$arrays$name
+    nms <- dat$storage$contents$internal
     type <- dat$storage$type[nms]
     size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat)
     body <- c(
@@ -218,11 +221,9 @@ generate_dust_system_update <- function(dat) {
             "rng_state_type&" = "rng_state",
             "real_type*" = "state_next")
   body <- collector()
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$phases$update$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$phases$update$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
   eqs <- dat$phases$update$equations
   for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
@@ -241,11 +242,9 @@ generate_dust_system_rhs <- function(dat) {
             "internal_state&" = "internal",
             "real_type*" = "state_deriv")
   body <- collector()
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$phases$deriv$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$phases$deriv$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
   eqs <- dat$phases$deriv$equations
   for (eq in c(dat$equations[eqs], dat$phases$deriv$variables)) {
     body$add(generate_dust_assignment(eq, "state_deriv", dat))
@@ -281,11 +280,9 @@ generate_dust_system_compare_data <- function(dat) {
             "internal_state&" = "internal",
             "rng_state_type&" = "rng_state")
   body <- collector()
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$phases$compare$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$phases$compare$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
   ## TODO collision here in names with 'll'; we might need to prefix
   ## with compare_ perhaps?
   body$add("real_type ll = 0;")
@@ -328,21 +325,18 @@ generate_dust_system_adjoint_update <- function(dat) {
             "real_type*" = "adjoint_next")
   body <- collector()
 
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$adjoint$update$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$adjoint$update$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
 
-  adjoint <- dat$storage$contents$adjoint
-  i <- adjoint %in% dat$adjoint$update$unpack_adjoint
-  body$add(sprintf("const auto %s = adjoint[%d];",
-                   adjoint[i],
-                   match(adjoint[i], dat$storage$packing$adjoint$scalar) - 1))
-
+  unpack <- intersect(dat$storage$contents$adjoint,
+                      dat$adjoint$update$unpack_adjoint)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
+                         "adjoint"))
   eqs <- dat$adjoint$update$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$update$adjoint)) {
-    body$add(generate_dust_assignment(eq, "state_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
   cpp_function("void", "adjoint_update", args, body$get(), static = TRUE)
@@ -360,21 +354,19 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
             "real_type*" = "adjoint_next")
   body <- collector()
 
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$adjoint$compare$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$adjoint$compare$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
 
-  adjoint <- dat$storage$contents$adjoint
-  i <- adjoint %in% dat$adjoint$compare$unpack_adjoint
-  body$add(sprintf("const auto %s = adjoint[%d];",
-                   adjoint[i],
-                   match(adjoint[i], dat$storage$packing$adjoint$scalar) - 1))
+  unpack <- intersect(dat$storage$contents$adjoint,
+                      dat$adjoint$compare$unpack_adjoint)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
+                         "adjoint"))
 
   eqs <- dat$adjoint$compare$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$compare$adjoint)) {
-    body$add(generate_dust_assignment(eq, "state_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
   cpp_function("void", "adjoint_compare_data", args, body$get(), static = TRUE)
@@ -391,21 +383,19 @@ generate_dust_system_adjoint_initial <- function(dat) {
             "real_type*" = "adjoint_next")
   body <- collector()
 
-  variables <- dat$storage$contents$variables
-  i <- variables %in% dat$adjoint$initial$unpack
-  body$add(sprintf("const auto %s = state[%d];",
-                   variables[i],
-                   match(variables[i], dat$storage$packing$state$scalar) - 1))
+  unpack <- intersect(dat$variables, dat$adjoint$initial$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
 
-  adjoint <- dat$storage$contents$adjoint
-  i <- adjoint %in% dat$adjoint$initial$unpack_adjoint
-  body$add(sprintf("const auto %s = adjoint[%d];",
-                   adjoint[i],
-                   match(adjoint[i], dat$storage$packing$adjoint$scalar) - 1))
+  unpack <- intersect(dat$storage$contents$adjoint,
+                      dat$adjoint$initial$unpack_adjoint)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
+                         "adjoint"))
 
   eqs <- dat$adjoint$initial$equations
   for (eq in c(dat$equations[eqs], dat$adjoint$initial$adjoint)) {
-    body$add(generate_dust_assignment(eq, "state_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
   cpp_function("void", "adjoint_initial", args, body$get(), static = TRUE)
@@ -448,20 +438,24 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
       generate_dust_sexp(name, dat$sexp_data, options)
     }
   } else if (location == "state") {
+    packing <- dat$storage$packing$state
+    offset <- packing$offset[[match(name, packing$name)]]
     if (is_array) {
-      stop("support arrays in variables")
+      offset <- expr_plus(idx, offset)
     }
-    ## TODO: this wil need to change, once we support arrays: at that
-    ## point we'll make this more efficient too by computing
-    ## expressions for access.
     sprintf("%s[%s]",
-            name_state, match(name, dat$storage$packing$state$scalar) - 1)
+            name_state,
+            generate_dust_sexp(offset, dat$sexp_data, options))
   } else if (location == "adjoint") {
+    packing <- dat$storage$packing$adjoint
+    offset <- packing$offset[[match(name, packing$name)]]
     if (is_array) {
-      stop("support arrays in adjoint")
+      stop("arrays in adjoint probably need checking carefully")
+      offset <- expr_plus(idx, offset)
     }
     sprintf("%s[%s]",
-            "adjoint_next", match(name, dat$storage$packing$adjoint$scalar) - 1)
+            name_state,
+            generate_dust_sexp(offset, dat$sexp_data, options))
   } else {
     stop(sprintf("Unsupported location '%s'", location))
   }
@@ -509,4 +503,22 @@ generate_dust_assignment <- function(eq, name_state, dat,
     }
   }
   res
+}
+
+
+generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
+  i <- match(names, packing$name)
+  is_scalar <- lengths(packing$dims[i]) == 0
+  is_array <- !is_scalar
+  offset <- vcapply(packing$offset[i], generate_dust_sexp, sexp_data)
+  ret <- character(length(names))
+  ret[is_scalar] <- sprintf("const auto %s = %s[%s];",
+                            names[is_scalar],
+                            from,
+                            offset[is_scalar])
+  ret[is_array] <- sprintf("const auto * %s = %s + %s",
+                           names[is_array],
+                           from,
+                           offset[is_array])
+  ret
 }
