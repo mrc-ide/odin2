@@ -444,3 +444,17 @@ If you wanted a length-5 array of zeros here, you should write
 ```
 a[] <- 0
 ```
+
+# `E2010`
+
+Can't reference data outside of equations that compare to data.  You have tried to reference some data (a variable that exists on the lhs of a call to `data()`) from an equation that is used anywhere other than a comparison expression (involving `~`, or a dependency of these equations).  You cannot do this, because data do not exist at this point.
+
+Here's a trivial example that would error:
+
+```r
+initial(x) <- 1
+update(x) <- x + d
+d <- data()
+```
+
+Here, `d` defines some data, and we try to use it from `update()` but we just can't do that.

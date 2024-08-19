@@ -57,3 +57,37 @@ test_that("parse compare call rhs as distributions", {
     "Invalid call to 'Normal()'",
     fixed = TRUE)
 })
+
+
+test_that("can apply transformation to data before use", {
+  res <- odin_parse({
+    initial(x) <- 1
+    update(x) <- 1
+    d <- data()
+    d2 <- d * d
+    compare(d2) ~ Normal(x, 1)
+  })
+  expect_equal(res$data, data_frame(name = "d"))
+  expect_equal(res$phases$compare$equations, "d2")
+  expect_equal(res$storage$location[["d2"]], "stack")
+})
+
+
+test_that("data can only be used within the compare phase", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- d
+      d <- data()
+    }),
+    "Data may only be referenced from equations used in comparison")
+
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- a
+      a <- d * d
+      d <- data()
+    }),
+    "Data may only be referenced from equations used in comparison")
+})
