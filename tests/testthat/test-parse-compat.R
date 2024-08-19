@@ -99,3 +99,18 @@ test_that("can translate simple calls to distributions", {
     res$phases$update$variables[[1]]$rhs$expr,
     quote(OdinStochasticCall(sample = "normal", mean = a)(a, 1)))
 })
+
+
+test_that("can translate parameter assignment using array access", {
+  expect_warning(
+    res <- odin_parse({
+      initial(y) <- 1
+      update(y) <- Normal(a[1], a[2])
+      a[] <- parameter()
+      dim(a) <- 2
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(
+    res$equations$a$src$value,
+    quote(a <- parameter()))
+})

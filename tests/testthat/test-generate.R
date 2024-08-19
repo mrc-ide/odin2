@@ -758,7 +758,7 @@ test_that("can generate system with array from user", {
     initial(x) <- 0
     update(x) <- x + a[1] + a[2]
     dim(a) <- 2
-    a[] <- parameter()
+    a <- parameter()
   })
   dat <- generate_prepare(dat)
 

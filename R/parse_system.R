@@ -336,7 +336,9 @@ parse_system_arrays <- function(exprs, call) {
   ## and make sure that we are always assigned as an array.
   for (nm in dim_nms) {
     i <- nms == nm & !is_dim
-    err <- vlapply(exprs[i], function(x) is.null(x$lhs$array))
+    err <- vlapply(exprs[i], function(x) {
+      is.null(x$lhs$array) && !identical(x$special, "parameter")
+    })
     if (any(err)) {
       src <- lapply(exprs[i][err], "[[", "src")
       odin_parse_error(

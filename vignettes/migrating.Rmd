@@ -77,6 +77,24 @@ a <- parameter(4)
 
 This translation can be done automatically in most cases, and will be done (with a warning) by default if possible.  You should update your code with the suggested fix, however, as this translation will be removed in a future version.
 
+## Vector parameters assign without array indicies
+
+Previously, if you had a vector parameter you had to write
+
+```r
+a[] <- parameter()
+dim(a) <- 10
+```
+
+(though with `user()`, as in the previous section).  However, the array index here does not really add anything as we already know how many dimensions `a` has from the `dim` call.  So now you should write
+
+```r
+a <- parameter()
+dim(a) <- 10
+```
+
+which makes it clearer that **all** of `a` is assigned by the parameter call.
+
 ## Discrete-time models have a more solid time basis
 
 Previously, discrete time models used `step` to count steps forward as unsigned integers, usually from zero.  Many models added a parameter (or constant) `dt` representing the timestep and then a variable `time` which represented the time as a real-valued number.  For example you might have `dt` of 0.25 and then your model stops at times `[0, 0.25, 0.5, 0.75, 1]` for steps `[0, 1, 2, 3, 4]`.
