@@ -224,7 +224,7 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
                         "the '{phase}()' function or its dependencies, which",
                         "is not allowed because data are not defined",
                         "at this point")),
-            "E2099", src, call)
+            "E2010", src, call)
         }
         phases[[phase]] <- list(unpack = unpack,
                                 equations = eqs_time,
