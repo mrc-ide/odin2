@@ -51,3 +51,27 @@ test_that("detect unary minus", {
   expect_false(uses_unary_minus(quote(a - b)))
   expect_true(uses_unary_minus(quote(-a - b)))
 })
+
+
+test_that("can generate reasonable expressions for addition", {
+  expect_identical(
+    expr_plus(quote(a), quote(b)), quote(a + b))
+  expect_identical(
+    expr_plus(quote(a), 1), quote(a + 1))
+  expect_identical(
+    expr_plus(1, quote(b)), quote(1 + b))
+  expect_identical(
+    expr_plus(1, 2), 3)
+})
+
+
+test_that("can generate reasonable expressions for subtraction", {
+  expect_identical(
+    expr_minus(quote(a), quote(b)), quote(a - b))
+  expect_identical(
+    expr_minus(quote(a), 1), quote(a - 1))
+  expect_identical(
+    expr_minus(1, quote(b)), quote(1 - b))
+  expect_identical(
+    expr_minus(3, 2), 1)
+})
