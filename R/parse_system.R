@@ -208,13 +208,28 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       eqs <- union(eqs, unlist(deps_recursive[eqs], FALSE, FALSE))
       used <- union(used, eqs)
 
-      is_time <- stage[eqs] == "time"
-      is_data <- stage[eqs] == "data"
+      is_time <- stage[eqs] %in% c("time", "data")
       eqs_time <- intersect(names(equations), eqs[is_time])
       unpack <- intersect(variables, c(eqs, deps))
-      required <- union(required, eqs[!(is_time | is_data)])
+      required <- union(required, eqs[!is_time])
 
       if (phase %in% c("update", "deriv", "output")) {
+        check <- c(e, equations[eqs_time])
+        err <- lapply(check, function(eq) {
+          intersect(data, eq$rhs$depends$variables)
+        })
+        is_err <- lengths(err) > 0
+        if (any(is_err)) {
+          data_err <- intersect(data, unlist0(err))
+          src <- lapply(check[is_err], "[[", "src")
+          odin_parse_error(
+            c("Data may only be referenced from equations used in comparison",
+              i = paste("You have referenced data {squote(data_err)} from",
+                        "the '{phase}()' function or its dependencies, which",
+                        "is not allowed because data are not defined",
+                        "at this point")),
+            "E2010", src, call)
+        }
         phases[[phase]] <- list(unpack = unpack,
                                 equations = eqs_time,
                                 variables = e)
@@ -229,7 +244,7 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
         phases[[phase]] <- list(equations = eqs_time,
                                 variables = e)
       } else if (phase == "compare") {
-        eqs_data <- intersect(names(equations), eqs[is_time | is_data])
+        eqs_data <- intersect(names(equations), eqs[is_time])
         phases[[phase]] <- list(equations = eqs_data,
                                 unpack = unpack,
                                 compare = e)
