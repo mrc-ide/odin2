@@ -192,3 +192,40 @@ test_that("can parse systems that involve arrays in shared", {
     d$equations$a$lhs$array,
     list(list(name = "i", is_range = TRUE, from = 1, to = 3)))
 })
+
+
+test_that("pack system entirely composed of arrays", {
+  d <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] * 2
+    initial(y[]) <- 1
+    update(y[]) <- y[i] / x[i]
+    dim(x) <- 2
+    dim(y) <- 2
+  })
+  expect_equal(
+    d$storage$packing$state,
+    data_frame(name = c("x", "y"),
+               rank = 1,
+               dims = I(list(2, 2)),
+               size = I(list(2, 2)),
+               offset = I(list(0, 2))))
+})
+
+
+test_that("pack system of mixed arrays and scalars", {
+  d <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] * 2
+    initial(y) <- 1
+    update(y) <- y / (x[1] + x[2])
+    dim(x) <- 2
+  })
+  expect_equal(
+    d$storage$packing$state,
+    data_frame(name = c("x", "y"),
+               rank = c(1, 0),
+               dims = I(list(2, NULL)),
+               size = I(list(2, 1)),
+               offset = I(list(0, 2))))
+})

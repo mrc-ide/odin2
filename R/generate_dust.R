@@ -450,6 +450,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
     packing <- dat$storage$packing$adjoint
     offset <- packing$offset[[match(name, packing$name)]]
     if (is_array) {
+      stop("arrays in adjoint probably need checking carefully")
       offset <- expr_plus(idx, offset)
     }
     sprintf("%s[%s]",
