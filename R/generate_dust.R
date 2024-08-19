@@ -118,6 +118,13 @@ generate_dust_system_build_shared <- function(dat) {
   eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
+    if (eq$lhs$name %in% dat$storage$arrays$name) {
+      i <- match(eq$lhs$name, dat$storage$arrays$name)
+      size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
+                                 options)
+      body$add(sprintf("std::vector<%s> %s(%s);",
+                       dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
+    }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
@@ -469,19 +476,11 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       ## Needs work doing some sort of static initialisation
       stopifnot(is.null(eq$rhs$args$default))
       len <- dat$storage$arrays$size[[i]]
-      if (isFALSE(options$shared_exists)) {
-        alloc <- sprintf("std::vector<real_type> %s(%s);",
-                         name, generate_dust_sexp(len, dat$sexp_data, options))
-        required <- "true"
-      } else {
-        alloc <- NULL
-        required <- "false"
-      }
+      required <- if (isFALSE(options$shared_exists)) "true" else "false"
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
-      read <- sprintf(
+      res <- sprintf(
         'dust2::r::read_real_vector(parameters, %s, %s.data(), "%s", %s);',
         len, dest, name, required)
-      res <- c(alloc, read)
     } else {
       lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
       if (isFALSE(options$shared_exists)) {
@@ -505,7 +504,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
 
     res <- sprintf("%s = %s;", lhs, rhs)
-    is_array <- !is.null(eq$lhs$array) && !is_parameter
+    is_array <- !is.null(eq$lhs$array)
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
         if (idx$is_range) {
