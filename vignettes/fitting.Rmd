@@ -543,10 +543,14 @@ p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
 
 However, there's a small bit of functionality we need to add here in dust2, still.
 
-<!-- ```{r,} -->
-<!-- likelihood2 <- dust2::dust_filter_mcstate(filter2, sir_packer) -->
-<!-- mcstate2::mcstate_model_density(likelihood2, p) -->
-<!-- ``` -->
+<!-- once https://github.com/mrc-ide/dust2/pull/59 is merged we can add:
+
+```{r}
+likelihood2 <- dust2::dust_filter_mcstate(filter2, sir_packer)
+mcstate2::mcstate_model_density(likelihood2, p)
+```
+
+-->
 
 # Further reading
 
