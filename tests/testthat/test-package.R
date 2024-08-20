@@ -53,7 +53,6 @@ test_that("can generate trivial package", {
 })
 
 
-
 test_that("can generate trivial package, quietly", {
   path <- withr::local_tempdir()
   test_pkg_setup(path)
