@@ -121,7 +121,7 @@ With this version of the model we can compute likelihoods with `dust2`'s machine
 Our system is **stochastic**; each particle will produce a different trajectory and from that a different likelihood.  Each time we run the system we get a different combination of likelihoods.  We can use a **particle filter** to generate an estimate of the marginal likelihood, averaging over this stochasticity.  This works by resampling the particles at each point along the time series, according to how likely they are.
 
 ```{r}
-filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 100)
+filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 200)
 ```
 
 Each time we run this filter the likelihood will be slightly (or very) different:
@@ -148,6 +148,37 @@ abline(v = c(mean(ll1), mean(ll2)), col = c("red", "blue"), lwd = 2)
 
 So even a relatively small difference in a parameter leads to a difference in the log-likelihood that is easily detectable in only 100 runs of the filter, even when the distributions overlap.  However, it does make optimisation-based approaches to inference, such as maximum likelihood, tricky because it's hard to know which way "up" is if each time you try a point it might return a different height.
 
+If you run a particle filter with the argument `save_history = TRUE` then we save the trajectories of particles over time:
+
+```{r}
+dust2::dust_filter_run(filter, list(beta = 0.2, gamma = 0.1), save_history = TRUE)
+```
+
+You can access these with `dust2::dust_filter_last_history()`:
+
+```{r}
+h <- dust2::dust_filter_last_history(filter)
+```
+
+The result here is a 4 x 100 x 200 array:
+
+```{r}
+dim(h)
+```
+
+The dimensions represent, in turn:
+
+1. 4 state variables
+2. 200 particles
+3. 100 time steps (corresponding to the data)
+
+Considering just the fourth state, representing incidence, and plotting over time, you may be able to make out the tree structure of the trajectories, with fewer distinct traces at the start of the time series, and some traces more heavily represented in the final sample than others:
+
+```{r}
+matplot(t(h[4, , ]), type = "l", lty = 1, col = "#00000022")
+points(cases ~ time, data, pch = 19, col = "red")
+```
+
 # Inference with particle MCMC (pMCMC)
 
 We can use MCMC to explore this model, but to do this we will need a prior.  We'll use [mcstate2's DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html) to create one; this looks similar to the odin code above:
@@ -159,7 +190,7 @@ prior <- mcstate2::mcstate_dsl({
 })
 ```
 
-Here we define a prior that covers `beta` and `gamma`, two of the three input parameters to our odin model.
+Here we define a prior that covers `beta` and `gamma`, two of the three input parameters to our odin model.  This prior is an `mcstate_model` object, which we can use to sample from, compute log densities with (to compute the prior), etc.
 
 We also need to adapt our `dust2` filter object above for use with `mcstate2`.  All we need to do here is to describe how a vector of statistical parameters (here `beta` and `gamma`) will be converted into the inputs that the `sir` system needs to run (here a list with elements `beta`, `gamma` and `I0`).  We do this with an `mcstate2::mcstate_packer` object:
 
@@ -185,13 +216,25 @@ Combining the filter and packer we create an `mcstate2` model, which we'll call 
 likelihood <- dust2::dust_filter_mcstate(filter, sir_packer)
 ```
 
-and with that our posterior
+This likelihood is now also an `mcstate_model` object:
+
+```{r}
+likelihood
+```
+
+The `mcstate2` package provides a high-level interface for working with these objects.  For example, to compute the likelihood we could now use `mcstate2::mcstate_model_density()`:
+
+```{r}
+mcstate2::mcstate_model_density(likelihood, c(0.2, 0.1))
+```
+
+The difference to using `dust2::dust_filter_run` here is now we provide a parameter vector from our *statistical model*, rather than the inputs to the odin/dust model.  This conforms to the interface that `mcstate2` uses and lets us run things like MCMC.
+
+We can combine the prior and the likelihood to create a posterior:
 
 ```{r}
 posterior <- prior + likelihood
 ```
-
-<!-- At this point we should refer to the mcstate2 docs for an introduction to these objects, but the docs there remain to be written -->
 
 The last ingredient required for running an MCMC is a sampler.  We don't have much choice with a model where the likelihood is stochastic, we'll need to run a simple random walk. However, for this we still need a proposal matrix (the variance covariance matrix that is the parameter for a multivariate Gaussian - we'll draw new positions from this).  In an ideal world, this distribution will have a similar shape to the target distribution (the posterior) as this will help with mixing.  To get started, we'll use an uncorrelated random walk with each parameter having a fairly wide variance of 0.02
 
@@ -354,9 +397,156 @@ dust2::dust_unfilter_run(unfilter, pars, adjoint = TRUE)
 dust2::dust_unfilter_last_gradient(unfilter)
 ```
 
+We can create an `mcstate2` model with this, as before:
+
+```{r}
+likelihood <- dust2::dust_filter_mcstate(unfilter, sir_packer)
+likelihood
+```
+
+and this model advertises that it can compute gradients now!
+
+So from `mcstate2` we can use `mcstate2::mcstate_model_density()` and `mcstate2::mcstate_model_gradient()` to compute log-likelihoods and gradients.
+
+```{r}
+mcstate2::mcstate_model_density(likelihood, c(0.2, 0.1))
+mcstate2::mcstate_model_gradient(likelihood, c(0.2, 0.1))
+```
+
+Because the prior contained gradient information, a posterior created with this version of the model also has gradients:
+
+```{r}
+posterior <- likelihood + prior
+posterior
+```
+
 With a model configured this way, you can use the [Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) method with `mcstate2::mcstate_sampler_hmc()`, which can be far more efficient than a random walk once tuned.
 
-**WARNING**": Using `derivative = TRUE` on some parameters has the effect of making the rest use `constant = TRUE`.  We will describe the effects of this somewhere...
+**WARNING**": Using `derivative = TRUE` on some parameters has the effect of making the rest use `constant = TRUE`.  We will describe the effects of this in a vignette on differentiable models, soon.
+
+# Running multiple parameter sets at once
+
+You can efficiently run multiple parameter sets at once; this will be parallelised where possible when enabled.
+
+## For dust2 systems
+
+When initialising the dust system, you should:
+
+* pass a (typically unnamed) list of parameters, each element of which is a different set of parameters for the system
+* pass the `n_groups` argument indicating how many groups you wish to initialise
+
+Here is a simple case with two parameter sets that differ in `beta`, each run with 20 particles:
+
+```{r}
+pars2 <- list(list(beta = 0.3, gamma = 0.1, I0 = 5),
+              list(beta = 0.2, gamma = 0.1, I0 = 5))
+sys <- dust2::dust_system_create(sir(), pars2, n_particles = 20, n_groups = 2,
+                                 dt = 0.25)
+dust2::dust_system_set_state_initial(sys)
+time <- 0:100
+y <- dust2::dust_system_simulate(sys, time)
+```
+
+The dimensions of `y` is now
+
+```{r}
+dim(y)
+```
+
+representing
+
+* 4 state variables
+* 20 particles
+* 2 parameter groups
+* 101 times
+
+Consider just incidence as above:
+
+```{r}
+matplot(time, t(y[4, , 1, ]), type = "l", lty = 1, col = "#ff000055",
+        xlab = "Time (days)", ylab = "Cases", las = 1)
+matlines(time, t(y[4, , 2, ]), type = "l", lty = 1, col = "#0000ff55")
+points(cases ~ time, data, pch = 19)
+```
+
+## For dust2 filters/unfilters
+
+Here we assume (require, really) that each parameter set is associated with a different data set.  We may relax this in future, but this is the typical use case we have seen.  We need an additional column called `group` in addition to `time`:
+
+```{r, include = FALSE}
+data2 <- local({
+  d1 <- data
+  d2 <- data
+  d2$cases <- rpois(nrow(d2), d2$cases * 1.5)
+  data2 <- cbind(group = rep(1:2, each = nrow(d2)), rbind(d1, d2))
+  data2 <- data2[order(data2$time), ]
+  rownames(data2) <- NULL
+  data2
+})
+```
+
+```{r}
+head(data2)
+```
+
+(this is just synthetic data for now, created by duplicating and perturbing the original data).
+
+```
+plot(cases ~ time, data2, subset = group == 2, pch = 19, col = "red",
+     xlab = "Time (days)", ylab = "Cases")
+points(cases ~ time, data2, subset = group == 1, pch = 19, col = "blue")
+```
+
+Because the data is grouped, we don't need to tell `dust2::dust_filter_create()` that we have two groups, though you can pass `n_groups = 2` here if you want, which will validate that you really do have exactly two groups in the data:
+
+```{r}
+filter2 <- dust2::dust_filter_create(sir(), 0, data2, n_particles = 200)
+```
+
+When passing parameters into the filter, you now should mirror the format used in `dust2::dust_system_run()`; a list of lists:
+
+```{r}
+dust2::dust_filter_run(filter2, pars2)
+```
+
+We now have two likelihoods returned by the filter; one per group.
+
+For the deterministic unfilter the process is the same:
+
+```{r}
+unfilter2 <- dust2::dust_unfilter_create(sir(), 0, data2)
+dust2::dust_unfilter_run(unfilter2, pars2)
+```
+
+however, our gradient has picked up a dimension:
+
+```{r}
+dust2::dust_unfilter_last_gradient(unfilter2)
+```
+
+Here, the first **column** is the gradient of the first parameter set, and the first **row** is the gradient of `beta` over parameter sets.
+
+Compare with the single parameter case:
+
+```{r}
+dust2::dust_unfilter_run(unfilter, pars2[[1]])
+dust2::dust_unfilter_last_gradient(unfilter)
+```
+
+## For mcstate2 models
+
+Here, rather than a parameter vector you would pass in a matrix, where each column represents a parameter set:
+
+```{r}
+p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
+```
+
+However, there's a small bit of functionality we need to add here in dust2, still.
+
+```{r}
+likelihood2 <- dust2::dust_filter_mcstate(filter2, sir_packer)
+mcstate2::mcstate_model_density(likelihood2, p)
+```
 
 # Further reading
 
