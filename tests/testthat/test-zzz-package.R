@@ -5,7 +5,7 @@ test_that("can generate trivial package, compile the result, and run system", {
                "update(x) <- x + 1"),
              file.path(path, "inst/odin/a.R"))
   res <- odin_package(path, quiet = TRUE)
-  pkg <- pkgload::load_all(res, quiet = TRUE, debug = TRUE)
+  pkg <- pkgload::load_all(res, quiet = TRUE)
 
   expect_s3_class(pkg$env$a(), "dust_system_generator")
   sys <- dust2::dust_system_create(pkg$env$a(), list(), n_particles = 1)
