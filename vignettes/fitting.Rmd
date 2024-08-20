@@ -160,7 +160,7 @@ You can access these with `dust2::dust_filter_last_history()`:
 h <- dust2::dust_filter_last_history(filter)
 ```
 
-The result here is a 4 x x 100 200 array:
+The result here is a 4 x 100 x 200 array:
 
 ```{r}
 dim(h)
@@ -432,7 +432,7 @@ You can efficiently run multiple parameter sets at once; this will be parallelis
 
 When initialising the dust system, you should:
 
-* pass an (typically unnamed) list of parameters, each element of which is a different set of parameters for the system
+* pass a (typically unnamed) list of parameters, each element of which is a different set of parameters for the system
 * pass the `n_groups` argument indicating how many groups you wish to initialise
 
 Here is a simple case with two parameter sets that differ in `beta`, each run with 20 particles:
