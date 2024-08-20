@@ -3,4 +3,5 @@
 S3method(cnd_footer,odin_parse_error)
 export(odin)
 export(odin_error_explain)
+export(odin_package)
 importFrom(rlang,cnd_footer)

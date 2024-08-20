@@ -10,6 +10,7 @@ reference:
     contents:
       - odin
       - odin_error_explain
+      - odin_package
 
 articles:
   - title: Basics
