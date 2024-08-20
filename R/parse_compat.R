@@ -13,7 +13,9 @@ parse_compat <- function(exprs, action, call) {
   ## things to fix in a single expression.
   
   exprs <- lapply(exprs, parse_compat_fix_user, call)
+  exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
   exprs <- lapply(exprs, parse_compat_fix_distribution, call)
+
   parse_compat_report(exprs, action, call)
   exprs
 }
@@ -50,6 +52,22 @@ parse_compat_fix_user <- function(expr, call) {
     expr$value[[3]] <- as.call(args)
     expr <- parse_add_compat(expr, "user", original)
   }
+  expr
+}
+
+
+parse_compat_fix_parameter_array <- function(expr, call) {
+  is_parameter_array_assignment <-
+    rlang::is_call(expr$value, c("<-", "=")) &&
+    rlang::is_call(expr$value[[3]], "parameter") &&
+    rlang::is_call(expr$value[[2]], "[")
+
+  if (is_parameter_array_assignment) {
+    original <- expr$value
+    expr$value[[2]] <- expr$value[[2]][[2]]
+    expr <- parse_add_compat(expr, "parameter_array", original)
+  }
+
   expr
 }
 
@@ -106,6 +124,8 @@ parse_compat_report <- function(exprs, action, call) {
   if (action != "silent" && any(i)) {
     description <- c(
       user = "Replace calls to 'user()' with 'parameter()'",
+      parameter_array =
+        "Drop arrays from lhs of assignments from 'parameter()'",
       distribution = paste(
         "Replace calls to r-style random number calls (e.g., 'rnorm()')",
         "with mcstate2-stye calls (e.g., 'Normal()')"))

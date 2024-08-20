@@ -99,3 +99,39 @@ test_that("can translate simple calls to distributions", {
     res$phases$update$variables[[1]]$rhs$expr,
     quote(OdinStochasticCall(sample = "normal", mean = a)(a, 1)))
 })
+
+
+test_that("can translate parameter assignment using array access", {
+  expect_warning(
+    res <- odin_parse({
+      initial(y) <- 1
+      update(y) <- Normal(a[1], a[2])
+      a[] <- parameter()
+      dim(a) <- 2
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(
+    res$equations$a$src$value,
+    quote(a <- parameter()))
+})
+
+
+test_that("can cope with two compatibility issues in one line", {
+  w <- expect_warning(
+    res <- odin_parse({
+      initial(y) <- 1
+      update(y) <- a[1] + a[1]
+      a[] <- user()
+      dim(a) <- 2
+    }),
+    "Found 2 compatibility issues")
+  expect_match(conditionMessage(w),
+               "Replace calls to 'user()' with 'parameter()'",
+               fixed = TRUE)
+  expect_match(conditionMessage(w),
+               "Drop arrays from lhs of assignments from 'parameter()'",
+               fixed = TRUE)
+  expect_equal(
+    res$equations$a$src$value,
+    quote(a <- parameter()))
+})

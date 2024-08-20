@@ -730,7 +730,7 @@ test_that("can generate system with array variable", {
 })
 
 
-test_that("can generate sytem with array variable used in compare", {
+test_that("can generate system with array variable used in compare", {
   dat <- odin_parse({
     initial(x[]) <- 0
     update(x[]) <- x[i]
@@ -749,5 +749,29 @@ test_that("can generate sytem with array variable used in compare", {
       "  real_type ll = 0;",
       "  ll += mcstate::density::normal(data.d, x[0] + x[1], y, true);",
       "  return ll;",
+      "}"))
+})
+
+
+test_that("can generate system with array from user", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- x + a[1] + a[2]
+    dim(a) <- 2
+    a <- parameter()
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  std::vector<real_type> a(2);",
+      '  dust2::r::read_real_vector(parameters, 2, a.data(), "a", true);',
+      "  return shared_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_vector(parameters, 2, shared.a.data(), "a", false);',
       "}"))
 })

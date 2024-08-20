@@ -118,7 +118,7 @@ generate_dust_system_build_shared <- function(dat) {
   eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
-    if (!is.null(eq$lhs$array)) {
+    if (eq$lhs$name %in% dat$storage$arrays$name) {
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
                                  options)
@@ -427,10 +427,12 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
     sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
     if (is_array) {
+      stopifnot(!(name %in% dat$parameters$name))
       sprintf("%s[%s]",
               generate_dust_sexp(name, dat$sexp_data, options),
               generate_dust_sexp(idx, dat$sexp_data, options))
     } else if (location == "shared" && isFALSE(options$shared_exists)) {
+      ## Can use 'name' for last arg
       sprintf("const %s %s",
               dat$storage$type[[name]],
               generate_dust_sexp(name, dat$sexp_data, options))
@@ -462,46 +464,66 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
 }
 
 
-generate_dust_assignment <- function(eq, name_state, dat,
-                                     options = list()) {
-  lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
-
+generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   if (eq$rhs$type == "parameter") {
-    if (isFALSE(options$shared_exists)) {
-      if (is.null(eq$rhs$args$default)) {
-        rhs <- sprintf('dust2::r::read_real(parameters, "%s")', eq$lhs$name)
-      } else {
-        default <- generate_dust_sexp(
-          eq$rhs$args$default, dat$sexp_data, options)
-        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                       eq$lhs$name, default)
-      }
+    name <- eq$lhs$name
+    is_array <- name %in% dat$storage$arrays$name
+    if (is_array) {
+      i <- match(name, dat$storage$arrays$name)
+      ## Needs work if more than 1d, some of which is in dust2;
+      ## dimensions here as an initialiser list
+      stopifnot(dat$storage$arrays$rank[[i]] == 1)
+      ## Needs work doing some sort of static initialisation
+      stopifnot(is.null(eq$rhs$args$default))
+      len <- dat$storage$arrays$size[[i]]
+      required <- if (isFALSE(options$shared_exists)) "true" else "false"
+      dest <- generate_dust_sexp(name, dat$sexp_data, options)
+      res <- sprintf(
+        'dust2::r::read_real_vector(parameters, %s, %s.data(), "%s", %s);',
+        len, dest, name, required)
     } else {
-      rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                     eq$lhs$name, lhs)
+      lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
+      if (isFALSE(options$shared_exists)) {
+        if (is.null(eq$rhs$args$default)) {
+          rhs <- sprintf('dust2::r::read_real(parameters, "%s")', eq$lhs$name)
+        } else {
+          default <- generate_dust_sexp(
+            eq$rhs$args$default, dat$sexp_data, options)
+          rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
+                         eq$lhs$name, default)
+        }
+      } else {
+        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
+                       eq$lhs$name, lhs)
+      }
+      res <- sprintf("%s = %s;", lhs, rhs)
     }
   } else {
+    is_array <- !is.null(eq$lhs$array)
+    lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
-  }
-  res <- sprintf("%s = %s;", lhs, rhs)
-  is_array <- !is.null(eq$lhs$array)
-  if (is_array) {
-    for (idx in rev(eq$lhs$array)) {
-      if (idx$is_range) {
-        from <- generate_dust_sexp(idx$from, dat)
-        to <- generate_dust_sexp(idx$to, dat)
-        res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
-                         idx$name, from, idx$name, to, idx$name),
-                 res,
-                 "}")
+
+    res <- sprintf("%s = %s;", lhs, rhs)
+    is_array <- !is.null(eq$lhs$array)
+    if (is_array) {
+      for (idx in rev(eq$lhs$array)) {
+        if (idx$is_range) {
+          from <- generate_dust_sexp(idx$from, dat)
+          to <- generate_dust_sexp(idx$to, dat)
+          res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
+                           idx$name, from, idx$name, to, idx$name),
+                   res,
+                   "}")
+        }
+      }
+      if (length(res) > 1) {
+        n <- (length(res) - 1) / 2
+        indent <- strrep("  ", c(seq_len(n + 1), rev(seq_len(n))) - 1)
+        res <- paste0(indent, res)
       }
     }
-    if (length(res) > 1) {
-      n <- (length(res) - 1) / 2
-      indent <- strrep("  ", c(seq_len(n + 1), rev(seq_len(n))) - 1)
-      res <- paste0(indent, res)
-    }
   }
+
   res
 }
 
