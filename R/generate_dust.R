@@ -118,6 +118,9 @@ generate_dust_system_build_shared <- function(dat) {
   eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
+    if (identical(eq$special, "dim") && isTRUE(eq$lhs$exclude)) {
+      next
+    }
     if (eq$lhs$name %in% dat$storage$arrays$name) {
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
@@ -127,7 +130,8 @@ generate_dust_system_build_shared <- function(dat) {
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }
-  body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
+  init <- setdiff(eqs, dat$storage$contents$virtual)
+  body$add(sprintf("return shared_state{%s};", paste(init, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
   cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
 }
@@ -156,7 +160,7 @@ generate_dust_system_build_internal <- function(dat) {
   } else {
     nms <- dat$storage$contents$internal
     type <- dat$storage$type[nms]
-    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat)
+    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat$sexp_data)
     body <- c(
       sprintf("std::vector<%s> %s(%s);", type, nms, size),
       sprintf("return internal_state{%s};", paste(nms, collapse = ", ")))
@@ -508,8 +512,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
         if (idx$is_range) {
-          from <- generate_dust_sexp(idx$from, dat)
-          to <- generate_dust_sexp(idx$to, dat)
+          from <- generate_dust_sexp(idx$from, dat$sexp_data)
+          to <- generate_dust_sexp(idx$to, dat$sexp_data)
           res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
                            idx$name, from, idx$name, to, idx$name),
                    res,

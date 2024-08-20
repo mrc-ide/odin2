@@ -84,23 +84,30 @@ parse_system_overall <- function(exprs, call) {
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
   arrays <- data_frame(
-    name = vcapply(exprs[is_dim], function(x) x$lhs$name),
+    name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = rep_len(1, sum(is_dim)),
     dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
 
-  ## This will change later; care needed with a folding product here.
-  stopifnot(
-    all(vlapply(arrays$dims, function(el) all(vlapply(el, is.numeric)))))
-  arrays$size <- I(lapply(arrays$dims, prod))
+  stopifnot(all(arrays$rank == 1))
+  ## This needs work, especially as it looks like 'dims' lacks a extra
+  ## layer of list here; we'll pick this up in mrc-5647 in
+  ## multidimensional arrays.
+  arrays$size <- arrays$dims
 
-  exprs <- list(equations = exprs[is_equation],
+  ## We need to include dimensions within equations, so that they are
+  ## included in the dependency graph.  However, we'll not actually
+  ## want to emit these most of the time.  I think better will be to
+  ## include explicit 'dim' equations for non-simple equations, and
+  ## we'll sort this out directly in the dependencies.
+
+  exprs <- list(equations = exprs[is_equation | is_dim],
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
                 data = exprs[is_data],
-                dim = exprs[is_dim])
+                dim = exprs[is_dim]) # drop?
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
@@ -119,6 +126,7 @@ parse_system_depends <- function(equations, variables, call) {
 
   ## First, compute the topological order ignoring variables
   names(equations) <- vcapply(equations, function(eq) eq$lhs$name)
+
   deps <- lapply(equations, function(eq) {
     ## In an earlier proof-of-concept here we also removed eq$lhs$name
     ## from the dependencies - we do need to do that for arrays at
@@ -128,6 +136,9 @@ parse_system_depends <- function(equations, variables, call) {
   res <- topological_order(deps)
   if (!res$success) {
     nms <- names(deps)[res$error]
+    ## TODO: check for dimensions here and translate back out?
+    ## There's also no reason why we can't use dim(x) as the name
+    ## really, despite being unconventional.
     details <- vcapply(nms, function(x) {
       sprintf("%s: depends on: %s", x, paste(deps[[x]], collapse = ", "))
     })
@@ -185,6 +196,12 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
   }
 
   stage <- set_names(names(stages)[stage], names(stage))
+
+  is_dim <- vlapply(equations, function(x) identical(x$special, "dim"))
+  stage_dim <- stage[names(which(is_dim))]
+  if (any(stage_dim != "system_create")) {
+    stop("invalid dimension time")
+  }
 
   ## Now, we try and work out which parts of the graph are needed at
   ## different "phases".  These roughly correspond to dust functions.
@@ -262,16 +279,18 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
 
 parse_storage <- function(equations, phases, variables, arrays, data, call) {
-  ## This will need additional work once we support arrays as these
-  ## will be put into internal storage.
-  shared <- intersect(names(equations), phases$build_shared$equations)
-  stack <- setdiff(names(equations), c(shared, arrays$name))
+  virtual <- names(which(vlapply(equations, function(x) isTRUE(x$lhs$exclude))))
+  shared <- setdiff(
+    intersect(names(equations), phases$build_shared$equations),
+    virtual)
+  stack <- setdiff(names(equations), c(shared, virtual, arrays$name))
   internal <- intersect(phases$update$equations, arrays$name)
 
   contents <- list(
     variables = variables,
     shared = shared,
     internal = internal,
+    virtual = virtual,
     data = data$name,
     output = character(),
     stack = stack)
@@ -317,8 +336,7 @@ parse_system_arrays <- function(exprs, call) {
   is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
   is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
 
-  nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
-  dim_nms <- nms[is_dim]
+  dim_nms <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
 
   ## First, look for any array calls that do not have a corresponding
   ## dim()
@@ -334,6 +352,7 @@ parse_system_arrays <- function(exprs, call) {
 
   ## Next, we collect up any subexpressions, in order, for all arrays,
   ## and make sure that we are always assigned as an array.
+  nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
   for (nm in dim_nms) {
     i <- nms == nm & !is_dim
     err <- vlapply(exprs[i], function(x) {
@@ -358,7 +377,9 @@ parse_system_arrays <- function(exprs, call) {
   ## expressions for the sizes.
   size <- set_names(lapply(exprs[is_dim], function(x) x$rhs$expr),
                     dim_nms)
-  stopifnot(all(vlapply(size, is.numeric)))
+
+  dim_is_simple <- vlapply(size, function(x) is.numeric(x) || is.name(x))
+  stopifnot(all(dim_is_simple))
 
   ## Then we go back and assign together uses in ranges.
   for (i in which(is_array)) {
@@ -369,6 +390,9 @@ parse_system_arrays <- function(exprs, call) {
     if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
       eq$lhs$array[[1]]$to <- size[[eq$lhs$name]]
     }
+    ## Add a dimension to the dependencies.
+    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
+    eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
   }
 

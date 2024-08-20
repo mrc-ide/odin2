@@ -775,3 +775,51 @@ test_that("can generate system with array from user", {
       '  dust2::r::read_real_vector(parameters, 2, shared.a.data(), "a", false);',
       "}"))
 })
+
+
+test_that("can generate system with simple variable sized array", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    n <- 2
+    a[] <- Normal(0, 1)
+    dim(a) <- n
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  return shared_state{n};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(shared.n);",
+      "  return internal_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i < shared.n; ++i) {",
+      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
+      "}"))
+})
