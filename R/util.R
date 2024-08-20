@@ -153,6 +153,16 @@ writelines_if_changed <- function(text, workdir, path, quiet) {
 }
 
 
+same_content <- function(path, text) {
+  identical(read_lines(path), paste(as.character(text), collapse = "\n"))
+}
+
+
+read_lines <- function(path) {
+  paste(readLines(path), collapse = "\n")
+}
+
+
 dir_create <- function(path) {
   dir.create(path, showWarnings = FALSE, recursive = TRUE)
 }
