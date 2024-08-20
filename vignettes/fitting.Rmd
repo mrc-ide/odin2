@@ -156,7 +156,7 @@ dust2::dust_filter_run(filter, list(beta = 0.2, gamma = 0.1), save_history = TRU
 
 You can access these with `dust2::dust_filter_last_history()`:
 
-```
+```{r}
 h <- dust2::dust_filter_last_history(filter)
 ```
 
