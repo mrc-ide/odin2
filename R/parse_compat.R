@@ -63,7 +63,7 @@ parse_compat_fix_parameter_array <- function(expr, call) {
     rlang::is_call(expr$value[[2]], "[")
 
   if (is_parameter_array_assignment) {
-    original <- expr$valeu
+    original <- expr$value
     expr$value[[2]] <- expr$value[[2]][[2]]
     expr <- parse_add_compat(expr, "parameter_array", original)
   }
