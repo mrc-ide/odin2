@@ -86,7 +86,9 @@ parse_system_overall <- function(exprs, call) {
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = rep_len(1, sum(is_dim)),
-    dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
+    dims = I(lapply(exprs[is_dim], function(x) {
+      if (x$lhs$exclude) x$rhs$expr else as.name(x$lhs$name)
+    })))
 
   stopifnot(all(arrays$rank == 1))
   ## This needs work, especially as it looks like 'dims' lacks a extra
@@ -300,7 +302,10 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
 
   ## We'll need integer variables soon, these are always weird.  We
   ## could also use proper booleans too.
-  type <- set_names(rep("real_type", length(location)), names(location))
+  type <- vcapply(equations[names(location)], function(x) {
+    if (identical(x$special, "dim")) "size_t" else "real_type"
+  })
+  names(type) <- names(location)
 
   packing <- list(state = parse_packing(variables, arrays))
 
@@ -375,23 +380,17 @@ parse_system_arrays <- function(exprs, call) {
   ## want to use this all over the show I think, but for now this is
   ## ok, because it is at this point that we would compute additional
   ## expressions for the sizes.
-  size <- set_names(lapply(exprs[is_dim], function(x) x$rhs$expr),
-                    dim_nms)
-
-  dim_is_simple <- vlapply(size, function(x) is.numeric(x) || is.name(x))
-  stopifnot(all(dim_is_simple))
-
   ## Then we go back and assign together uses in ranges.
   for (i in which(is_array)) {
     eq <- exprs[[i]]
     if (length(eq$lhs$array) > 1) {
       stop("support matrices here")
     }
+    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
-      eq$lhs$array[[1]]$to <- size[[eq$lhs$name]]
+      eq$lhs$array[[1]]$to <- as.name(name_dim)
     }
     ## Add a dimension to the dependencies.
-    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
   }

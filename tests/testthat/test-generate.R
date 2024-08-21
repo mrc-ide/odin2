@@ -823,3 +823,52 @@ test_that("can generate system with simple variable sized array", {
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
 })
+
+
+test_that("can generate system with variable size array that needs saving", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    n <- 2
+    a[] <- Normal(0, 1)
+    dim(a) <- n + 1
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  size_t dim_a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  const size_t dim_a = n + 1;",
+      "  return shared_state{n, dim_a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(shared.dim_a);",
+      "  return internal_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i < shared.dim_a; ++i) {",
+      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
+      "}"))
+})

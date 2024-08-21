@@ -32,6 +32,13 @@ generate_dust_system <- function(dat) {
 
 generate_prepare <- function(dat) {
   dat$sexp_data <- generate_dust_dat(dat$storage$location)
+  ## TODO: could merge this above perhaps, these aren't split it in a
+  ## very useful place right now.
+  if (any(dat$storage$location == "virtual")) {
+    virtual <- names(which(dat$storage$location == "virtual"))
+    dat$sexp_data$virtual <-
+      lapply(dat$equations[virtual], function(x) x$rhs$expr)
+  }
   dat
 }
 
