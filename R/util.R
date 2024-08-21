@@ -166,20 +166,3 @@ read_lines <- function(path) {
 dir_create <- function(path) {
   dir.create(path, showWarnings = FALSE, recursive = TRUE)
 }
-
-
-expr_prod <- function(x) {
-  if (length(x) == 0) {
-    1
-  } else if (length(x) == 1) {
-    x[[1]]
-  } else {
-    ## We may import this maths bit later generally
-    times <- mcstate2::mcstate_differentiation()$maths$times
-    ret <- times(x[[1]], x[[2]])
-    for (i in seq_along(x)[-(1:2)]) {
-      ret <- times(ret, x[[i]])
-    }
-    ret
-  }
-}

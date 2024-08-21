@@ -8,7 +8,7 @@ parse_system_overall <- function(exprs, call) {
   is_data <- special == "data"
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
-  is_equation <- special %in% c("", "parameter")
+  is_equation <- special %in% c("", "parameter", "dim")
 
   ## We take initial as the set of variables:
   variables <- vcapply(exprs[is_initial], function(x) x$lhs$name)
@@ -96,20 +96,13 @@ parse_system_overall <- function(exprs, call) {
   ## multidimensional arrays.
   arrays$size <- arrays$dims
 
-  ## We need to include dimensions within equations, so that they are
-  ## included in the dependency graph.  However, we'll not actually
-  ## want to emit these most of the time.  I think better will be to
-  ## include explicit 'dim' equations for non-simple equations, and
-  ## we'll sort this out directly in the dependencies.
-
-  exprs <- list(equations = exprs[is_equation | is_dim],
+  exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
-                data = exprs[is_data],
-                dim = exprs[is_dim]) # drop?
+                data = exprs[is_data])
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
@@ -128,7 +121,6 @@ parse_system_depends <- function(equations, variables, call) {
 
   ## First, compute the topological order ignoring variables
   names(equations) <- vcapply(equations, function(eq) eq$lhs$name)
-
   deps <- lapply(equations, function(eq) {
     ## In an earlier proof-of-concept here we also removed eq$lhs$name
     ## from the dependencies - we do need to do that for arrays at
@@ -138,9 +130,6 @@ parse_system_depends <- function(equations, variables, call) {
   res <- topological_order(deps)
   if (!res$success) {
     nms <- names(deps)[res$error]
-    ## TODO: check for dimensions here and translate back out?
-    ## There's also no reason why we can't use dim(x) as the name
-    ## really, despite being unconventional.
     details <- vcapply(nms, function(x) {
       sprintf("%s: depends on: %s", x, paste(deps[[x]], collapse = ", "))
     })
