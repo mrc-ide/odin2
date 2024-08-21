@@ -119,22 +119,12 @@ uses_unary_minus <- function(expr) {
 ## expr_plus(quote(i - 1), 1)
 ## expr_plus(quote(i + 2), 3)
 expr_minus <- function(a, b) {
-  if (is.numeric(a) && is.numeric(b)) {
-    a - b
-  } else {
-    call("-", a, b)
-  }
+  mcstate2::mcstate_differentiation()$maths$minus(a, b)
 }
 
 
 expr_plus <- function(a, b) {
-  ## maths <- mcstate2::mcstate_differentiation()$maths
-  ## maths$plus(a, b)
-  if (is.numeric(a) && is.numeric(b)) {
-    a + b
-  } else {
-    call("+", a, b)
-  }
+  mcstate2::mcstate_differentiation()$maths$plus(a, b)
 }
 
 
