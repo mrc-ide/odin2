@@ -549,7 +549,7 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
                             names[is_scalar],
                             from,
                             offset[is_scalar])
-  ret[is_array] <- sprintf("const auto * %s = %s + %s",
+  ret[is_array] <- sprintf("const auto * %s = %s + %s;",
                            names[is_array],
                            from,
                            offset[is_array])

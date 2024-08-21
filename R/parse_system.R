@@ -399,17 +399,18 @@ parse_packing <- function(names, arrays) {
     packing <- arrays
   }
 
-  ## Later, we'll pack things up with anything that requires symbols
-  ## first, so there's no great stress here at the moment; later we'll
-  ## need to order these by things that are expressions anywhere in
-  ## their size.
   packing <- packing[match(names, packing$name), ]
+
+  ## We might refine this later; moving other fairly simple things
+  ## earlier in the list.
+  pack_group <- viapply(packing$size, function(x) {
+    if (is.numeric(x)) 1L else 2L
+  })
+  packing <- packing[order(pack_group), ] # stable sort relative to names
   rownames(packing) <- NULL
 
-  ## These are C-style array offsets - we store them as a list because
-  ## this will likely become expressions in future.
-  packing$offset <-
-    I(as.list(cumsum(c(0, unlist(packing$size[-nrow(packing)])))))
+  ## These are C-style array offsets (from 0, not 1)
+  packing$offset <- I(expr_cumsum(c(list(0), packing$size[-nrow(packing)])))
 
   packing
 }

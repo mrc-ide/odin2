@@ -707,7 +707,7 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + 0",
+      "  const auto * x = state + 0;",
       "  const auto y = state[3];",
       "  for (size_t i = 1; i < 3; ++i) {",
       "    state_next[i - 1 + 0] = x[i - 1];",
@@ -744,7 +744,7 @@ test_that("can generate system with array variable used in compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto * x = state + 0",
+      "  const auto * x = state + 0;",
       "  const auto y = state[2];",
       "  real_type ll = 0;",
       "  ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
@@ -870,5 +870,68 @@ test_that("can generate system with variable size array that needs saving", {
       "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
+      "}"))
+})
+
+
+test_that("can store arrays in state", {
+  ## In this test case we need to generate offsets, which for now
+  ## we'll do without generating any special variables
+  dat <- odin_parse({
+    n <- 2
+    initial(a[]) <- 1
+    update(a[]) <- a[i] + 1
+    dim(a) <- n
+    initial(b[]) <- 1
+    update(b[]) <- b[i] + 2
+    dim(b) <- n + 1
+    initial(c[]) <- 1
+    update(c[]) <- c[i] + 3
+    dim(c) <- n + 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  size_t dim_b;",
+      "  size_t dim_c;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  const size_t dim_b = n + 1;",
+      "  const size_t dim_c = n + 2;",
+      "  return shared_state{n, dim_b, dim_c};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * a = state + 0;",
+      "  const auto * b = state + 0 + shared.n;",
+      "  const auto * c = state + 0 + shared.n + shared.dim_b;",
+      "  for (size_t i = 1; i < shared.n; ++i) {",
+      "    state_next[i - 1 + 0] = a[i - 1] + 1;",
+      "  }",
+      "  for (size_t i = 1; i < shared.dim_b; ++i) {",
+      "    state_next[i - 1 + 0 + shared.n] = b[i - 1] + 2;",
+      "  }",
+      "  for (size_t i = 1; i < shared.dim_c; ++i) {",
+      "    state_next[i - 1 + 0 + shared.n + shared.dim_b] = c[i - 1] + 3;",
+      "  }",
       "}"))
 })

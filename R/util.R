@@ -128,11 +128,26 @@ expr_minus <- function(a, b) {
 
 
 expr_plus <- function(a, b) {
+  ## maths <- mcstate2::mcstate_differentiation()$maths
+  ## maths$plus(a, b)
   if (is.numeric(a) && is.numeric(b)) {
     a + b
   } else {
     call("+", a, b)
   }
+}
+
+
+expr_cumsum <- function(x) {
+  ret <- vector("list", length(x))
+  for (i in seq_along(x)) {
+    if (i == 1) {
+      ret[[i]] <- x[[i]]
+    } else {
+      ret[[i]] <- expr_plus(ret[[i - 1]], x[[i]])
+    }
+  }
+  ret
 }
 
 
