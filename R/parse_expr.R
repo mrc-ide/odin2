@@ -126,7 +126,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
           i = paste("Compare expressions do not represent assignents, but",
                     "relationships, which we emphasise by using '~'.  This",
                     "also keeps the syntax close to that for the prior",
-                    "specification in mcstate2")),
+                    "specification in monty")),
         "E1004", src, call)
     }
     lhs <- lhs[[2]]
@@ -194,7 +194,7 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   ## is the first pass.
   rhs <- parse_expr_usage(rhs, src, call)
   is_stochastic <- any(
-    depends$functions %in% mcstate2::mcstate_dsl_distributions()$name)
+    depends$functions %in% monty::monty_dsl_distributions()$name)
 
   list(type = "expression",
        expr = rhs,
@@ -319,7 +319,7 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
 
 
 parse_expr_compare_rhs <- function(rhs, src, call) {
-  result <- mcstate2::mcstate_dsl_parse_distribution(rhs, "The rhs of '~'")
+  result <- monty::monty_dsl_parse_distribution(rhs, "The rhs of '~'")
   if (!result$success) {
     odin_parse_error(
       result$error,
@@ -347,7 +347,7 @@ parse_expr_usage <- function(expr, src, call) {
   if (is.recursive(expr)) {
     fn <- expr[[1]]
     fn_str <- as.character(fn)
-    if (fn_str %in% mcstate2::mcstate_dsl_distributions()$name) {
+    if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
     } else {
       args <- lapply(expr[-1], parse_expr_usage, src, call)
@@ -359,7 +359,7 @@ parse_expr_usage <- function(expr, src, call) {
 
 
 parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
-  res <- mcstate2::mcstate_dsl_parse_distribution(expr)
+  res <- monty::monty_dsl_parse_distribution(expr)
   if (!res$success) {
     odin_parse_error(res$error, "E1018", src, call)
   }

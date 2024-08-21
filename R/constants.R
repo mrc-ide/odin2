@@ -1,10 +1,10 @@
 INDEX <- c("i", "j", "k", "l", "i5", "i6", "i7", "i8")
 
-## TODO: it would be great if mcstate could advertise what is in its
+## TODO: it would be great if monty could advertise what is in its
 ## maths library.
 ##
-## TODO: sign for mcstate
-FUNCTIONS_MCSTATE_MATH <-
+## TODO: sign for monty
+FUNCTIONS_MONTY_MATH <-
   c("^" = "pow",
     ceiling = "ceil",
     sign = "sign",

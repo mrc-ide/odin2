@@ -8,7 +8,7 @@ generate_dust_system <- function(dat) {
   body$add("public:")
   body$add(sprintf("  %s() = delete;", dat$class))
   body$add("  using real_type = double;")
-  body$add("  using rng_state_type = mcstate::random::generator<real_type>;")
+  body$add("  using rng_state_type = monty::random::generator<real_type>;")
   body$add(sprintf("  %s", generate_dust_system_shared_state(dat)))
   body$add(sprintf("  %s", generate_dust_system_internal_state(dat)))
   body$add(sprintf("  %s", generate_dust_system_data_type(dat)))
@@ -295,7 +295,7 @@ generate_dust_system_compare_data <- function(dat) {
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
     eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
-    body$add(sprintf("ll += mcstate::density::%s(%s, true);",
+    body$add(sprintf("ll += monty::density::%s(%s, true);",
                      eq$rhs$density$cpp, paste(eq_args, collapse = ", ")))
   }
 

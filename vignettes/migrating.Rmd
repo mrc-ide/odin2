@@ -116,7 +116,7 @@ but if you were writing this in R you would write
 rbinom(1, size, prob)
 ```
 
-with the first argument being the number of draws from the distribution in question.  This departure in arguments feels needlessly confusing!  If you were using `odin` without `odin.dust` then this did compile to a call to one of R's underlying random number functions so this connection was reasonable but from version 2 we use mcstate's parallelisable random number distributions.
+with the first argument being the number of draws from the distribution in question.  This departure in arguments feels needlessly confusing!  If you were using `odin` without `odin.dust` then this did compile to a call to one of R's underlying random number functions so this connection was reasonable but from version 2 we use monty's parallelisable random number distributions.
 
 The mapping is:
 
@@ -150,7 +150,7 @@ If your system has a parameter that affects the number of state variables in the
 
 This package replaces `odin.dust` and will eventually replace `odin` (as in, we'll copy the entire `odin2` code into `odin` to become version 2.0.0 of that package).
 
-The relationship between packages has changed.  Previously `mcstate` "knew" about `dust` models and so you had to use `odin.dust` practically to use the statistical machinery in `mcstate2`.  We've changed this around now, so that `odin2` "knows" about `mcstate2` and can create systems that will work well with `mcstate2`.  We now depend on `mcstate2`, so if you have `odin2` installed you can start working towards fitting models immediately.
+The relationship between packages has changed.  Previously `mcstate` "knew" about `dust` models and so you had to use `odin.dust` practically to use the statistical machinery in `mcstate`.  We've changed this around now, so that `odin2` "knows" about `monty` and can create systems that will work well with `monty`.  We now depend on `monty`, so if you have `odin2` installed you can start working towards fitting models immediately.
 
 # Known limitations
 

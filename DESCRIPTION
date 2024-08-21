@@ -15,7 +15,7 @@ BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
     dust2 (>= 0.1.1),
-    mcstate2,
+    monty,
     rlang
 Suggests:
     decor,
@@ -29,6 +29,6 @@ Suggests:
 Config/testthat/edition: 3
 Remotes:
     mrc-ide/dust2,
-    mrc-ide/mcstate2
+    mrc-ide/monty
 VignetteBuilder: knitr
 Language: en-GB

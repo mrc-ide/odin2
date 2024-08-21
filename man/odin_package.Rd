@@ -42,7 +42,7 @@ pre-requisites apply here:
 For your \code{DESCRIPTION} file:
 \itemize{
 \item \code{dust2} must be in \code{Imports}
-\item \code{cpp11}, \code{dust2} and \code{mcstate2} must be in \code{LinkingTo}
+\item \code{cpp11}, \code{dust2} and \code{monty} must be in \code{LinkingTo}
 }
 
 For your \code{NAMESPACE} file:
@@ -58,7 +58,7 @@ If you want your packages to build on GitHub actions, or be
 installable via \code{remotes::install_github} you should add to your
 \code{DESCRIPTION}:
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{Remotes: mrc-ide/dust2, mrc-ide/mcstate2
+\if{html}{\out{<div class="sourceCode">}}\preformatted{Remotes: mrc-ide/dust2, mrc-ide/monty
 }\if{html}{\out{</div>}}
 
 Note that you do not need to include odin2 itself as a dependency.

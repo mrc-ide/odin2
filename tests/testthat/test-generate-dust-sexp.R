@@ -82,13 +82,13 @@ test_that("can use functions from the library", {
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
-    "3 * mcstate::math::exp(1 + 2)")
+    "3 * monty::math::exp(1 + 2)")
   expect_equal(
     generate_dust_sexp(quote(4^8), dat, options),
-    "mcstate::math::pow(4, 8)")
+    "monty::math::pow(4, 8)")
   expect_equal(
     generate_dust_sexp(quote(ceiling(4)), dat, options),
-    "mcstate::math::ceil(4)")
+    "monty::math::ceil(4)")
 })
 
 
@@ -101,13 +101,13 @@ test_that("can generate min/max", {
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
-    "3 * mcstate::math::exp(1 + 2)")
+    "3 * monty::math::exp(1 + 2)")
   expect_equal(
     generate_dust_sexp(quote(4^8), dat, options),
-    "mcstate::math::pow(4, 8)")
+    "monty::math::pow(4, 8)")
   expect_equal(
     generate_dust_sexp(quote(ceiling(4)), dat, options),
-    "mcstate::math::ceil(4)")
+    "monty::math::ceil(4)")
 })
 
 

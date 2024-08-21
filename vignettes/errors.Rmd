@@ -205,7 +205,7 @@ The argument to `compare()` must be a symbol.  We may expand this in future to s
 
 # `E1013`
 
-Failed to parse the rhs of `~` as a valid distribution.  This can fail for many reasons, and the details of the failure come from `mcstate2::mcstate_dsl_parse_distribution`
+Failed to parse the rhs of `~` as a valid distribution.  This can fail for many reasons, and the details of the failure come from `monty::monty_dsl_parse_distribution`
 
 Example reasons for failure include the the rhs being:
 
@@ -249,7 +249,7 @@ The error message will explain how to update your code to use new odin2 syntax.
 
 # `E1018`
 
-Failed to parse a call to a stochastic function (e.g., `Normal()`).  These errors come from `mcstate2::mcstate_dsl_parse_distribution`, typically where the function call does not match arguments for any candidate call (some distributions have multiple candidates, distinguished by argument names).
+Failed to parse a call to a stochastic function (e.g., `Normal()`).  These errors come from `monty::monty_dsl_parse_distribution`, typically where the function call does not match arguments for any candidate call (some distributions have multiple candidates, distinguished by argument names).
 
 Example calls that will fail:
 

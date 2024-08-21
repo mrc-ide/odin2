@@ -311,7 +311,7 @@ test_that("can build simple compare function", {
     c(method_args$compare_data,
       "  const auto x = state[0];",
       "  real_type ll = 0;",
-      "  ll += mcstate::density::normal(data.d, x, 1, true);",
+      "  ll += monty::density::normal(data.d, x, 1, true);",
       "  return ll;",
       "}"))
 })
@@ -332,7 +332,7 @@ test_that("can build more complex compare function", {
       "  const auto x = state[0];",
       "  real_type ll = 0;",
       "  const real_type a = x / data.d;",
-      "  ll += mcstate::density::normal(data.d, x, a, true);",
+      "  ll += monty::density::normal(data.d, x, a, true);",
       "  return ll;",
       "}"))
 })
@@ -391,7 +391,7 @@ test_that("variables involving data are computed within compare", {
       "  const auto x = state[0];",
       "  real_type ll = 0;",
       "  const real_type a = data.d1 / data.d2;",
-      "  ll += mcstate::density::normal(data.d1, x, a, true);",
+      "  ll += monty::density::normal(data.d1, x, a, true);",
       "  return ll;",
       "}"))
 
@@ -435,8 +435,8 @@ test_that("pull recursive dependencies into compare_data", {
     c(method_args$compare_data,
       "  const auto x = state[0];",
       "  real_type ll = 0;",
-      "  const real_type p = mcstate::math::exp(x);",
-      "  ll += mcstate::density::poisson(data.d, p, true);",
+      "  const real_type p = monty::math::exp(x);",
+      "  ll += monty::density::poisson(data.d, p, true);",
       "  return ll;",
       "}"))
 })
@@ -475,9 +475,9 @@ test_that("generate adjoint", {
       "  const auto x = state[0];",
       "  const auto adj_x = adjoint[0];",
       "  const auto adj_a = adjoint[1];",
-      "  const real_type p = mcstate::math::exp(x);",
+      "  const real_type p = monty::math::exp(x);",
       "  const real_type adj_p = data.d / p - 1;",
-      "  adjoint_next[0] = adj_p * mcstate::math::exp(x) + adj_x;",
+      "  adjoint_next[0] = adj_p * monty::math::exp(x) + adj_x;",
       "  adjoint_next[1] = adj_a;",
       "}"))
 
@@ -502,7 +502,7 @@ test_that("can generate simple stochastic system", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  state_next[0] = mcstate::random::normal(rng_state, x, 1);",
+      "  state_next[0] = monty::random::normal(rng_state, x, 1);",
       "}"))
 })
 
@@ -571,9 +571,9 @@ test_that("can generate models with commonly used mathematical functions", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  const real_type a = mcstate::math::log(x);",
-      "  const real_type b = mcstate::math::ceil(a);",
-      "  const real_type c = mcstate::math::pow(a, b);",
+      "  const real_type a = monty::math::log(x);",
+      "  const real_type b = monty::math::ceil(a);",
+      "  const real_type c = monty::math::pow(a, b);",
       "  state_next[0] = c;",
       "}"))
 })
@@ -591,7 +591,7 @@ test_that("can generate a simple array equation", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  for (size_t i = 1; i < 2; ++i) {",
-      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
@@ -661,7 +661,7 @@ test_that("can generate non-range access to arrays", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  internal.a[0] = mcstate::random::normal(rng_state, 0, 1);",
+      "  internal.a[0] = monty::random::normal(rng_state, 0, 1);",
       "  state_next[0] = internal.a[0];",
       "}"))
 })
@@ -688,7 +688,7 @@ test_that("can generate stochastic initial conditions", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  const real_type a0 = mcstate::random::poisson(rng_state, shared.N / 100);",
+      "  const real_type a0 = monty::random::poisson(rng_state, shared.N / 100);",
       "  state[0] = a0;",
       "  state[1] = shared.N - a0;",
       "}"))
@@ -747,7 +747,7 @@ test_that("can generate system with array variable used in compare", {
       "  const auto * x = state + 0",
       "  const auto y = state[2];",
       "  real_type ll = 0;",
-      "  ll += mcstate::density::normal(data.d, x[0] + x[1], y, true);",
+      "  ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
       "  return ll;",
       "}"))
 })

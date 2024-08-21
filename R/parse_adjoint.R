@@ -131,7 +131,7 @@ adjoint_phase <- function(eqs, dat) {
 
 adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   prefix <- "adj_" # we might move this elsewhere?
-  diff <- mcstate2::mcstate_differentiation()
+  diff <- monty::monty_differentiation()
   differentiate <- diff$differentiate
   maths <- diff$maths
 
