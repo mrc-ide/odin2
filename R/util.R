@@ -134,3 +134,35 @@ expr_plus <- function(a, b) {
     call("+", a, b)
   }
 }
+
+
+## From dust2
+writelines_if_changed <- function(text, workdir, path, quiet) {
+  path_full <- file.path(workdir, path)
+  skip <- file.exists(path_full) && same_content(path_full, text)
+  if (skip) {
+    if (!quiet) {
+      cli::cli_alert_info("'{path}' is up to date")
+    }
+  } else {
+    writeLines(text, path_full)
+    if (!quiet) {
+      cli::cli_alert_success("Wrote '{path}'")
+    }
+  }
+}
+
+
+same_content <- function(path, text) {
+  identical(read_lines(path), paste(as.character(text), collapse = "\n"))
+}
+
+
+read_lines <- function(path) {
+  paste(readLines(path), collapse = "\n")
+}
+
+
+dir_create <- function(path) {
+  dir.create(path, showWarnings = FALSE, recursive = TRUE)
+}

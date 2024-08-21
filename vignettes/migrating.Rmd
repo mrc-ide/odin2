@@ -43,7 +43,6 @@ This list is incomplete, and we'll expand it as we work through the tests.  We'r
 Things we do plan on implementing:
 
 * Arrays, of any kind (`mrc-5576`)
-* Packaging of odin systems
 * Debugging print statements (only recently introduced into odin)
 * Interpolation
 * Transformation of output

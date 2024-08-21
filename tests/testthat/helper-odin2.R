@@ -17,3 +17,21 @@ method_args <- list(
   adjoint_compare_data = "static void adjoint_compare_data(real_type time, real_type dt, const real_type* state, const real_type* adjoint, const data_type& data, const shared_state& shared, internal_state& internal, real_type* adjoint_next) {",
   adjoint_initial = "static void adjoint_initial(real_type time, real_type dt, const real_type* state, const real_type* adjoint, const shared_state& shared, internal_state& internal, real_type* adjoint_next) {")
 # nolint end
+
+
+test_pkg_setup <- function(path, name = "pkg") {
+  dir.create(file.path(path, "inst/odin"), FALSE, TRUE)
+  writeLines(c(
+    paste("Package:", name),
+    "LinkingTo: cpp11, dust2, mcstate2",
+    "Imports: dust2",
+    "Version: 0.0.1",
+    "Authors@R: c(person('A', 'Person', role = c('aut', 'cre'),",
+    "    email = 'person@example.com'))",
+    "Title: An Example",
+    "Description: Example of odin for testing.",
+    "License: CC0"),
+    file.path(path, "DESCRIPTION"))
+  writeLines(sprintf("useDynLib(%s, .registration = TRUE)", name),
+             file.path(path, "NAMESPACE"))
+}
