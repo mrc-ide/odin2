@@ -128,7 +128,7 @@ parse_compat_report <- function(exprs, action, call) {
         "Drop arrays from lhs of assignments from 'parameter()'",
       distribution = paste(
         "Replace calls to r-style random number calls (e.g., 'rnorm()')",
-        "with mcstate2-stye calls (e.g., 'Normal()')"))
+        "with monty-stye calls (e.g., 'Normal()')"))
 
     type <- lapply(exprs[i], function(x) x$compat$type)
     err <- unlist0(type)

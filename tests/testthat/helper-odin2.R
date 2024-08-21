@@ -23,7 +23,7 @@ test_pkg_setup <- function(path, name = "pkg") {
   dir.create(file.path(path, "inst/odin"), FALSE, TRUE)
   writeLines(c(
     paste("Package:", name),
-    "LinkingTo: cpp11, dust2, mcstate2",
+    "LinkingTo: cpp11, dust2, monty",
     "Imports: dust2",
     "Version: 0.0.1",
     "Authors@R: c(person('A', 'Person', role = c('aut', 'cre'),",

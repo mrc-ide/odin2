@@ -17,7 +17,7 @@ set.seed(1)
 
 **WARNING**: The concepts here are stable, but some of the interface will change, in particular function names.
 
-With a dynamical model we can simulate forwards in time and see how a system might change over time, given a set of parameters.  If we have a time series data set though, we can go a step further and find parameters consistent with the data.  This vignette gives an introduction to the approaches to fitting to data available for `odin2` models.  This support largely derives from the [`mcstate2`](https://mrc-ide.github.io/mcstate2) and [`dust2`](https://mrc-ide.github.io/dust2) packages and we will refer the reader to their documentation where further detail is on offer.
+With a dynamical model we can simulate forwards in time and see how a system might change over time, given a set of parameters.  If we have a time series data set though, we can go a step further and find parameters consistent with the data.  This vignette gives an introduction to the approaches to fitting to data available for `odin2` models.  This support largely derives from the [`monty`](https://mrc-ide.github.io/monty) and [`dust2`](https://mrc-ide.github.io/dust2) packages and we will refer the reader to their documentation where further detail is on offer.
 
 # Setting the scene
 
@@ -30,7 +30,7 @@ plot(cases ~ time, data, pch = 19, las = 1,
      xlab = "Time (days)", ylab = "Cases")
 ```
 
-The data here shows a classic epidemic, with cases rising up to some peak and falling.  We will try fitting this with a simple compartmental SIR (Susceptible-Infected-Recovered) model, which we will write here in odin2.  There are a number of possible ways of writing this, but here we'll go for a stochastic discrete-time version, mostly because it will allow us to demonstrate a number of features of `odin2`, `dust2` and `mcstate2` (and because the ODE version is not yet written).
+The data here shows a classic epidemic, with cases rising up to some peak and falling.  We will try fitting this with a simple compartmental SIR (Susceptible-Infected-Recovered) model, which we will write here in odin2.  There are a number of possible ways of writing this, but here we'll go for a stochastic discrete-time version, mostly because it will allow us to demonstrate a number of features of `odin2`, `dust2` and `monty` (and because the ODE version is not yet written).
 
 Before fitting the data, we'll write out a model that captures the core ideas (this is replicated from `vignette("odin2")`)
 
@@ -112,7 +112,7 @@ sir <- odin2::odin({
 }, quiet = TRUE)
 ```
 
-These last two lines are the new addition to the odin code.  The first says that `cases` will be found in the data.  The second restates our aim from the previous paragraph, comparing the observed `cases` against modelled `incidence`.  The syntax here is designed to echo that of the [`mcstate2` DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html), though (at least for now) we use `compare()` on the left side to make this clearer.
+These last two lines are the new addition to the odin code.  The first says that `cases` will be found in the data.  The second restates our aim from the previous paragraph, comparing the observed `cases` against modelled `incidence`.  The syntax here is designed to echo that of the [`monty` DSL](https://mrc-ide.github.io/monty/articles/dsl.html), though (at least for now) we use `compare()` on the left side to make this clearer.
 
 With this version of the model we can compute likelihoods with `dust2`'s machinery.
 
@@ -181,24 +181,24 @@ points(cases ~ time, data, pch = 19, col = "red")
 
 # Inference with particle MCMC (pMCMC)
 
-We can use MCMC to explore this model, but to do this we will need a prior.  We'll use [mcstate2's DSL](https://mrc-ide.github.io/mcstate2/articles/dsl.html) to create one; this looks similar to the odin code above:
+We can use MCMC to explore this model, but to do this we will need a prior.  We'll use [monty's DSL](https://mrc-ide.github.io/monty/articles/dsl.html) to create one; this looks similar to the odin code above:
 
 ```{r}
-prior <- mcstate2::mcstate_dsl({
+prior <- monty::monty_dsl({
   beta ~ Exponential(mean = 0.3)
   gamma ~ Exponential(mean = 0.1)
 })
 ```
 
-Here we define a prior that covers `beta` and `gamma`, two of the three input parameters to our odin model.  This prior is an `mcstate_model` object, which we can use to sample from, compute log densities with (to compute the prior), etc.
+Here we define a prior that covers `beta` and `gamma`, two of the three input parameters to our odin model.  This prior is a `monty_model` object, which we can use to sample from, compute log densities with (to compute the prior), etc.
 
-We also need to adapt our `dust2` filter object above for use with `mcstate2`.  All we need to do here is to describe how a vector of statistical parameters (here `beta` and `gamma`) will be converted into the inputs that the `sir` system needs to run (here a list with elements `beta`, `gamma` and `I0`).  We do this with an `mcstate2::mcstate_packer` object:
+We also need to adapt our `dust2` filter object above for use with `monty`.  All we need to do here is to describe how a vector of statistical parameters (here `beta` and `gamma`) will be converted into the inputs that the `sir` system needs to run (here a list with elements `beta`, `gamma` and `I0`).  We do this with a `monty::monty_packer` object:
 
 ```{r}
-sir_packer <- mcstate2::mcstate_packer(c("beta", "gamma"), fixed = list(I0 = 5))
+sir_packer <- monty::monty_packer(c("beta", "gamma"), fixed = list(I0 = 5))
 ```
 
-With this packer we can convert from a **list** of name-value pairs suitable for initialising an `odin2` model into a **vector** of parameters suitable for use with `mcstate2`:
+With this packer we can convert from a **list** of name-value pairs suitable for initialising an `dust2` system into a **vector** of parameters suitable for use with `monty`:
 
 ```{r}
 sir_packer$pack(pars)
@@ -210,25 +210,25 @@ and we can carry out the inverse:
 sir_packer$unpack(c(0.3, 0.1))
 ```
 
-Combining the filter and packer we create an `mcstate2` model, which we'll call `likelihood`, as that's what it represents:
+Combining the filter and packer we create a `monty` model, which we'll call `likelihood`, as that's what it represents:
 
 ```{r}
-likelihood <- dust2::dust_filter_mcstate(filter, sir_packer)
+likelihood <- dust2::dust_filter_monty(filter, sir_packer)
 ```
 
-This likelihood is now also an `mcstate_model` object:
+This likelihood is now also a `monty_model` object:
 
 ```{r}
 likelihood
 ```
 
-The `mcstate2` package provides a high-level interface for working with these objects.  For example, to compute the likelihood we could now use `mcstate2::mcstate_model_density()`:
+The `monty` package provides a high-level interface for working with these objects.  For example, to compute the likelihood we could now use `monty::monty_model_density()`:
 
 ```{r}
-mcstate2::mcstate_model_density(likelihood, c(0.2, 0.1))
+monty::monty_model_density(likelihood, c(0.2, 0.1))
 ```
 
-The difference to using `dust2::dust_filter_run` here is now we provide a parameter vector from our *statistical model*, rather than the inputs to the odin/dust model.  This conforms to the interface that `mcstate2` uses and lets us run things like MCMC.
+The difference to using `dust2::dust_filter_run` here is now we provide a parameter vector from our *statistical model*, rather than the inputs to the odin/dust model.  This conforms to the interface that `monty` uses and lets us run things like MCMC.
 
 We can combine the prior and the likelihood to create a posterior:
 
@@ -239,14 +239,14 @@ posterior <- prior + likelihood
 The last ingredient required for running an MCMC is a sampler.  We don't have much choice with a model where the likelihood is stochastic, we'll need to run a simple random walk. However, for this we still need a proposal matrix (the variance covariance matrix that is the parameter for a multivariate Gaussian - we'll draw new positions from this).  In an ideal world, this distribution will have a similar shape to the target distribution (the posterior) as this will help with mixing.  To get started, we'll use an uncorrelated random walk with each parameter having a fairly wide variance of 0.02
 
 ```{r}
-sampler <- mcstate2::mcstate_sampler_random_walk(diag(2) * 0.02)
+sampler <- monty::monty_sampler_random_walk(diag(2) * 0.02)
 ```
 
 We can now run an MCMC for 100 samples
 
 ```{r}
-samples <- mcstate2::mcstate_sample(posterior, sampler, 100, 
-                                    initial = sir_packer$pack(pars))
+samples <- monty::monty_sample(posterior, sampler, 100,
+                               initial = sir_packer$pack(pars))
 ```
 
 We need to develop nice tools for working with the outputs of the sampler, but for now bear with some grubby base R manipulation.
@@ -270,18 +270,18 @@ There are several things we can do here to improve how this chain mixes
 * We can try and find a better proposal kernel.
 * We can increase the number of particles used in the filter.  This will reduce the variance in the estimate of the marginal likelihood, which means that the random walk will be less confused by fluctuations in the surface it's moving over.  This comes at a computational cost though.
 * We can increase the number of threads (effectively CPU cores) that we are using while computing the likelihood.  This will scale fairly efficiently through to at least 10 cores, with the likelihood calculations being almost [embarrassingly parallel](https://en.wikipedia.org/wiki/Embarrassingly_parallel).  This will help to offset some of the costs incurred above.
-* We can run multiple chains at once.  We don't yet have a good parallel runner implemented in `mcstate2` but it is coming soon.  This will reduce wall time (because each chain runs at the same time) and also allows us to compute convergence diagnostics which will reveal how well (or badly) we are doing.
+* We can run multiple chains at once.  We don't yet have a good parallel runner implemented in `monty` but it is coming soon.  This will reduce wall time (because each chain runs at the same time) and also allows us to compute convergence diagnostics which will reveal how well (or badly) we are doing.
 * We can try a deterministic model (see below) to get a sense of the general region of high probability space.
 
 Here, we apply most of these suggestions at once, using a variance-covariance matrix [that I prepared earlier](https://www.youtube.com/watch?v=ziqD1xvSpF4):
 
 ```{r}
 filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 1000)
-likelihood <- dust2::dust_filter_mcstate(filter, sir_packer)
+likelihood <- dust2::dust_filter_monty(filter, sir_packer)
 vcv <- matrix(c(0.0005, 0.0003, 0.0003, 0.0003), 2, 2)
-sampler <- mcstate2::mcstate_sampler_random_walk(vcv)
-samples <- mcstate2::mcstate_sample(posterior, sampler, 1000, 
-                                    initial = sir_packer$pack(pars))
+sampler <- monty::monty_sampler_random_walk(vcv)
+samples <- monty::monty_sample(posterior, sampler, 1000,
+                               initial = sir_packer$pack(pars))
 ```
 
 The likelihood now quickly rises up to a stable range and is clearly mixing:
@@ -338,10 +338,10 @@ dust2::dust_unfilter_run(unfilter, pars)
 We can now proceed as before, reusing our `packer`, `prior` and `sampler` objects, which are still useable here:
 
 ```{r}
-likelihood_det <- dust2::dust_filter_mcstate(unfilter, sir_packer)
+likelihood_det <- dust2::dust_filter_monty(unfilter, sir_packer)
 posterior_det <- prior + likelihood_det
-samples_det <- mcstate2::mcstate_sample(posterior_det, sampler, 1000,
-                                        initial = sir_packer$pack(pars))
+samples_det <- monty::monty_sample(posterior_det, sampler, 1000,
+                                   initial = sir_packer$pack(pars))
 ```
 
 Here, you can see the 1000 samples from the deterministic model (in blue) overlaid on top of the samples from the stochastic model (in grey):
@@ -397,20 +397,20 @@ dust2::dust_unfilter_run(unfilter, pars, adjoint = TRUE)
 dust2::dust_unfilter_last_gradient(unfilter)
 ```
 
-We can create an `mcstate2` model with this, as before:
+We can create a `monty` model with this, as before:
 
 ```{r}
-likelihood <- dust2::dust_filter_mcstate(unfilter, sir_packer)
+likelihood <- dust2::dust_filter_monty(unfilter, sir_packer)
 likelihood
 ```
 
 and this model advertises that it can compute gradients now!
 
-So from `mcstate2` we can use `mcstate2::mcstate_model_density()` and `mcstate2::mcstate_model_gradient()` to compute log-likelihoods and gradients.
+So from `monty` we can use `monty::monty_model_density()` and `monty::monty_model_gradient()` to compute log-likelihoods and gradients.
 
 ```{r}
-mcstate2::mcstate_model_density(likelihood, c(0.2, 0.1))
-mcstate2::mcstate_model_gradient(likelihood, c(0.2, 0.1))
+monty::monty_model_density(likelihood, c(0.2, 0.1))
+monty::monty_model_gradient(likelihood, c(0.2, 0.1))
 ```
 
 Because the prior contained gradient information, a posterior created with this version of the model also has gradients:
@@ -420,7 +420,7 @@ posterior <- likelihood + prior
 posterior
 ```
 
-With a model configured this way, you can use the [Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) method with `mcstate2::mcstate_sampler_hmc()`, which can be far more efficient than a random walk once tuned.
+With a model configured this way, you can use the [Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) method with `monty::monty_sampler_hmc()`, which can be far more efficient than a random walk once tuned.
 
 **WARNING**": Using `derivative = TRUE` on some parameters has the effect of making the rest use `constant = TRUE`.  We will describe the effects of this in a vignette on differentiable models, soon.
 
@@ -533,7 +533,7 @@ dust2::dust_unfilter_run(unfilter, pars2[[1]])
 dust2::dust_unfilter_last_gradient(unfilter)
 ```
 
-## For mcstate2 models
+## For monty models
 
 Here, rather than a parameter vector you would pass in a matrix, where each column represents a parameter set:
 
@@ -544,10 +544,10 @@ p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
 However, there's a small bit of functionality we need to add here in dust2, still.
 
 ```{r}
-likelihood2 <- dust2::dust_filter_mcstate(filter2, sir_packer)
-mcstate2::mcstate_model_density(likelihood2, p)
+likelihood2 <- dust2::dust_filter_monty(filter2, sir_packer)
+monty::monty_model_density(likelihood2, p)
 ```
 
 # Further reading
 
-This vignette can only skim the surface, and is organised around features of odin itself.  The machinery for running the models comes from [`dust2`](https://mrc-ide.github.io/dust2) and for performing inference from [`mcstate2`](https://mrc-ide.github.io/mcstate2) and we will be adding documentation to those packages that covers the details of use.
+This vignette can only skim the surface, and is organised around features of odin itself.  The machinery for running the models comes from [`dust2`](https://mrc-ide.github.io/dust2) and for performing inference from [`monty`](https://mrc-ide.github.io/monty) and we will be adding documentation to those packages that covers the details of use.

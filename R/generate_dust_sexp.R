@@ -23,9 +23,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (n == 2 && fn %in% c("+", "-", "*", "/", "==")) {
       ## Some care might be needed for division in some cases.
       ret <- sprintf("%s %s %s", args[[1]], fn, args[[2]])
-    } else if (fn %in% names(FUNCTIONS_MCSTATE_MATH)) {
-      ret <- sprintf("mcstate::math::%s(%s)",
-                     FUNCTIONS_MCSTATE_MATH[[fn]],
+    } else if (fn %in% names(FUNCTIONS_MONTY_MATH)) {
+      ret <- sprintf("monty::math::%s(%s)",
+                     FUNCTIONS_MONTY_MATH[[fn]],
                      paste(args, collapse = ", "))
     } else if (fn == "as.numeric") {
       ret <- sprintf("static_cast<real_type>(%s)", args[[1]])
@@ -40,7 +40,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ret <- sprintf("std::%s(%s)", fn, paste(args, collapse = ", "))
     } else if (fn == "%%") {
       ## TODO: we'll use our usual fmodr thing here once we get that
-      ## into mcstate's math library, but for now this is ok.
+      ## into monty's math library, but for now this is ok.
       ret <- sprintf("std::fmod(%s, %s)", args[[1]], args[[2]])
     } else if (fn == "if") {
       ## NOTE: The ternary operator has very low precendence, so we
@@ -50,7 +50,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## parens for now.
       ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
     } else if (is_stochastic_call) {
-      ret <- sprintf("mcstate::random::%s(rng_state, %s)",
+      ret <- sprintf("monty::random::%s(rng_state, %s)",
                      fn, paste(args, collapse = ", "))
     } else {
       ## TODO: we should catch this during parse; erroring here is a
