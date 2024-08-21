@@ -298,11 +298,21 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
 
   packing <- list(state = parse_packing(variables, arrays))
 
+  use_offset <- vlapply(packing$state$offset, is.recursive)
+  if (any(use_offset)) {
+    offset <- set_names(packing$state$offset[use_offset],
+                        paste0("offset_", packing$state$name[use_offset]))
+    packing$state$offset[use_offset] <- lapply(names(offset), as.name)
+  } else {
+    offset <- NULL
+  }
+
   list(contents = contents,
        location = location,
        arrays = arrays,
        type = type,
-       packing = packing)
+       packing = packing,
+       offset = offset)
 }
 
 

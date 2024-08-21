@@ -18,6 +18,13 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
     system$exprs, equations, system$variables, system$data$name, call)
   storage <- parse_storage(
     equations, phases, system$variables, system$arrays, system$data, call)
+  if (!is.null(storage$offset)) {
+    offset <- Map(build_offset_equation,
+                  names(storage$offset), unname(storage$offset))
+    equations <- c(equations, offset)
+    phases$build_shared$equations <-
+      c(phases$build_shared$equations, names(storage$offset))
+  }
   zero_every <- parse_zero_every(system$time, phases, equations,
                                  system$variables, call)
 
@@ -75,4 +82,10 @@ parse_check_usage_find_unknown <- function(exprs, dat, call) {
       "Unknown variable{?s} used in odin code: {squote(err_nms)}",
       "E2006", src, call)
   }
+}
+
+
+build_offset_equation <- function(name, expr) {
+  list(lhs = list(name = name),
+       rhs = list(type = "expression", expr = expr))
 }
