@@ -198,7 +198,7 @@ We also need to adapt our `dust2` filter object above for use with `monty`.  All
 sir_packer <- monty::monty_packer(c("beta", "gamma"), fixed = list(I0 = 5))
 ```
 
-With this packer we can convert from a **list** of name-value pairs suitable for initialising an `dust2` system into a **vector** of parameters suitable for use with `monty`:
+With this packer we can convert from a **list** of name-value pairs suitable for initialising a `dust2` system into a **vector** of parameters suitable for use with `monty`:
 
 ```{r}
 sir_packer$pack(pars)
