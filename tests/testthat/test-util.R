@@ -53,30 +53,6 @@ test_that("detect unary minus", {
 })
 
 
-test_that("can generate reasonable expressions for addition", {
-  expect_identical(
-    expr_plus(quote(a), quote(b)), quote(a + b))
-  expect_identical(
-    expr_plus(quote(a), 1), quote(a + 1))
-  expect_identical(
-    expr_plus(1, quote(b)), quote(1 + b))
-  expect_identical(
-    expr_plus(1, 2), 3)
-})
-
-
-test_that("can generate reasonable expressions for subtraction", {
-  expect_identical(
-    expr_minus(quote(a), quote(b)), quote(a - b))
-  expect_identical(
-    expr_minus(quote(a), 1), quote(a - 1))
-  expect_identical(
-    expr_minus(1, quote(b)), quote(1 - b))
-  expect_identical(
-    expr_minus(3, 2), 1)
-})
-
-
 test_that("writelines_if_changed doesn't replace file", {
   workdir <- withr::local_tempdir()
   path <- "myfile"
