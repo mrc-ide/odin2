@@ -167,7 +167,7 @@ test_that("unpack indirect variables in compare", {
     initial(x) <- 1
     p <- exp(x)
     d <- data()
-    compare(d) ~ Poisson(p)
+    d ~ Poisson(p)
   })
 
   expect_equal(dat$phases$compare$unpack, "x")

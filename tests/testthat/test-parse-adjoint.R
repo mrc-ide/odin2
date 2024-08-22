@@ -23,7 +23,7 @@ test_that("can parse nontrivial system with adjoint", {
     gamma <- parameter(0.1, differentiate = TRUE)
     I0 <- parameter(10, differentiate = TRUE)
     cases_observed <- data()
-    compare(cases_observed) ~ Poisson(cases_inc)
+    cases_observed ~ Poisson(cases_inc)
   })
 
   expect_type(dat$adjoint, "list")
