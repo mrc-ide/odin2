@@ -85,24 +85,6 @@ initial(a, b) <- 1
 initial(x = a) <- 1
 ```
 
-# `E1004`
-
-Assignment, rather than relationship (`~`) used for a `compare()` call.
-
-Example:
-
-```
-compare(x) <- Normal(0, 1)
-```
-
-You can't write code like the above, because this is not an assignment into `x`, but instead the description of a relationship of `x`.  Use `~` rather than `<-` to say:
-
-```
-compare(x) ~ Normal(0, 1)
-```
-
-which reads as `x` is normally distributed with a mean of 0 and standard deviation of 1.
-
 # `E1005`
 
 Invalid target on lhs of assignment.
@@ -170,38 +152,18 @@ d <- data(integer = TRUE)
 
 Here, you have somewhat hopefully requested that `d` will be data as an integer but we don't yet support that.  Probably this will be supported in future, but the interface is not yet decided.  For now all data elements are assumed to be scalar reals.
 
-# `E1011`
-
-Something other than `compare()` was found on the lhs of `~`, which is not supported.
-
-Example:
-
-```
-a ~ Normal(0, 1)
-```
-
-I'm open to supporting writing the above in this way, actually, but it's not been how we implemented this first in odin 1.x.  You also can't write:
-
-```
-initial(x) ~ Normal(0, 1)
-```
-
-you should use assignment in this place.
-
-Probably if you see this error you have used `~` where you had meant to use assignment with `<-`.
-
 # `E1012`
 
-Invalid argument to `compare` on the lhs of `~`.
+Invalid argument on the lhs of a `~` comparison.
 
 Example
 
 ```
-compare(x / 2) ~ Normal(0, 1)
-compare(1) ~ Normal(0, 1)
+x / 2 ~ Normal(0, 1)
+1 ~ Normal(0, 1)
 ```
 
-The argument to `compare()` must be a symbol.  We may expand this in future to support arrays too.
+The lhs of a `~` comparison must be a symbol.  We may expand this in the future to support arrays too.
 
 # `E1013`
 
@@ -209,9 +171,9 @@ Failed to parse the rhs of `~` as a valid distribution.  This can fail for many 
 
 Example reasons for failure include the the rhs being:
 
-* not a call (e.g., `compare(x) ~ 1`
-* not a call to distribution function (e.g., `compare(x) ~ sqrt(2)`)
-* an invalid call (e.g., `compare(x) ~ Normal(0, 1, 2)`)
+* not a call (e.g., `x ~ 1`
+* not a call to distribution function (e.g., `x ~ sqrt(2)`)
+* an invalid call (e.g., `x ~ Normal(0, 1, 2)`)
 
 The details for the failure will be included in the body of the error message.
 

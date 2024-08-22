@@ -76,6 +76,23 @@ a <- parameter(4)
 
 This translation can be done automatically in most cases, and will be done (with a warning) by default if possible.  You should update your code with the suggested fix, however, as this translation will be removed in a future version.
 
+## Compare keyword is now removed.
+
+In comparisons such as
+
+```r
+compare(d) ~ Normal(0, 1)
+```
+
+The `compare` keyword, and the `~` only occur together.  This has been simplified, and is now written as:
+
+```r
+d ~ Normal(0, 1)
+```
+
+which reads as: `d` is normally distributed with a mean of 0 and standard deviation of 1.
+
+
 ## Vector parameters assign without array indicies
 
 Previously, if you had a vector parameter you had to write
