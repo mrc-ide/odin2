@@ -818,7 +818,7 @@ test_that("can generate system with simple variable sized array", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  for (size_t i = 1; i < shared.n; ++i) {",
-      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
@@ -867,7 +867,7 @@ test_that("can generate system with variable size array that needs saving", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  for (size_t i = 1; i < shared.dim_a; ++i) {",
-      "    internal.a[i - 1] = mcstate::random::normal(rng_state, 0, 1);",
+      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
       "}"))
