@@ -116,17 +116,6 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         "E1003", src, call)
     }
 
-    if (special == "compare") {
-      ## TODO: a good candidate for pointing at the source location of
-      ## the error.
-      odin_parse_error(
-        c("'compare()' expressions must use '~', not '<-'",
-          i = paste("Compare expressions do not represent assignents, but",
-                    "relationships, which we emphasise by using '~'.  This",
-                    "also keeps the syntax close to that for the prior",
-                    "specification in monty")),
-        "E1004", src, call)
-    }
     lhs <- lhs[[2]]
     if (length(m$value) > 2) {
       args <- as.list(m$value[-(1:2)])
