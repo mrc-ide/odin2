@@ -518,7 +518,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         if (idx$is_range) {
           from <- generate_dust_sexp(idx$from, dat$sexp_data)
           to <- generate_dust_sexp(idx$to, dat$sexp_data)
-          res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
+          res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
