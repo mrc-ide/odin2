@@ -130,7 +130,7 @@ parse_compat_report <- function(exprs, action, call) {
         "Replace calls to r-style random number calls (e.g., 'rnorm()')",
         "with monty-stye calls (e.g., 'Normal()')"),
       compare = paste(
-        "Remove redundent 'compare()' wrapper, because all expressions",
+        "Remove redundant 'compare()' wrapper, because all expressions",
         "using `~` are comparisons."
       ))
 
