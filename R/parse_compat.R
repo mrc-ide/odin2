@@ -11,11 +11,11 @@ parse_compat <- function(exprs, action, call) {
 
   ## We also need to cope with the situation where we have three
   ## things to fix in a single expression.
-  
   exprs <- lapply(exprs, parse_compat_fix_user, call)
   exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
   exprs <- lapply(exprs, parse_compat_fix_distribution, call)
-
+  exprs <- lapply(exprs, parse_compat_fix_compare, call)
+  
   parse_compat_report(exprs, action, call)
   exprs
 }
@@ -128,7 +128,11 @@ parse_compat_report <- function(exprs, action, call) {
         "Drop arrays from lhs of assignments from 'parameter()'",
       distribution = paste(
         "Replace calls to r-style random number calls (e.g., 'rnorm()')",
-        "with monty-stye calls (e.g., 'Normal()')"))
+        "with monty-stye calls (e.g., 'Normal()')"),
+      compare = paste(
+        "Remove redundent 'compare()' wrapper, because all expressions",
+        "using `~` are comparisons."
+      ))
 
     type <- lapply(exprs[i], function(x) x$compat$type)
     err <- unlist0(type)
@@ -154,4 +158,16 @@ parse_compat_report <- function(exprs, action, call) {
       cli::cli_warn(c(header, detail), call = call)
     }
   }
+}
+
+parse_compat_fix_compare <- function(expr, call) {
+  is_compare <-
+    rlang::is_call(expr$value, "~") &&
+    rlang::is_call(expr$value[[2]], "compare")
+  if (is_compare) {
+    original <- expr$value
+    expr$value[[2]] <- expr$value[[2]][[2]]
+    expr <- parse_add_compat(expr, "compare", original)
+  }
+  expr
 }

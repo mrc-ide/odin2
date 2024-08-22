@@ -297,19 +297,9 @@ parse_expr_compare <- function(expr, src, call) {
 
 
 parse_expr_compare_lhs <- function(lhs, src, call) {
-  if (!rlang::is_call(lhs, "compare")) {
-    ## TODO: this is a good candidate for pointing at the assignment
-    ## symbol in the error message, if we have access to the source,
-    ## as that's the most likely fix.
-    odin_parse_error(
-      c("Expected the lhs of '~' to be a 'compare()' call",
-        i = "Did you mean to use '<-' in place of '~'?"),
-      "E1011", src, call)
-  }
-  lhs <- lhs[[2]]
   if (!is.symbol(lhs)) {
     odin_parse_error(
-      "Expected the argument of 'compare()' to be a symbol",
+      "The left hand side of a `~` comparison must be a symbol",
       "E1012", src, call)
   }
   lhs

@@ -135,3 +135,16 @@ test_that("can cope with two compatibility issues in one line", {
     res$equations$a$src$value,
     quote(a <- parameter()))
 })
+
+test_that("can translate compare()", {
+  expect_warning(
+    res <- odin_parse({
+      update(x) <- 1
+      initial(x) <- 1
+      d <- data()
+      compare(d) ~ Normal(x, 1)
+    }), "Found 1 compatibility issue")
+
+  expect_equal(
+    res$phases$compare$compare[[1]]$src$value[[2]], quote(d))
+})
