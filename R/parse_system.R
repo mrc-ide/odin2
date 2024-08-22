@@ -277,6 +277,17 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
   stack <- setdiff(names(equations), c(shared, virtual, arrays$name))
   internal <- intersect(phases$update$equations, arrays$name)
 
+  packing <- list(state = parse_packing(variables, arrays))
+  use_offset <- vlapply(packing$state$offset, is.recursive)
+  if (any(use_offset)) {
+    offset <- set_names(packing$state$offset[use_offset],
+                        paste0("offset_", packing$state$name[use_offset]))
+    packing$state$offset[use_offset] <- lapply(names(offset), as.name)
+    shared <- c(shared, names(offset))
+  } else {
+    offset <- NULL
+  }
+
   contents <- list(
     variables = variables,
     shared = shared,
@@ -291,21 +302,11 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
 
   ## We'll need integer variables soon, these are always weird.  We
   ## could also use proper booleans too.
-  type <- vcapply(equations[names(location)], function(x) {
-    if (identical(x$special, "dim")) "size_t" else "real_type"
-  })
-  names(type) <- names(location)
-
-  packing <- list(state = parse_packing(variables, arrays))
-
-  use_offset <- vlapply(packing$state$offset, is.recursive)
-  if (any(use_offset)) {
-    offset <- set_names(packing$state$offset[use_offset],
-                        paste0("offset_", packing$state$name[use_offset]))
-    packing$state$offset[use_offset] <- lapply(names(offset), as.name)
-  } else {
-    offset <- NULL
-  }
+  type <- set_names(rep("real_type", length(location)), names(location))
+  is_dim <- vlapply(equations[names(location)],
+                    function(x) identical(x$special, "dim"))
+  is_offset <- names(location) %in% names(offset)
+  type[is_dim | is_offset] <- "size_t"
 
   list(contents = contents,
        location = location,

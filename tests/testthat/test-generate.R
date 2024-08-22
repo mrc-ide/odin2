@@ -897,6 +897,7 @@ test_that("can store arrays in state", {
       "  real_type n;",
       "  size_t dim_b;",
       "  size_t dim_c;",
+      "  size_t offset_c;",
       "};"))
   expect_equal(
     generate_dust_system_internal_state(dat),
@@ -907,7 +908,8 @@ test_that("can store arrays in state", {
       "  const real_type n = 2;",
       "  const size_t dim_b = n + 1;",
       "  const size_t dim_c = n + 2;",
-      "  return shared_state{n, dim_b, dim_c};",
+      "  const size_t offset_c = n + dim_b;",
+      "  return shared_state{n, dim_b, dim_c, offset_c};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -923,7 +925,7 @@ test_that("can store arrays in state", {
     c(method_args$update,
       "  const auto * a = state + 0;",
       "  const auto * b = state + shared.n;",
-      "  const auto * c = state + shared.n + shared.dim_b;",
+      "  const auto * c = state + shared.offset_c;",
       "  for (size_t i = 1; i < shared.n; ++i) {",
       "    state_next[i - 1] = a[i - 1] + 1;",
       "  }",
@@ -931,7 +933,7 @@ test_that("can store arrays in state", {
       "    state_next[i - 1 + shared.n] = b[i - 1] + 2;",
       "  }",
       "  for (size_t i = 1; i < shared.dim_c; ++i) {",
-      "    state_next[i - 1 + shared.n + shared.dim_b] = c[i - 1] + 3;",
+      "    state_next[i - 1 + shared.offset_c] = c[i - 1] + 3;",
       "  }",
       "}"))
 })
