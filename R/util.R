@@ -116,12 +116,12 @@ uses_unary_minus <- function(expr) {
 
 
 expr_minus <- function(a, b) {
-  mcstate2::mcstate_differentiation()$maths$minus(a, b)
+  monty::monty_differentiation()$maths$minus(a, b)
 }
 
 
 expr_plus <- function(a, b) {
-  mcstate2::mcstate_differentiation()$maths$plus(a, b)
+  monty::monty_differentiation()$maths$plus(a, b)
 }
 
 
