@@ -4,11 +4,11 @@ parse_system_overall <- function(exprs, call) {
   is_deriv <- special == "deriv"
   is_output <- special == "output"
   is_initial <- special == "initial"
-  is_compare <- special == "compare"
+  is_compare <- vlapply(exprs, function(x) rlang::is_call(x$src$value, "~"))
   is_data <- special == "data"
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
-  is_equation <- special %in% c("", "parameter", "dim")
+  is_equation <- special %in% c("", "parameter", "dim") & !is_compare
 
   ## We take initial as the set of variables:
   variables <- vcapply(exprs[is_initial], function(x) x$lhs$name)

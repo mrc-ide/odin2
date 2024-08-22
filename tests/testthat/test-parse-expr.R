@@ -23,6 +23,9 @@ test_that("require that assignment lhs is reasonable", {
   expect_error(
     parse_expr(quote(f(1) <- 1), NULL, NULL),
     "Expected a symbol on the lhs")
+  expect_error(
+    parse_expr(quote(compare(x) <- Normal(0, 1)), NULL, NULL),
+    "Expected a symbol on the lhs")
 })
 
 

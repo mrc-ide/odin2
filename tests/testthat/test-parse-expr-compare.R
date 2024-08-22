@@ -1,6 +1,5 @@
 test_that("Can parse compare expression", {
   res <- parse_expr(quote(x ~ Normal(0, 1)), NULL, NULL)
-  expect_equal(res$special, "compare")
   expect_equal(res$rhs$type, "compare")
   expect_equal(res$rhs$density$cpp, "normal")
   expect_equal(res$rhs$args, list(quote(x), 0, 1))
@@ -9,7 +8,7 @@ test_that("Can parse compare expression", {
 })
 
 
-test_that("only compare expressions may use '~'", {
+test_that("Suitable lhs and rhs on a '~' comparison", {
   expect_error(
     parse_expr(quote(initial(x) ~ 1), NULL, NULL),
     "The left hand side of a `~` comparison must be a symbol",,

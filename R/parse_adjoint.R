@@ -140,7 +140,7 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   ## though which go on the heap.
   i <- vlapply(equations, function(x) nm %in% x$rhs$depends$variables)
   f <- function(eq) {
-    if (identical(eq$special, "compare")) {
+    if (rlang::is_call(eq$src$value, "~")) {
       differentiate(eq$rhs$density$expr, nm)
     } else {
       if (isTRUE(eq$rhs$is_stochastic)) {

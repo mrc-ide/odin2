@@ -96,8 +96,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     deriv = function(name) NULL,
     output = function(name) NULL,
     dim = function(name) NULL,
-    config = function(name) NULL,
-    compare = function(name) NULL)
+    config = function(name) NULL)
 
   args <- NULL
   if (rlang::is_call(lhs, names(special_def))) {
@@ -279,8 +278,7 @@ parse_expr_compare <- function(expr, src, call) {
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
-  list(special = "compare",
-       rhs = rhs,
+  list(rhs = rhs,
        src = src)
 }
 
