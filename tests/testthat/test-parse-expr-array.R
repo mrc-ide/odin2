@@ -54,13 +54,6 @@ test_that("can parse array expression", {
 })
 
 
-test_that("require constant array size", {
-  expect_error(
-    parse_expr(quote(dim(a) <- n), NULL, NULL),
-    "Non-constant sized dimensions are not yet supported")
-})
-
-
 test_that("can't use array access with higher rank than the lhs implies", {
   expect_error(
     parse_expr(quote(a[] <- x[j]), NULL, NULL),

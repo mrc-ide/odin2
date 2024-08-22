@@ -590,7 +590,7 @@ test_that("can generate a simple array equation", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  for (size_t i = 1; i < 2; ++i) {",
+      "  for (size_t i = 1; i <= 2; ++i) {",
       "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1];",
@@ -632,7 +632,7 @@ test_that("can generate a simple array within shared", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  std::vector<real_type> a(3);",
-      "  for (size_t i = 1; i < 3; ++i) {",
+      "  for (size_t i = 1; i <= 3; ++i) {",
       "    a[i - 1] = i;",
       "  }",
       "  return shared_state{a};",
@@ -707,18 +707,18 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + 0",
+      "  const auto * x = state + 0;",
       "  const auto y = state[3];",
-      "  for (size_t i = 1; i < 3; ++i) {",
-      "    state_next[i - 1 + 0] = x[i - 1];",
+      "  for (size_t i = 1; i <= 3; ++i) {",
+      "    state_next[i - 1] = x[i - 1];",
       "  }",
       "  state_next[3] = y;",
       "}"))
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  for (size_t i = 1; i < 3; ++i) {",
-      "    state[i - 1 + 0] = 0;",
+      "  for (size_t i = 1; i <= 3; ++i) {",
+      "    state[i - 1] = 0;",
       "  }",
       "  state[3] = 0;",
       "}"))
@@ -744,7 +744,7 @@ test_that("can generate system with array variable used in compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto * x = state + 0",
+      "  const auto * x = state + 0;",
       "  const auto y = state[2];",
       "  real_type ll = 0;",
       "  ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
@@ -773,5 +773,213 @@ test_that("can generate system with array from user", {
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
       '  dust2::r::read_real_vector(parameters, 2, shared.a.data(), "a", false);',
+      "}"))
+})
+
+
+test_that("can generate system with simple variable sized array", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    n <- 2
+    a[] <- Normal(0, 1)
+    dim(a) <- n
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  return shared_state{n};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(shared.n);",
+      "  return internal_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.n; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
+      "}"))
+})
+
+
+test_that("can generate system with variable size array that needs saving", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    n <- 2
+    a[] <- Normal(0, 1)
+    dim(a) <- n + 1
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  size_t dim_a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    c("struct internal_state {",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  const size_t dim_a = n + 1;",
+      "  return shared_state{n, dim_a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(shared.dim_a);",
+      "  return internal_state{a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim_a; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
+      "}"))
+})
+
+
+test_that("can store arrays in state", {
+  ## In this test case we need to generate offsets, which for now
+  ## we'll do without generating any special variables
+  dat <- odin_parse({
+    n <- 2
+    initial(a[]) <- 1
+    update(a[]) <- a[i] + 1
+    dim(a) <- n
+    initial(b[]) <- 1
+    update(b[]) <- b[i] + 2
+    dim(b) <- n + 1
+    initial(c[]) <- 1
+    update(c[]) <- c[i] + 3
+    dim(c) <- n + 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  size_t dim_b;",
+      "  size_t dim_c;",
+      "  size_t offset_c;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  const size_t dim_b = n + 1;",
+      "  const size_t dim_c = n + 2;",
+      "  const size_t offset_c = n + dim_b;",
+      "  return shared_state{n, dim_b, dim_c, offset_c};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * a = state + 0;",
+      "  const auto * b = state + shared.n;",
+      "  const auto * c = state + shared.offset_c;",
+      "  for (size_t i = 1; i <= shared.n; ++i) {",
+      "    state_next[i - 1] = a[i - 1] + 1;",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim_b; ++i) {",
+      "    state_next[i - 1 + shared.n] = b[i - 1] + 2;",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim_c; ++i) {",
+      "    state_next[i - 1 + shared.offset_c] = c[i - 1] + 3;",
+      "  }",
+      "}"))
+})
+
+
+test_that("generate variable sized array from parameters", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    n <- 2
+    a <- parameter()
+    dim(a) <- n
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  std::vector<real_type> a(n);",
+      '  dust2::r::read_real_vector(parameters, n, a.data(), "a", true);',
+      "  return shared_state{n, a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "  dust2::r::read_real_vector(parameters, shared.n, shared.a.data(), \"a\", false);",
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = shared.a[0] + shared.a[1];",
       "}"))
 })

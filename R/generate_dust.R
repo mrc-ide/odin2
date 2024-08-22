@@ -32,6 +32,13 @@ generate_dust_system <- function(dat) {
 
 generate_prepare <- function(dat) {
   dat$sexp_data <- generate_dust_dat(dat$storage$location)
+  ## TODO: could merge this above perhaps, these aren't split it in a
+  ## very useful place right now.
+  if (any(dat$storage$location == "virtual")) {
+    virtual <- names(which(dat$storage$location == "virtual"))
+    dat$sexp_data$virtual <-
+      lapply(dat$equations[virtual], function(x) x$rhs$expr)
+  }
   dat
 }
 
@@ -115,7 +122,8 @@ generate_dust_system_packing <- function(name, dat) {
 
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
-  eqs <- dat$phases$build_shared$equations
+  eqs <- setdiff(dat$phases$build_shared$equations,
+                 dat$storage$contents$virtual)
   body <- collector()
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
@@ -156,7 +164,7 @@ generate_dust_system_build_internal <- function(dat) {
   } else {
     nms <- dat$storage$contents$internal
     type <- dat$storage$type[nms]
-    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat)
+    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat$sexp_data)
     body <- c(
       sprintf("std::vector<%s> %s(%s);", type, nms, size),
       sprintf("return internal_state{%s};", paste(nms, collapse = ", ")))
@@ -475,7 +483,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       stopifnot(dat$storage$arrays$rank[[i]] == 1)
       ## Needs work doing some sort of static initialisation
       stopifnot(is.null(eq$rhs$args$default))
-      len <- dat$storage$arrays$size[[i]]
+      len <- generate_dust_sexp(dat$storage$arrays$size[[i]],
+                                dat$sexp_data, options)
       required <- if (isFALSE(options$shared_exists)) "true" else "false"
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
       res <- sprintf(
@@ -508,9 +517,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
         if (idx$is_range) {
-          from <- generate_dust_sexp(idx$from, dat)
-          to <- generate_dust_sexp(idx$to, dat)
-          res <- c(sprintf("for (size_t %s = %s; %s < %s; ++%s) {",
+          from <- generate_dust_sexp(idx$from, dat$sexp_data)
+          to <- generate_dust_sexp(idx$to, dat$sexp_data)
+          res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
@@ -538,7 +547,7 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
                             names[is_scalar],
                             from,
                             offset[is_scalar])
-  ret[is_array] <- sprintf("const auto * %s = %s + %s",
+  ret[is_array] <- sprintf("const auto * %s = %s + %s;",
                            names[is_array],
                            from,
                            offset[is_array])

@@ -52,17 +52,6 @@ parse_expr_assignment <- function(expr, src, call) {
     }
   }
 
-  ## This means we can consider a range of issues around interesting
-  ## sized arrays later.  This is not terribly useful, but it will
-  ## limit the size of the PR.
-  if (identical(special, "dim")) {
-    if (!is.numeric(rhs$expr)) {
-      odin_parse_error(
-        "Non-constant sized dimensions are not yet supported",
-        "E0001", src, call)
-    }
-  }
-
   index_used <- intersect(INDEX, rhs$depends$variables)
   if (length(index_used) > 0) {
     n <- length(lhs$array)
@@ -78,6 +67,15 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     ## index variables are not real dependencies, so remove them:
     rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
+  }
+
+  if (identical(special, "dim")) {
+    lhs$name_data <- lhs$name
+    lhs$name <- paste0("dim_", lhs$name)
+    ## Exclude this dimension from appearing as a symbol if it is very
+    ## simple
+    lhs$exclude <- is.numeric(rhs$expr) || is.name(rhs$expr) ||
+      length(rhs$depends$variables) == 0
   }
 
   list(special = special,

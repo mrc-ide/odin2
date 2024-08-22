@@ -115,24 +115,26 @@ uses_unary_minus <- function(expr) {
 }
 
 
-## These would do well to cope with things like
-## expr_plus(quote(i - 1), 1)
-## expr_plus(quote(i + 2), 3)
 expr_minus <- function(a, b) {
-  if (is.numeric(a) && is.numeric(b)) {
-    a - b
-  } else {
-    call("-", a, b)
-  }
+  monty::monty_differentiation()$maths$minus(a, b)
 }
 
 
 expr_plus <- function(a, b) {
-  if (is.numeric(a) && is.numeric(b)) {
-    a + b
-  } else {
-    call("+", a, b)
+  monty::monty_differentiation()$maths$plus(a, b)
+}
+
+
+expr_cumsum <- function(x) {
+  ret <- vector("list", length(x))
+  for (i in seq_along(x)) {
+    if (i == 1) {
+      ret[[i]] <- x[[i]]
+    } else {
+      ret[[i]] <- expr_plus(ret[[i - 1]], x[[i]])
+    }
   }
+  ret
 }
 
 

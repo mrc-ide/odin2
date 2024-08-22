@@ -8,7 +8,7 @@ parse_system_overall <- function(exprs, call) {
   is_data <- special == "data"
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
-  is_equation <- special %in% c("", "parameter")
+  is_equation <- special %in% c("", "parameter", "dim")
 
   ## We take initial as the set of variables:
   variables <- vcapply(exprs[is_initial], function(x) x$lhs$name)
@@ -84,14 +84,17 @@ parse_system_overall <- function(exprs, call) {
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
   arrays <- data_frame(
-    name = vcapply(exprs[is_dim], function(x) x$lhs$name),
+    name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = rep_len(1, sum(is_dim)),
-    dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
+    dims = I(lapply(exprs[is_dim], function(x) {
+      if (x$lhs$exclude) x$rhs$expr else as.name(x$lhs$name)
+    })))
 
-  ## This will change later; care needed with a folding product here.
-  stopifnot(
-    all(vlapply(arrays$dims, function(el) all(vlapply(el, is.numeric)))))
-  arrays$size <- I(lapply(arrays$dims, prod))
+  stopifnot(all(arrays$rank == 1))
+  ## This needs work, especially as it looks like 'dims' lacks a extra
+  ## layer of list here; we'll pick this up in mrc-5647 in
+  ## multidimensional arrays.
+  arrays$size <- arrays$dims
 
   exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
@@ -99,8 +102,7 @@ parse_system_overall <- function(exprs, call) {
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
-                data = exprs[is_data],
-                dim = exprs[is_dim])
+                data = exprs[is_data])
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
@@ -186,6 +188,12 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
   stage <- set_names(names(stages)[stage], names(stage))
 
+  is_dim <- vlapply(equations, function(x) identical(x$special, "dim"))
+  stage_dim <- stage[names(which(is_dim))]
+  if (any(stage_dim != "system_create")) {
+    stop("invalid dimension time")
+  }
+
   ## Now, we try and work out which parts of the graph are needed at
   ## different "phases".  These roughly correspond to dust functions.
 
@@ -262,16 +270,29 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
 
 parse_storage <- function(equations, phases, variables, arrays, data, call) {
-  ## This will need additional work once we support arrays as these
-  ## will be put into internal storage.
-  shared <- intersect(names(equations), phases$build_shared$equations)
-  stack <- setdiff(names(equations), c(shared, arrays$name))
+  virtual <- names(which(vlapply(equations, function(x) isTRUE(x$lhs$exclude))))
+  shared <- setdiff(
+    intersect(names(equations), phases$build_shared$equations),
+    virtual)
+  stack <- setdiff(names(equations), c(shared, virtual, arrays$name))
   internal <- intersect(phases$update$equations, arrays$name)
+
+  packing <- list(state = parse_packing(variables, arrays))
+  use_offset <- vlapply(packing$state$offset, is.recursive)
+  if (any(use_offset)) {
+    offset <- set_names(packing$state$offset[use_offset],
+                        paste0("offset_", packing$state$name[use_offset]))
+    packing$state$offset[use_offset] <- lapply(names(offset), as.name)
+    shared <- c(shared, names(offset))
+  } else {
+    offset <- NULL
+  }
 
   contents <- list(
     variables = variables,
     shared = shared,
     internal = internal,
+    virtual = virtual,
     data = data$name,
     output = character(),
     stack = stack)
@@ -282,14 +303,17 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
   ## We'll need integer variables soon, these are always weird.  We
   ## could also use proper booleans too.
   type <- set_names(rep("real_type", length(location)), names(location))
-
-  packing <- list(state = parse_packing(variables, arrays))
+  is_dim <- vlapply(equations[names(location)],
+                    function(x) identical(x$special, "dim"))
+  is_offset <- names(location) %in% names(offset)
+  type[is_dim | is_offset] <- "size_t"
 
   list(contents = contents,
        location = location,
        arrays = arrays,
        type = type,
-       packing = packing)
+       packing = packing,
+       offset = offset)
 }
 
 
@@ -314,14 +338,13 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
 
 
 parse_system_arrays <- function(exprs, call) {
-  is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
   is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
 
-  nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
-  dim_nms <- nms[is_dim]
+  dim_nms <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
 
   ## First, look for any array calls that do not have a corresponding
   ## dim()
+  is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
   err <- !vlapply(exprs[is_array], function(x) x$lhs$name %in% dim_nms)
   if (any(err)) {
     src <- exprs[is_array][err]
@@ -334,6 +357,7 @@ parse_system_arrays <- function(exprs, call) {
 
   ## Next, we collect up any subexpressions, in order, for all arrays,
   ## and make sure that we are always assigned as an array.
+  nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
   for (nm in dim_nms) {
     i <- nms == nm & !is_dim
     err <- vlapply(exprs[i], function(x) {
@@ -356,19 +380,21 @@ parse_system_arrays <- function(exprs, call) {
   ## want to use this all over the show I think, but for now this is
   ## ok, because it is at this point that we would compute additional
   ## expressions for the sizes.
-  size <- set_names(lapply(exprs[is_dim], function(x) x$rhs$expr),
-                    dim_nms)
-  stopifnot(all(vlapply(size, is.numeric)))
-
   ## Then we go back and assign together uses in ranges.
-  for (i in which(is_array)) {
+  is_array_assignment <- is_array | (nms %in% dim_nms)
+  for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
     if (length(eq$lhs$array) > 1) {
       stop("support matrices here")
     }
-    if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
-      eq$lhs$array[[1]]$to <- size[[eq$lhs$name]]
+    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
+    if (!is.null(eq$lhs$array)) {
+      if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
+        eq$lhs$array[[1]]$to <- as.name(name_dim)
+      }
     }
+    ## Add a dimension to the dependencies.
+    eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
   }
 
@@ -387,17 +413,18 @@ parse_packing <- function(names, arrays) {
     packing <- arrays
   }
 
-  ## Later, we'll pack things up with anything that requires symbols
-  ## first, so there's no great stress here at the moment; later we'll
-  ## need to order these by things that are expressions anywhere in
-  ## their size.
   packing <- packing[match(names, packing$name), ]
+
+  ## We might refine this later; moving other fairly simple things
+  ## earlier in the list.
+  pack_group <- viapply(packing$size, function(x) {
+    if (is.numeric(x)) 1L else 2L
+  })
+  packing <- packing[order(pack_group), ] # stable sort relative to names
   rownames(packing) <- NULL
 
-  ## These are C-style array offsets - we store them as a list because
-  ## this will likely become expressions in future.
-  packing$offset <-
-    I(as.list(cumsum(c(0, unlist(packing$size[-nrow(packing)])))))
+  ## These are C-style array offsets (from 0, not 1)
+  packing$offset <- I(expr_cumsum(c(list(0), packing$size[-nrow(packing)])))
 
   packing
 }
