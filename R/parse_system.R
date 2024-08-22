@@ -338,13 +338,13 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
 
 
 parse_system_arrays <- function(exprs, call) {
-  is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
   is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
 
   dim_nms <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
 
   ## First, look for any array calls that do not have a corresponding
   ## dim()
+  is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
   err <- !vlapply(exprs[is_array], function(x) x$lhs$name %in% dim_nms)
   if (any(err)) {
     src <- exprs[is_array][err]
@@ -381,14 +381,17 @@ parse_system_arrays <- function(exprs, call) {
   ## ok, because it is at this point that we would compute additional
   ## expressions for the sizes.
   ## Then we go back and assign together uses in ranges.
-  for (i in which(is_array)) {
+  is_array_assignment <- is_array | (nms %in% dim_nms)
+  for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
     if (length(eq$lhs$array) > 1) {
       stop("support matrices here")
     }
     name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
-    if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
-      eq$lhs$array[[1]]$to <- as.name(name_dim)
+    if (!is.null(eq$lhs$array)) {
+      if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
+        eq$lhs$array[[1]]$to <- as.name(name_dim)
+      }
     }
     ## Add a dimension to the dependencies.
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)

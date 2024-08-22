@@ -937,3 +937,49 @@ test_that("can store arrays in state", {
       "  }",
       "}"))
 })
+
+
+test_that("generate variable sized array from parameters", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2]
+    n <- 2
+    a <- parameter()
+    dim(a) <- n
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  real_type n;",
+      "  std::vector<real_type> a;",
+      "};"))
+  expect_equal(
+    generate_dust_system_internal_state(dat),
+    "struct internal_state {};")
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type n = 2;",
+      "  std::vector<real_type> a(n);",
+      '  dust2::r::read_real_vector(parameters, n, a.data(), "a", true);',
+      "  return shared_state{n, a};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      "  dust2::r::read_real_vector(parameters, shared.n, shared.a.data(), \"a\", false);",
+      "}"))
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  return internal_state{};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = shared.a[0] + shared.a[1];",
+      "}"))
+})

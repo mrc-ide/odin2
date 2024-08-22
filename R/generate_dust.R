@@ -483,7 +483,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       stopifnot(dat$storage$arrays$rank[[i]] == 1)
       ## Needs work doing some sort of static initialisation
       stopifnot(is.null(eq$rhs$args$default))
-      len <- dat$storage$arrays$size[[i]]
+      len <- generate_dust_sexp(dat$storage$arrays$size[[i]],
+                                dat$sexp_data, options)
       required <- if (isFALSE(options$shared_exists)) "true" else "false"
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
       res <- sprintf(
