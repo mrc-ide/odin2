@@ -115,9 +115,6 @@ uses_unary_minus <- function(expr) {
 }
 
 
-## These would do well to cope with things like
-## expr_plus(quote(i - 1), 1)
-## expr_plus(quote(i + 2), 3)
 expr_minus <- function(a, b) {
   mcstate2::mcstate_differentiation()$maths$minus(a, b)
 }

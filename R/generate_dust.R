@@ -122,12 +122,10 @@ generate_dust_system_packing <- function(name, dat) {
 
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
-  eqs <- dat$phases$build_shared$equations
+  eqs <- setdiff(dat$phases$build_shared$equations,
+                 dat$storage$contents$virtual)
   body <- collector()
   for (eq in dat$equations[eqs]) {
-    if (identical(eq$special, "dim") && isTRUE(eq$lhs$exclude)) {
-      next
-    }
     if (eq$lhs$name %in% dat$storage$arrays$name) {
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
@@ -137,8 +135,7 @@ generate_dust_system_build_shared <- function(dat) {
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }
-  init <- setdiff(eqs, dat$storage$contents$virtual)
-  body$add(sprintf("return shared_state{%s};", paste(init, collapse = ", ")))
+  body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
   cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
 }
