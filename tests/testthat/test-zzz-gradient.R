@@ -21,7 +21,7 @@ test_that("can compute gradient", {
     gamma <- parameter(0.1, differentiate = TRUE)
     I0 <- parameter(10, differentiate = TRUE)
     cases_observed <- data()
-    compare(cases_observed) ~ Poisson(cases_inc)
+    cases_observed ~ Poisson(cases_inc)
   }, quiet = TRUE, debug = TRUE)
 
   expect_mapequal(sir()$properties,

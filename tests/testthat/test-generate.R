@@ -44,7 +44,7 @@ test_that("generate basic attributes for system with compare", {
     update(x) <- 1
     initial(x) <- 1
     d <- data()
-    compare(d) ~ Normal(x, 1)
+    d ~ Normal(x, 1)
   })
   dat <- generate_prepare(dat)
   expect_equal(
@@ -303,7 +303,7 @@ test_that("can build simple compare function", {
     update(x) <- 1
     initial(x) <- 1
     d <- data()
-    compare(d) ~ Normal(x, 1)
+    d ~ Normal(x, 1)
   })
   dat <- generate_prepare(dat)
   expect_equal(
@@ -323,7 +323,7 @@ test_that("can build more complex compare function", {
     initial(x) <- 1
     a <- x / d
     d <- data()
-    compare(d) ~ Normal(x, a)
+    d ~ Normal(x, a)
   })
   dat <- generate_prepare(dat)
   expect_equal(
@@ -382,7 +382,7 @@ test_that("variables involving data are computed within compare", {
     d1 <- data()
     d2 <- data()
     a <- d1 / d2
-    compare(d1) ~ Normal(x, a)
+    d1 ~ Normal(x, a)
   })
   dat <- generate_prepare(dat)
   expect_equal(
@@ -427,7 +427,7 @@ test_that("pull recursive dependencies into compare_data", {
     initial(x) <- 1
     p <- exp(x)
     d <- data()
-    compare(d) ~ Poisson(p)
+    d ~ Poisson(p)
   })
   dat <- generate_prepare(dat)
   expect_equal(
@@ -449,7 +449,7 @@ test_that("generate adjoint", {
     a <- parameter(differentiate = TRUE)
     p <- exp(x)
     d <- data()
-    compare(d) ~ Poisson(p)
+    d ~ Poisson(p)
   })
 
   dat <- generate_prepare(dat)
@@ -738,7 +738,7 @@ test_that("can generate system with array variable used in compare", {
     update(y) <- y
     dim(x) <- 2
     d <- data()
-    compare(d) ~ Normal(x[1] + x[2], y)
+    d ~ Normal(x[1] + x[2], y)
   })
   dat <- generate_prepare(dat)
   expect_equal(

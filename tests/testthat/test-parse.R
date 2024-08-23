@@ -23,7 +23,7 @@ test_that("can parse dust MVP system", {
     p <- parameter(constant = TRUE)
     initial(x) <- 0
     d <- data()
-    compare(d) ~ Normal(x, 1)
+    d ~ Normal(x, 1)
   })
 
   expect_equal(res$time, "discrete")

@@ -74,7 +74,7 @@ test_that("can compile a discrete-time model that compares to data", {
     noise <- 1 / exp_noise # Exponential(rate = exp_noise)
     incidence <- data()
     lambda <- cases_inc + noise
-    compare(incidence) ~ Poisson(lambda)
+    incidence ~ Poisson(lambda)
   })
 
   code <- generate_dust_system(dat)

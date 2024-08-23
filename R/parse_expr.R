@@ -96,8 +96,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     deriv = function(name) NULL,
     output = function(name) NULL,
     dim = function(name) NULL,
-    config = function(name) NULL,
-    compare = function(name) NULL)
+    config = function(name) NULL)
 
   args <- NULL
   if (rlang::is_call(lhs, names(special_def))) {
@@ -116,17 +115,6 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         "E1003", src, call)
     }
 
-    if (special == "compare") {
-      ## TODO: a good candidate for pointing at the source location of
-      ## the error.
-      odin_parse_error(
-        c("'compare()' expressions must use '~', not '<-'",
-          i = paste("Compare expressions do not represent assignents, but",
-                    "relationships, which we emphasise by using '~'.  This",
-                    "also keeps the syntax close to that for the prior",
-                    "specification in monty")),
-        "E1004", src, call)
-    }
     lhs <- lhs[[2]]
     if (length(m$value) > 2) {
       args <- as.list(m$value[-(1:2)])
@@ -290,26 +278,15 @@ parse_expr_compare <- function(expr, src, call) {
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
-  list(special = "compare",
-       rhs = rhs,
+  list(rhs = rhs,
        src = src)
 }
 
 
 parse_expr_compare_lhs <- function(lhs, src, call) {
-  if (!rlang::is_call(lhs, "compare")) {
-    ## TODO: this is a good candidate for pointing at the assignment
-    ## symbol in the error message, if we have access to the source,
-    ## as that's the most likely fix.
-    odin_parse_error(
-      c("Expected the lhs of '~' to be a 'compare()' call",
-        i = "Did you mean to use '<-' in place of '~'?"),
-      "E1011", src, call)
-  }
-  lhs <- lhs[[2]]
   if (!is.symbol(lhs)) {
     odin_parse_error(
-      "Expected the argument of 'compare()' to be a symbol",
+      "The left hand side of a `~` comparison must be a symbol",
       "E1012", src, call)
   }
   lhs
