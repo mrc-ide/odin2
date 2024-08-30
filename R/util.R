@@ -23,19 +23,6 @@ vcapply <- function(...) {
 }
 
 
-match_value <- function(x, choices, name = deparse(substitute(x)), arg = name,
-                        call = NULL) {
-  assert_scalar_character(x, call = call, arg = arg)
-  if (!(x %in% choices)) {
-    choices_str <- paste(squote(choices), collapse = ", ")
-    cli::cli_abort(c("'{name}' must be one of {choices_str}",
-                     i = "Instead we were given '{x}'"), call = call,
-                   arg = arg)
-  }
-  x
-}
-
-
 ## See mrc-5614 for ideas about improving this, for later.
 match_call <- function(call, fn) {
   ## We'll probably expand on the error case here to return something
