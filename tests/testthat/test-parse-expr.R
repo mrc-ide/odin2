@@ -245,3 +245,36 @@ test_that("throw sensible error if stochastic parse fails", {
     parse_expr(quote(a <- Normal(mu = 0, sigma = 1)), NULL, NULL),
     "Invalid call to 'Normal()'", fixed = TRUE)
 })
+
+
+test_that("check args", {
+  expect_error(
+    parse_expr(quote(a <- round(a, 3)), NULL, NULL),
+    "Invalid call to 'round':")
+  expect_error(
+    parse_expr(quote(a <- round(y = 2)), NULL, NULL),
+    "Invalid call to 'round'")
+  expect_error(
+    parse_expr(quote(a <- sin(y = 2)), NULL, NULL),
+    "Calls to 'sin' may not have any named arguments")
+})
+
+
+test_that("check argument number", {
+  ## Once names on primative calls is fixed, we'll have very few of
+  ## these left and may remove the check
+  expect_error(
+    parse_expr(quote(a <- sin(1, 2)), NULL, NULL),
+    "Invalid call to 'sin': incorrect number of arguments")
+  expect_error(
+    parse_expr(quote(a <- `+`(1, 2, 3)), NULL, NULL),
+    "Invalid call to '+': incorrect number of arguments",
+    fixed = TRUE)
+})
+
+
+test_that("check functions against valid list", {
+  expect_error(
+    parse_expr(quote(a <- sin(1) + pgamma(2)), NULL, NULL),
+    "Unsupported function 'pgamma'")
+})

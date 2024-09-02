@@ -169,11 +169,6 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
 
 
 parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
-  ## So here, we want to find dependencies used in the rhs and make
-  ## sure that the user correctly restricts to the right set of
-  ## dependencies.  There is some faff with sum, and we detect here if
-  ## the user uses anything stochastic.  We do look for the range
-  ## operator but I'm not totally sure that's the best place to do so.
   depends <- find_dependencies(rhs)
 
   ## TODO: we're going to check usage in a couple of places, but this
@@ -322,11 +317,47 @@ parse_expr_usage <- function(expr, src, call) {
   if (is.recursive(expr)) {
     fn <- expr[[1]]
     fn_str <- as.character(fn)
+    ignore <- "["
     if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
-    } else {
+    } else if (fn_str %in% names(FUNCTIONS)) {
+      usage <- FUNCTIONS[[fn_str]]
+      if (is.function(usage)) {
+        res <- match_call(expr, usage)
+        if (!res$success) {
+          err <- conditionMessage(res$error)
+          odin_parse_error("Invalid call to '{fn_str}': {err}",
+                           "E1028", src, call)
+        }
+      } else {
+        n_args <- length(expr) - 1
+        if (!is.null(names(expr))) {
+          odin_parse_error(
+            "Calls to '{fn_str}' may not have any named arguments",
+            "E1029", src, call)
+        }
+        if (length(usage) == 1) {
+          if (n_args != usage) {
+            odin_parse_error(
+              paste("Invalid call to '{fn_str}': incorrect number of arguments",
+                    "(expected {usage} but recieved {n_args})"),
+              "E1030", src, call)
+          }
+        } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
+          collapse <- if (diff(usage) == 1) " or " else " to "
+          usage_str <- paste(usage, collapse = collapse)
+          odin_parse_error(
+            paste("Invalid call to '{fn_str}': incorrect number of arguments",
+                  "(expected {usage_str} but recieved {n_args})"),
+            "E1030", src, call)
+        }
+      }
       args <- lapply(expr[-1], parse_expr_usage, src, call)
       expr <- as.call(c(list(fn), args))
+    } else if (!(fn_str %in% ignore)) {
+      odin_parse_error(
+        "Unsupported function '{fn_str}'",
+        "E1027", src, call)
     }
   }
   expr

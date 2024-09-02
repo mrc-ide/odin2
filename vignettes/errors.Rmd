@@ -328,6 +328,44 @@ Something unexpected was used as an array index on the left hand side of an arra
 x[TRUE] <- 1
 ```
 
+# `E1027`
+
+You have tried to use a function that odin does not support.
+
+Example:
+
+```r
+a <- pgamma(0, 1)
+```
+
+It's also possible that you have simply misspelt the function you intended:
+
+```r
+a <- sqt(2)
+```
+
+Not all of R's mathematical functions are supported, but please let us know if you need something that we don't support.
+
+# `E1028`
+
+Invalid call to an odin function.  Usually, this means that you have provided too many or too few arguments, or that you have provided a named argument that the function does not support.  The message should guide you to fix the mistake, but the machinery for doing this (currently) comes from `match.call` which can be unhelpful at times.
+
+Example:
+
+```r
+a <- round(b, 2)
+```
+
+We don't yet support `round`'s `digit` argument, so this call will fail.
+
+# `E1029`
+
+Disallowed use of named arguments.  For some primative R functions (e.g., `+` we disallow use of named argument forms).  You are unlikely to see this error, but we would be interested to know if you do.
+
+# `E1030`
+
+Incorrect number of arguments to a function that does not accept argument names.  You are unlikely to see this error, but we would be interested to know if you do.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
