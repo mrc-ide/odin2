@@ -3,7 +3,7 @@ method_args <- list(
   packing_state = "static dust2::packing packing_state(const shared_state& shared) {",
   packing_gradient = "static dust2::packing packing_gradient(const shared_state& shared) {",
   build_shared = "static shared_state build_shared(cpp11::list parameters) {",
-  build_data = "static data_type build_data(cpp11::list data) {",
+  build_data = "static data_type build_data(cpp11::list data, const shared_state& shared) {",
   initial_discrete = "static void initial(real_type time, real_type dt, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state) {",
   initial_continuous = "static void initial(real_type time, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state) {",
   update_shared = "static void update_shared(cpp11::list parameters, shared_state& shared) {",
