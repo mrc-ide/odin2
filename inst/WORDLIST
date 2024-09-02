@@ -4,6 +4,7 @@ Poisson
 R's
 cdot
 codecov
+cpp
 dI
 dR
 dS
@@ -15,6 +16,8 @@ io
 mathrm
 mcstate
 mcstate's
+monty
+monty's
 neq
 odin
 odin's

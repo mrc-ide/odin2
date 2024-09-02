@@ -360,7 +360,7 @@ We don't yet support `round`'s `digit` argument, so this call will fail.
 
 # `E1029`
 
-Disallowed use of named arguments.  For some primative R functions (e.g., `+` we disallow use of named argument forms).  You are unlikely to see this error, but we would be interested to know if you do.
+Disallowed use of named arguments.  For some primitive R functions (e.g., `+` we disallow use of named argument forms).  You are unlikely to see this error, but we would be interested to know if you do.
 
 # `E1030`
 

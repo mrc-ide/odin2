@@ -11,7 +11,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-`odin2` supports many functions that you'd expect to see for constructing dynamocal models.  These include most common mathematical operations and some that are quite obscure.  There is a special syntax for working with arrays, which is described in some detail below.  The support for stochastic models and comparison to data come from `monty`.
+`odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data come from `monty`.
 
 # Basic operations
 
@@ -97,7 +97,7 @@ All the usual trig functions are also available:
 * `acos` -- **Arc-cosine function**
 * `asin` -- **Arc-sin function**
 * `atan` -- **Arc-tangent function**
-* `atan2` -- **Two-arg arc-tangent function**
+* `atan2` -- **Two-argument arc-tangent function**
 * `cosh` -- **Hyperbolic cosine function**
 * `sinh` -- **Hyperbolic sine function**
 * `tanh` -- **Hyperbolic tangent function**
@@ -107,7 +107,7 @@ All the usual trig functions are also available:
 
 # Distribution functions
 
-We support distribution funtions in two places:
+We support distribution functions in two places:
 
 First, for discrete-time models we support sampling from a distribution at each time step.  For example:
 
@@ -115,7 +115,7 @@ First, for discrete-time models we support sampling from a distribution at each 
 a <- Normal(0, 1)
 ```
 
-will assign `a` to a draw from the strandard normal distibution.  You cannot use these functions from continuous time models.  You cannot sample from stochastic functions in a continuous time (ODE) model.
+will assign `a` to a draw from the standard normal distribution.  You cannot use these functions from continuous time models.  You cannot sample from stochastic functions in a continuous time (ODE) model.
 
 Second, for comparison to data, for example:
 
@@ -152,7 +152,7 @@ The currently supported distributions are (alphabetically):
   - `shape`, `rate` (**default**)
   - `shape`, `scale`
 * `Hypergeometric` -- the [hypergeometric distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution) with parameters `m` (number of white balls), `n` (number of black balls), and `k` (number of samples), and we return the number of *white* balls.  We may support alternative parametrisations of this distribution in future (this version is the same parametrisation as `rhyper`)
-* `Normal` -- the [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution) mean, sd
+* `Normal` -- the [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution) with parameters `mean`, `sd`
 * `Poisson` -- the [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) with parameter `lambda` (the mean)
 * `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
 
