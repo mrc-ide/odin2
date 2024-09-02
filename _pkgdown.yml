@@ -11,6 +11,7 @@ reference:
       - odin
       - odin_error_explain
       - odin_package
+      - odin_show
 
 articles:
   - title: Basics
