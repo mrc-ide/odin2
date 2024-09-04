@@ -157,3 +157,16 @@ test_that("can translate user(integer = TRUE)", {
     res$equations$a$src$value,
     quote(a <- parameter(type = "integer")))
 })
+
+
+test_that("translate use of 't' into 'time' on use", {
+  expect_warning(
+    res <- odin_parse({
+      deriv(x) <- t
+      initial(x) <- 0
+    }),
+    "Found 1 compatibility issue")
+  expect_identical(
+    res$phases$deriv$variables[[1]]$rhs$expr,
+    quote(time))
+})

@@ -295,9 +295,6 @@ parse_expr_check_lhs_name <- function(lhs, context, src, call) {
 }
 
 
-## TODO: we'll have a variant of this that acts as a compatibility
-## layer for user(), as this is probably the biggest required change
-## to people's code, really.
 parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   template <- function(default = NULL, constant = NULL, differentiate = FALSE,
                        type = NULL) {

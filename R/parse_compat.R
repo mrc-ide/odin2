@@ -1,20 +1,13 @@
 parse_compat <- function(exprs, action, call) {
-  ## Things we can translate:
-  ##
-  ## user() -> parameter()
-
-  ## rbinom() -> Binomial() [etc]
-
-  ## dt -> drop
-  ## step -> time
-  ## t -> time
-
-  ## We also need to cope with the situation where we have three
-  ## things to fix in a single expression.
   exprs <- lapply(exprs, parse_compat_fix_user, call)
   exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
   exprs <- lapply(exprs, parse_compat_fix_distribution, call)
   exprs <- lapply(exprs, parse_compat_fix_compare, call)
+
+  ## Fix time-related things; this needs processing at the whole
+  ## system level, because the fixes need to consider the whole
+  ## system.
+  exprs <- parse_compat_fix_time(exprs, call)
 
   parse_compat_report(exprs, action, call)
   exprs
@@ -135,8 +128,8 @@ parse_compat_report <- function(exprs, action, call) {
         "with monty-stye calls (e.g., 'Normal()')"),
       compare = paste(
         "Remove redundant 'compare()' wrapper, because all expressions",
-        "using `~` are comparisons."
-      ))
+        "using `~` are comparisons."),
+      time_uses_t = "Use 'time' and not 't' to refer to time")
 
     type <- lapply(exprs[i], function(x) x$compat$type)
     err <- unlist0(type)
@@ -174,4 +167,52 @@ parse_compat_fix_compare <- function(expr, call) {
     expr <- parse_add_compat(expr, "compare", original)
   }
   expr
+}
+
+
+parse_compat_fix_time <- function(exprs, call) {
+  ## Look for assignments to 'time' anywhere
+  is_time_assignment <- vlapply(exprs, function(x) {
+    rlang::is_call(x$value, c("<-", "=")) &&
+      identical(x$value[[2]], quote(time))
+  })
+  if (any(is_time_assignment)) {
+    ## We might here look for the form 'step * dt', which we can just
+    ## ignore
+    stop("Prevent assignment to time")
+  }
+
+  is_dt_assignment <- vlapply(exprs, function(x) {
+    rlang::is_call(x$value, c("<-", "=")) &&
+      identical(x$value[[2]], quote(dt))
+  })
+  if (any(is_dt_assignment)) {
+    ## We might here look for the form '<numeric-literal>' or 'user(...)'
+    stop("Prevent assignment to dt")
+  }
+
+  deps <- lapply(exprs, function(x) all.vars(x$value))
+  uses_t <- vlapply(deps, function(x) "t" %in% x)
+  uses_step <- vlapply(deps, function(x) "step" %in% x)
+
+  if (any(uses_t)) {
+    exprs[uses_t] <- lapply(exprs[uses_t], parse_compat_fix_time_uses_t, call)
+  }
+
+  if (any(uses_step)) {
+    ## these are harder, because most of the uses I know of are
+    ## accessing time by step.  because we don't yet support
+    ## interpolation, this is harder to direct users to a decent fix,
+    ## so we just won't for now.
+    stop("prevent use of step")
+  }
+
+  exprs
+}
+
+
+parse_compat_fix_time_uses_t <- function(expr, call) {
+  original <- expr$value
+  expr$value <- substitute_(expr$value, list(t = quote(time)))
+  parse_add_compat(expr, "time_uses_t", original)
 }
