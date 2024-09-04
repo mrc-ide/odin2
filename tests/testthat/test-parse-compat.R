@@ -170,3 +170,13 @@ test_that("translate use of 't' into 'time' on use", {
     res$phases$deriv$variables[[1]]$rhs$expr,
     quote(time))
 })
+
+
+test_that("prevent use of 'step' in discrete time models", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + step
+      initial(x) <- 0
+    }),
+    "Cannot use 'step' within discrete time models")
+})

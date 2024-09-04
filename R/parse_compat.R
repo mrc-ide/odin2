@@ -204,7 +204,18 @@ parse_compat_fix_time <- function(exprs, call) {
     ## accessing time by step.  because we don't yet support
     ## interpolation, this is harder to direct users to a decent fix,
     ## so we just won't for now.
-    stop("prevent use of step")
+    ##
+    ## We might spot things like 'step * dt' and replace these with
+    ## 'time'.  That's quite hard to do automatically because of
+    ## off-by-one issues though.
+    odin_parse_error(
+      c("Cannot use 'step' within discrete time models",
+        i = paste("In contrast with odin v1, 'step' is no longer a measure",
+                  "of time, and you should use 'time' directly, perhaps in",
+                  "conjunction with 'dt'"),
+        i = paste("This code may have been valid in previous versions of",
+                  "odin, you may want to check 'vignette(\"migrating\")'")),
+      "E1099", exprs[uses_step], call)
   }
 
   exprs

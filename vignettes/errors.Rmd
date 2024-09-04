@@ -622,6 +622,12 @@ An example that would trigger this:
 delay_cases_days <- 10
 ```
 
+# `E1099`
+
+Cannot use `step` within discrete time models.  Prior to odin version 2, the `step` variable was automatically provdided by odin to be the time basis for discrete time models; models started at step 0 and increased by one each time step.  We no longer support this, and instead models start at some real-valued (but integral) time and increment with a step size of `dt` (which must be of the form `1 / <integer>).
+
+You will need to adapt your code to fix this error, and this may require features that we are still developing.  Please see `vignette("migrating")` for details.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
