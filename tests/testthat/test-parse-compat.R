@@ -148,3 +148,17 @@ test_that("can translate compare()", {
   expect_equal(
     res$phases$compare$compare[[1]]$src$value[[2]], quote(d))
 })
+
+
+test_that("can translate user(integer = TRUE)", {
+  expect_warning(
+    res <- odin_parse({
+      update(x) <- a
+      initial(x) <- 1
+      a <- user(integer = TRUE)
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(
+    res$equations$a$src$value,
+    quote(a <- parameter(type = "integer")))
+})

@@ -74,6 +74,11 @@ which says that `a` is a user-supplied parameter with a default value of `4`.  I
 a <- parameter(4)
 ```
 
+The `integer` argument accepted by `user` has now changed:
+
+* `user(integer = TRUE)` becomes `parameter(type = "integer")`
+* `user(integer = FALSE)` becomes `parameter(type = "real")`
+
 This translation can be done automatically in most cases, and will be done (with a warning) by default if possible.  You should update your code with the suggested fix, however, as this translation will be removed in a future version.
 
 ## Compare keyword is now removed.
