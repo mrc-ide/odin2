@@ -571,6 +571,69 @@ test_that("can generate duplicated zero_every method", {
 })
 
 
+test_that("can generate zero_every for array variable", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + 1
+    initial(x[], zero_every = 4) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  std::vector<size_t> zero_every_1;",
+      "  for (size_t i = 0; i < 4; ++i) {",
+      "    zero_every_1.push_back(i);",
+      "  }",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_1}};",
+      "}"))
+})
+
+
+test_that("can generate zero_every for array variable with scalar", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + 1
+    initial(x[], zero_every = 4) <- 0
+    update(y) <- y + 1
+    initial(y, zero_every = 4) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  std::vector<size_t> zero_every_1;",
+      "  for (size_t i = 0; i < 4; ++i) {",
+      "    zero_every_1.push_back(i);",
+      "  }",
+      "  zero_every_1.push_back(4);",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_1}};",
+      "}"))
+})
+
+
+test_that("can generate zero_every for array variable separate from scalar", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + 1
+    initial(x[], zero_every = 4) <- 0
+    update(y) <- y + 1
+    initial(y, zero_every = 2) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  std::vector<size_t> zero_every_1{4};",
+      "  std::vector<size_t> zero_every_2;",
+      "  for (size_t i = 0; i < 4; ++i) {",
+      "    zero_every_2.push_back(i);",
+      "  }",
+      "  return dust2::zero_every_type<real_type>{{2, zero_every_1}, {4, zero_every_2}};",
+      "}"))
+})
+
+
 test_that("generate defaults for parameters", {
   dat <- odin_parse({
     a <- parameter(2)
