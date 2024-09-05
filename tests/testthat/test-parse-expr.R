@@ -131,6 +131,41 @@ test_that("can't use both constant and differentiate", {
 })
 
 
+test_that("can change parameter type", {
+  res <- parse_expr(quote(a <- parameter()), NULL, NULL)
+  expect_equal(res$rhs$args$type, "real_type")
+  res <- parse_expr(quote(a <- parameter(type = "real")), NULL, NULL)
+  expect_equal(res$rhs$args$type, "real_type")
+  res <- parse_expr(quote(a <- parameter(type = "integer")), NULL, NULL)
+  expect_equal(res$rhs$args$type, "int")
+  res <- parse_expr(quote(a <- parameter(type = "logical")), NULL, NULL)
+  expect_equal(res$rhs$args$type, "bool")
+})
+
+
+test_that("validate type arg to parameter", {
+  expect_error(
+    parse_expr(quote(a <- parameter(type = TRUE)), NULL, NULL),
+    "type' must be a scalar character, but was 'FALSE'")
+  expect_error(
+    parse_expr(quote(a <- parameter(type = "int")), NULL, NULL),
+    "Invalid value 'int for argument 'type'")
+})
+
+
+test_that("can't differentiate non-real parameters", {
+  expect_error(
+    parse_expr(quote(a <- parameter(type = "integer", differentiate = TRUE)),
+               NULL, NULL),
+    "Differentiable parameters must have 'type = \"real\"'")
+  expect_error(
+    parse_expr(quote(a <- parameter(type = "logical", differentiate = TRUE)),
+               NULL, NULL),
+    "Differentiable parameters must have 'type = \"real\"'")
+})
+
+
+
 test_that("sensible error if parameters are incorrectly specified", {
   expect_error(
     parse_expr(quote(a <- parameter(other = TRUE)), NULL, NULL),

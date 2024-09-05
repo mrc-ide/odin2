@@ -31,6 +31,7 @@ test_that("can parse dust MVP system", {
   expect_equal(res$variables, "x")
   expect_equal(res$parameters,
                data_frame(name = c("b", "p"),
+                          type = "real_type",
                           differentiate = FALSE,
                           constant = c(FALSE, TRUE)))
   expect_equal(res$data, data_frame(name = "d"))
