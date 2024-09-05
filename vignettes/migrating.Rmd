@@ -93,7 +93,7 @@ d ~ Normal(0, 1)
 which reads as: `d` is normally distributed with a mean of 0 and standard deviation of 1.
 
 
-## Vector parameters assign without array indicies
+## Vector parameters assign without array indices
 
 Previously, if you had a vector parameter you had to write
 

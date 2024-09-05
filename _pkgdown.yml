@@ -21,5 +21,6 @@ articles:
     navbar: Details
     contents:
       - errors
+      - functions
       - migrating
       - syntax

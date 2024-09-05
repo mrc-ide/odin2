@@ -2,9 +2,9 @@ parse_compat <- function(exprs, action, call) {
   ## Things we can translate:
   ##
   ## user() -> parameter()
-  
+
   ## rbinom() -> Binomial() [etc]
-  
+
   ## dt -> drop
   ## step -> time
   ## t -> time
@@ -15,7 +15,7 @@ parse_compat <- function(exprs, action, call) {
   exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
   exprs <- lapply(exprs, parse_compat_fix_distribution, call)
   exprs <- lapply(exprs, parse_compat_fix_compare, call)
-  
+
   parse_compat_report(exprs, action, call)
   exprs
 }

@@ -1,0 +1,176 @@
+---
+title: "odin functions"
+author: "Rich FitzJohn"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{odin functions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data comes from `monty`.
+
+# Basic operations
+
+* `+` -- **Plus**: Both infix (`a + b`) and prefix (`+a`) versions supported (e.g., `1 + 2` &rarr; `3`)
+* `-` -- **Minus**: Both infix (`a - b`) and prefix (`-a`) versions supported (e.g., `10 - 1` &rarr; `9`)
+* `*` -- **Multiply**: Multiply two numbers together (e.g., `2 * 6` &rarr; `12`)
+* `/` -- **Divide**: Divide two numbers (e.g., `12 / 6` &rarr; `2`)
+* `^` -- **Power**: Raise the first number to the power of the second. Either number may be a floating point number (e.g., `2.3 ^ 1.2` &rarr; `2.716898`)
+* `(` -- **Parenthesis**: Group expressions together (e.g., `(1 + 5) * 2` &rarr; `12`)
+
+# Conditionals
+
+You can only use conditionals with `if` as an inline expression, for example
+
+```r
+a <- if (9 > 10) 1 else 2
+```
+
+would result in `a` being assigned as `2` (this works in R normally too!).
+
+Because general flow control is not supported, you **cannot** write:
+
+```r
+if (9 > 10) {
+  a <- 1
+} else {
+  a <- 2
+}
+```
+
+# Operators
+
+A number of logical-returning operators exist, primarily to support the `if` statement; all the usual comparison operators exist (though not vectorised `|` or `&`).
+
+* `>` -- **Greater than** (e.g., `1 > 2` &rarr; `FALSE`)
+* `<` -- **Less than** (e.g., `1 < 2` &rarr; `TRUE`)
+* `>=` -- **Greater than or equal to** (e.g., `1 >= 2` &rarr; `FALSE`)
+* `<=` -- **Less than or equal to** (e.g., `1 <= 2` &rarr; `TRUE`)
+* `==` -- **Is exactly equal to** (e.g., `1 == 1` &rarr; `TRUE`)
+* `!=` -- **Is not exactly equal to** (e.g., `1 != 2` &rarr; `TRUE`)
+* `&&` -- **Boolean AND** (e.g., `(1 == 1) && (2 > 1)` &rarr; `TRUE`)
+* `||` -- **Boolean OR** (e.g., `(1 == 1) && (2 > 1)` &rarr; `TRUE`)
+
+Be wary of strict equality with `==` or `!=` as numbers may be floating point numbers, which have some surprising properties for the uninitiated, for example
+
+```{r}
+sqrt(3)^2 == 3
+```
+
+# Mathematical functions
+
+* `%%` -- **Modulo**: Finds the remainder after division of one number by another (e.g., `123 %% 100` &rarr; `23`)
+* `%/%` -- **Integer divide**: Different to floating point division, effectively the full number of times one number divides into another (e.g., `20 %/% 7` &rarr; `2`)
+* `abs` -- **Absolute value** (e.g., `abs(-1)` &rarr; `1`)
+* `sign` -- **Sign function**: Returns the sign of its argument as either -1, 0 or 1, which may be useful for multiplying by another argument (e.g., `sign(-100)` &rarr; `-1`)
+* `round` -- **Round a number** (e.g., `round(1.23)` &rarr; `1`; `round(1.23, 1)` &rarr; `1.2`)
+* `floor` -- **Floor of a number**: Largest integer not greater than the provided number (e.g., `floor(6.5)` &rarr; `6`)
+* `ceiling` -- **Ceiling of a number**: Smallest integer not less than the provided number (e.g., `ceiling(6.5)` &rarr; `7`)
+* `trunc` -- **Truncate a number**: Round a number towards zero
+* `max` -- **Maximum**: Returns maximum of two numbers (e.g., `max(2, 6)` &rarr; `6`)
+* `min` -- **Minimum** (e.g., `min(2, 6)` &rarr; `2`)
+* `exp` -- **Exponential function** (e.g., `exp(1)` &rarr; `2.718282`)
+* `expm1` -- **Computes exp(x) - 1 accurately for small |x|** (e.g., `exp(1)` &rarr; `1.718282`)
+* `log` -- **Logarithmic function in base e** (e.g., `log(1)` &rarr; `0`)
+* `log2` -- **Logarithmic function in base 2** (e.g., `log2(1024)` &rarr; `10`)
+* `log10` -- **Logarithmic function in base 10** (e.g., `log10(1000)` &rarr; `3`)
+* `log1p` -- **Computes log(x + 1) accurately for small |x|** (e.g., `log1p(1)` &rarr; `0.6931472`)
+* `sqrt` -- **Square root function** (e.g., `sqrt(4)` &rarr; `2`)
+* `beta` -- **Beta function** (e.g., `beta(3, 5)` &rarr; `0.00952381`)
+* `lbeta` -- **Log beta function** (e.g., `lbeta(3, 5)` &rarr; `-4.65396`)
+* `choose` -- **Binomial coefficients** (e.g., `choose(60, 3)` &rarr; `34220`)
+* `lchoose` -- **Log binomial coefficients** (e.g., `choose(60, 3)` &rarr; `10.44057`)
+* `gamma` -- **Gamma function** (e.g., `gamma(10)` &rarr; `362880`)
+* `lgamma` -- **Log gamma function** (e.g., `lgamma(10)` &rarr; `12.80183`)
+
+The exact behaviour for `%%` and `%/%` for floating point numbers and negative numbers is complicated - please see `?Arithmetic`.  The rules for operators in `odin` try to follow those in R as closely as possible.
+
+All the usual trig functions are also available:
+
+* `cos` -- **Cosine function**
+* `sin` -- **Sine function**
+* `tan` -- **Tangent function**
+* `acos` -- **Arc-cosine function**
+* `asin` -- **Arc-sin function**
+* `atan` -- **Arc-tangent function**
+* `atan2` -- **Two-argument arc-tangent function**
+* `cosh` -- **Hyperbolic cosine function**
+* `sinh` -- **Hyperbolic sine function**
+* `tanh` -- **Hyperbolic tangent function**
+* `acosh` -- **Hyperbolic arc-cosine function**
+* `asinh` -- **Hyperbolic arc-sine function**
+* `atanh` -- **Hyperbolic arc-tangent function**
+
+# Distribution functions
+
+We support distribution functions in two places:
+
+First, for discrete-time models we support sampling from a distribution at each time step.  For example:
+
+```r
+a <- Normal(0, 1)
+```
+
+will assign `a` to a draw from the standard normal distribution.  You cannot use these functions from continuous time models.  You cannot sample from stochastic functions in a continuous time (ODE) model.
+
+Second, for comparison to data, for example:
+
+```
+a ~ Normal(0, 1)
+```
+
+will add a log likelihood term looking up the log density of the data element `a` against a standard normal distribution.  This form can be used in both discrete-time and continuous-time models.  For more information, see `vignette("fitting")`.
+
+Some distributions have several versions; these are distinguished by the arguments to the functions.  For example:
+
+```r
+a <- Gamma(2, 0.1)
+a <- Gamma(shape = 2, rate = 0.1)
+```
+
+draw from a Gamma distribution with a shape of 2 and a **rate** of 0.1, while
+
+```r
+a <- Gamma(2, scale = 10)
+a <- Gamma(shape = 2, scale = 10)
+```
+
+draw from a Gamma distribution with a shape of 2 and a **scale** of 10.
+
+The currently supported distributions are (alphabetically):
+
+* `Beta` -- the [Beta distribution](https://en.wikipedia.org/wiki/Beta_distribution) with parameters `a` and `b` (vs `rbeta`'s `shape1` and `shape2`)
+* `Binomial` -- the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) with parameters `size` and `prob`
+* `Exponential` -- the [exponential distribution](https://en.wikipedia.org/wiki/Exponential_distribution) with two forms:
+  - `rate` (**default**); this is the same parameterisation as `rexp`
+  - `mean` which is the inverse of rate.  **NOTE**: we may change this to `scale` soon
+* `Gamma` -- the [gamma distribution](https://en.wikipedia.org/wiki/Gamma_distribution) with two forms:
+  - `shape`, `rate` (**default**)
+  - `shape`, `scale`
+* `Hypergeometric` -- the [hypergeometric distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution) with parameters `m` (number of white balls), `n` (number of black balls), and `k` (number of samples), and we return the number of *white* balls.  We may support alternative parametrisations of this distribution in future (this version is the same parametrisation as `rhyper`)
+* `Normal` -- the [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution) with parameters `mean`, `sd`
+* `Poisson` -- the [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) with parameter `lambda` (the mean)
+* `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
+
+In the future, we plan support for additional distributions, please let us know if we are missing any that you need.  The support for these functions comes from `monty` and we will link here to the docs in that package once they exist for additional details.
+
+## Semantics of random number draws
+
+Stochastic functions are called for each element in an array they are assigned to, at each time.  So here:
+
+```
+x[] <- Normal(0, 1)
+```
+
+`x` will be filled with each element having a different draw from a standard normal.  In contrast, in:
+
+```
+a <- Normal(0, 1)
+x[] <- a
+```
+
+`x` will be a vector where every element is the same, the result of a *single* draw from a standard normal.
