@@ -42,11 +42,6 @@ test_that("can translate simple user calls", {
     list(value = quote(a <- parameter(1)),
          compat = list(type = "user", original = quote(a <- user(1)))))
   expect_error(
-    parse_compat_fix_user(list(value = quote(a <- user(integer = TRUE)))),
-    "Can't yet translate 'user()' calls that use the 'integer' argument",
-    fixed = TRUE,
-    class = "odin_parse_error")
-  expect_error(
     parse_compat_fix_user(list(value = quote(a <- user(min = 0)))),
     "Can't yet translate 'user()' calls that use the 'min' argument",
     fixed = TRUE,
