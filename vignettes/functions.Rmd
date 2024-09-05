@@ -11,7 +11,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-`odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data come from `monty`.
+`odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data comes from `monty`.
 
 # Basic operations
 
@@ -44,7 +44,7 @@ if (9 > 10) {
 
 # Operators
 
-A number of logical-returning operators exist, primarily to support the if statement; all the usual comparison operators exist (though not vectorised `|` or `&`).
+A number of logical-returning operators exist, primarily to support the `if` statement; all the usual comparison operators exist (though not vectorised `|` or `&`).
 
 * `>` -- **Greater than** (e.g., `1 > 2` &rarr; `FALSE`)
 * `<` -- **Less than** (e.g., `1 < 2` &rarr; `TRUE`)

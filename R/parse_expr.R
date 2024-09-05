@@ -340,7 +340,7 @@ parse_expr_usage <- function(expr, src, call) {
           if (n_args != usage) {
             odin_parse_error(
               paste("Invalid call to '{fn_str}': incorrect number of arguments",
-                    "(expected {usage} but recieved {n_args})"),
+                    "(expected {usage} but received {n_args})"),
               "E1030", src, call)
           }
         } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
@@ -348,7 +348,7 @@ parse_expr_usage <- function(expr, src, call) {
           usage_str <- paste(usage, collapse = collapse)
           odin_parse_error(
             paste("Invalid call to '{fn_str}': incorrect number of arguments",
-                  "(expected {usage_str} but recieved {n_args})"),
+                  "(expected {usage_str} but received {n_args})"),
             "E1030", src, call)
         }
       }
