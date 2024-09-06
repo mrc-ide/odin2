@@ -132,8 +132,9 @@ generate_dust_system_build_shared <- function(dat) {
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
       i <- match(eq$lhs$name, dat$storage$arrays$name)
-      size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
-                                 options)
+      size <- generate_dust_sexp(
+        call("OdinLength", eq$lhs$name),
+        dat$sexp_data, options)
       body$add(sprintf("std::vector<%s> %s(%s);",
                        dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
     }
@@ -522,8 +523,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       stopifnot(dat$storage$arrays$rank[[i]] == 1)
       ## Needs work doing some sort of static initialisation
       stopifnot(is.null(eq$rhs$args$default))
-      len <- generate_dust_sexp(dat$storage$arrays$size[[i]],
-                                dat$sexp_data, options)
+      len <- generate_dust_sexp(
+        call("OdinLength", eq$lhs$name),
+        dat$sexp_data, options)
       required <- if (isFALSE(options$shared_exists)) "true" else "false"
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
       res <- sprintf(
@@ -567,8 +569,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
         if (idx$is_range) {
-          from <- generate_dust_sexp(idx$from, dat$sexp_data)
-          to <- generate_dust_sexp(idx$to, dat$sexp_data)
+          from <- generate_dust_sexp(idx$from, dat$sexp_data, options)
+          to <- generate_dust_sexp(idx$to, dat$sexp_data, options)
           res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
                            idx$name, from, idx$name, to, idx$name),
                    res,

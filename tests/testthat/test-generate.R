@@ -707,7 +707,7 @@ test_that("can generate a simple array within shared", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(3)};",
-      "  std::vector<real_type> a(3);", # TODO: fix this
+      "  std::vector<real_type> a(dim_a.size);",
       "  for (size_t i = 1; i <= dim_a.size; ++i) {",
       "    a[i - 1] = i;",
       "  }",
@@ -843,15 +843,15 @@ test_that("can generate system with array from user", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(2)};",
-      "  std::vector<real_type> a(2);",
-      '  dust2::r::read_real_vector(parameters, 2, a.data(), "a", true);',
+      "  std::vector<real_type> a(dim_a.size);",
+      '  dust2::r::read_real_vector(parameters, dim_a.size, a.data(), "a", true);',
       "  const shared_state::dim_type dim{dim_a};",
       "  return shared_state{dim, a};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
-      '  dust2::r::read_real_vector(parameters, 2, shared.a.data(), "a", false);',
+      '  dust2::r::read_real_vector(parameters, shared.dim.a.size, shared.a.data(), "a", false);',
       "}"))
 })
 
@@ -1063,15 +1063,15 @@ test_that("generate variable sized array from parameters", {
     c(method_args$build_shared,
       "  const real_type n = 2;",
       "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
-      "  std::vector<real_type> a(n);",
-      '  dust2::r::read_real_vector(parameters, n, a.data(), "a", true);',
+      "  std::vector<real_type> a(dim_a.size);",
+      '  dust2::r::read_real_vector(parameters, dim_a.size, a.data(), "a", true);',
       "  const shared_state::dim_type dim{dim_a};",
       "  return shared_state{dim, n, a};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
-      "  dust2::r::read_real_vector(parameters, shared.n, shared.a.data(), \"a\", false);",
+      "  dust2::r::read_real_vector(parameters, shared.dim.a.size, shared.a.data(), \"a\", false);",
       "}"))
   expect_equal(
     generate_dust_system_build_internal(dat),
