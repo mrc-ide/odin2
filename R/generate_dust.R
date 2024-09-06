@@ -177,7 +177,9 @@ generate_dust_system_build_internal <- function(dat) {
   } else {
     nms <- dat$storage$contents$internal
     type <- dat$storage$type[nms]
-    size <- vcapply(dat$storage$arrays$size, generate_dust_sexp, dat$sexp_data)
+    size <- vcapply(nms, function(nm) {
+      generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+    })
     body <- c(
       sprintf("std::vector<%s> %s(%s);", type, nms, size),
       sprintf("return internal_state{%s};", paste(nms, collapse = ", ")))

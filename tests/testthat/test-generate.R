@@ -675,7 +675,7 @@ test_that("can generate a simple array equation", {
   expect_equal(
     generate_dust_system_build_internal(dat),
     c(method_args$build_internal,
-      "  std::vector<real_type> a(2);",
+      "  std::vector<real_type> a(shared.dim.a.size);",
       "  return internal_state{a};",
       "}"))
 })
@@ -895,7 +895,7 @@ test_that("can generate system with simple variable sized array", {
   expect_equal(
     generate_dust_system_build_internal(dat),
     c(method_args$build_internal,
-      "  std::vector<real_type> a(shared.n);",
+      "  std::vector<real_type> a(shared.dim.a.size);",
       "  return internal_state{a};",
       "}"))
   expect_equal(
@@ -919,9 +919,6 @@ test_that("can generate system with variable size array that needs saving", {
   })
 
   dat <- generate_prepare(dat)
-  writeLines(generate_dust_system_shared_state(dat))
-  writeLines(generate_dust_system_build_shared(dat))
-  writeLines(generate_dust_system_update(dat))
 
   expect_equal(
     generate_dust_system_shared_state(dat),
