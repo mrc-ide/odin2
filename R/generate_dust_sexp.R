@@ -74,8 +74,6 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       if (location %in% c("state", "stack", "adjoint",
                           if (!shared_exists) "shared")) {
         ret <- name
-      } else if (location == "virtual") {
-        ret <- generate_dust_sexp(dat$virtual[[name]], dat, options)
       } else { # shared, internal, data
         ret <- sprintf("%s.%s", location, name)
       }

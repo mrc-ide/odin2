@@ -131,7 +131,6 @@ generate_dust_system_build_shared <- function(dat) {
   body <- collector()
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
-      browser()
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
                                  options)
