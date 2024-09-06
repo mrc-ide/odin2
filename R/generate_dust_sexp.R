@@ -56,7 +56,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## parens for now.
       ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
     } else if (is_stochastic_call) {
-      ret <- sprintf("monty::random::%s(rng_state, %s)",
+      ret <- sprintf("monty::random::%s<real_type>(rng_state, %s)",
                      fn, paste(args, collapse = ", "))
     } else {
       ## TODO: we should catch this during parse; erroring here is a

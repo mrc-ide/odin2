@@ -117,11 +117,17 @@ test_that("can compile a discrete-time model that compares to data", {
 
 test_that("can generate simple model with array", {
   gen <- odin({
-    initial(x) <- 1
+    initial(x) <- 0
     update(x) <- a[1] + a[2] + a[3]
     n <- 2
     a[] <- Normal(0, 1)
     dim(a) <- n + 1
-  }, debug = TRUE, quiet = FALSE)
+  }, debug = TRUE, quiet = TRUE)
 
+  sys <- dust2::dust_system_create(gen(), list(), 10, seed = 42)
+  dust2::dust_system_run_to_time(sys, 1)
+  state <- dust2::dust_system_state(sys)
+
+  r <- monty::monty_rng$new(10, seed = 42)
+  expect_equal(state, rbind(colSums(r$normal(3, 0, 1))))
 })
