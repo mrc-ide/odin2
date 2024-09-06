@@ -537,6 +537,78 @@ test_that("can generate nontrivial zero_every method", {
 })
 
 
+test_that("can generate duplicated zero_every method", {
+  dat <- odin_parse({
+    update(x) <- 0
+    update(y) <- 1
+    initial(x, zero_every = 4) <- 0
+    initial(y, zero_every = 4) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {4, {1}}};",
+      "}"))
+})
+
+
+test_that("can generate duplicated zero_every method with different freq", {
+  dat <- odin_parse({
+    update(x) <- 0
+    update(y) <- 1
+    initial(x, zero_every = 4) <- 0
+    initial(y, zero_every = 3) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {3, {1}}};",
+      "}"))
+})
+
+
+test_that("can generate zero_every for array variable", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + 1
+    initial(x[], zero_every = 4) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  std::vector<size_t> zero_every_x;",
+      "  for (size_t i = 0; i < 4; ++i) {",
+      "    zero_every_x.push_back(i);",
+      "  }",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}};",
+      "}"))
+})
+
+
+test_that("can generate zero_every for array variable with scalar", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + 1
+    initial(x[], zero_every = 4) <- 0
+    update(y) <- y + 1
+    initial(y, zero_every = 2) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_zero_every(dat),
+    c(method_args$zero_every,
+      "  std::vector<size_t> zero_every_x;",
+      "  for (size_t i = 0; i < 4; ++i) {",
+      "    zero_every_x.push_back(i);",
+      "  }",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}, {2, {4}}};",
+      "}"))
+})
+
+
 test_that("generate defaults for parameters", {
   dat <- odin_parse({
     a <- parameter(2)

@@ -267,11 +267,35 @@ generate_dust_system_zero_every <- function(dat) {
   if (is.null(dat$zero_every)) {
     body <- "return dust2::zero_every_type<real_type>();"
   } else {
-    index <- match(names(dat$zero_every), dat$variables) - 1
+    packing <- dat$storage$packing$state
     every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
                      USE.NAMES = FALSE)
-    str <- paste(sprintf("{%s, {%s}}", every, index), collapse = ", ")
-    body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
+    i <- match(names(dat$zero_every), packing$name)
+    is_array <- packing$rank[i] > 0
+    nms <- sprintf("zero_every_%s", packing$name[i])
+    nms[!is_array] <- sprintf(
+      "{%s}",
+      vcapply(packing$offset[i][!is_array], generate_dust_sexp, dat$sexp_data))
+    if (any(is_array)) {
+      create_vector <- function(name, offset, size) {
+        end <- generate_dust_sexp(expr_plus(offset, size), dat$sexp_data)
+        offset <- generate_dust_sexp(offset, dat$sexp_data)
+        c(sprintf("std::vector<size_t> %s;", name),
+          sprintf("for (size_t i = %s; i < %s; ++i) {", offset, end),
+          sprintf("  %s.push_back(i);", name),
+          "}")
+      }
+      create <- unlist0(Map(create_vector,
+                            nms[is_array],
+                            packing$offset[i][is_array],
+                            packing$size[i][is_array]))
+    } else {
+      create <- NULL
+    }
+    str <- paste(sprintf("{%s, %s}", every, nms), collapse = ", ")
+    body <- c(
+      create,
+      sprintf("return dust2::zero_every_type<real_type>{%s};", str))
   }
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
