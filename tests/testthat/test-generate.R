@@ -502,7 +502,7 @@ test_that("can generate simple stochastic system", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  state_next[0] = monty::random::normal(rng_state, x, 1);",
+      "  state_next[0] = monty::random::normal<real_type>(rng_state, x, 1);",
       "}"))
 })
 
@@ -662,8 +662,8 @@ test_that("can generate a simple array equation", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  for (size_t i = 1; i <= 2; ++i) {",
-      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
@@ -698,16 +698,21 @@ test_that("can generate a simple array within shared", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
       "  std::vector<real_type> a;",
       "};"))
   expect_equal(
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
-      "  std::vector<real_type> a(3);",
-      "  for (size_t i = 1; i <= 3; ++i) {",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(3)};",
+      "  std::vector<real_type> a(3);", # TODO: fix this
+      "  for (size_t i = 1; i <= dim_a.size; ++i) {",
       "    a[i - 1] = i;",
       "  }",
-      "  return shared_state{a};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  return shared_state{dim, a};",
       "}"))
 
   ## internal state empty despite having arrays:
@@ -733,7 +738,7 @@ test_that("can generate non-range access to arrays", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  internal.a[0] = monty::random::normal(rng_state, 0, 1);",
+      "  internal.a[0] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  state_next[0] = internal.a[0];",
       "}"))
 })
@@ -760,7 +765,7 @@ test_that("can generate stochastic initial conditions", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  const real_type a0 = monty::random::poisson(rng_state, shared.N / 100);",
+      "  const real_type a0 = monty::random::poisson<real_type>(rng_state, shared.N / 100);",
       "  state[0] = a0;",
       "  state[1] = shared.N - a0;",
       "}"))
@@ -781,7 +786,7 @@ test_that("can generate system with array variable", {
     c(method_args$update,
       "  const auto * x = state + 0;",
       "  const auto y = state[3];",
-      "  for (size_t i = 1; i <= 3; ++i) {",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
       "    state_next[i - 1] = x[i - 1];",
       "  }",
       "  state_next[3] = y;",
@@ -789,7 +794,7 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  for (size_t i = 1; i <= 3; ++i) {",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
       "    state[i - 1] = 0;",
       "  }",
       "  state[3] = 0;",
@@ -837,9 +842,11 @@ test_that("can generate system with array from user", {
   expect_equal(
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(2)};",
       "  std::vector<real_type> a(2);",
       '  dust2::r::read_real_vector(parameters, 2, a.data(), "a", true);',
-      "  return shared_state{a};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  return shared_state{dim, a};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -863,6 +870,9 @@ test_that("can generate system with simple variable sized array", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
       "  real_type n;",
       "};"))
   expect_equal(
@@ -874,7 +884,9 @@ test_that("can generate system with simple variable sized array", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const real_type n = 2;",
-      "  return shared_state{n};",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  return shared_state{dim, n};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -889,8 +901,8 @@ test_that("can generate system with simple variable sized array", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  for (size_t i = 1; i <= shared.n; ++i) {",
-      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
@@ -914,8 +926,10 @@ test_that("can generate system with variable size array that needs saving", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
       "  real_type n;",
-      "  size_t dim_a;",
       "};"))
   expect_equal(
     generate_dust_system_internal_state(dat),
@@ -926,8 +940,9 @@ test_that("can generate system with variable size array that needs saving", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const real_type n = 2;",
-      "  const size_t dim_a = n + 1;",
-      "  return shared_state{n, dim_a};",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n + 1)};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  return shared_state{dim, n};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -936,14 +951,14 @@ test_that("can generate system with variable size array that needs saving", {
   expect_equal(
     generate_dust_system_build_internal(dat),
     c(method_args$build_internal,
-      "  std::vector<real_type> a(shared.dim_a);",
+      "  std::vector<real_type> a(shared.dim.a.size);",
       "  return internal_state{a};",
       "}"))
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  for (size_t i = 1; i <= shared.dim_a; ++i) {",
-      "    internal.a[i - 1] = monty::random::normal(rng_state, 0, 1);",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
       "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
       "}"))
@@ -970,9 +985,12 @@ test_that("can store arrays in state", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "    dust2::array::dimensions<1> b;",
+      "    dust2::array::dimensions<1> c;",
+      "  } dim;",
       "  real_type n;",
-      "  size_t dim_b;",
-      "  size_t dim_c;",
       "  size_t offset_c;",
       "};"))
   expect_equal(
@@ -982,10 +1000,12 @@ test_that("can store arrays in state", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const real_type n = 2;",
-      "  const size_t dim_b = n + 1;",
-      "  const size_t dim_c = n + 2;",
-      "  const size_t offset_c = n + dim_b;",
-      "  return shared_state{n, dim_b, dim_c, offset_c};",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
+      "  const dust2::array::dimensions<1> dim_b{static_cast<size_t>(n + 1)};",
+      "  const dust2::array::dimensions<1> dim_c{static_cast<size_t>(n + 2)};",
+      "  const size_t offset_c = 1 + n + n;",
+      "  const shared_state::dim_type dim{dim_a, dim_b, dim_c};",
+      "  return shared_state{dim, n, offset_c};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -1002,13 +1022,13 @@ test_that("can store arrays in state", {
       "  const auto * a = state + 0;",
       "  const auto * b = state + shared.n;",
       "  const auto * c = state + shared.offset_c;",
-      "  for (size_t i = 1; i <= shared.n; ++i) {",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    state_next[i - 1] = a[i - 1] + 1;",
       "  }",
-      "  for (size_t i = 1; i <= shared.dim_b; ++i) {",
+      "  for (size_t i = 1; i <= shared.dim.b.size; ++i) {",
       "    state_next[i - 1 + shared.n] = b[i - 1] + 2;",
       "  }",
-      "  for (size_t i = 1; i <= shared.dim_c; ++i) {",
+      "  for (size_t i = 1; i <= shared.dim.c.size; ++i) {",
       "    state_next[i - 1 + shared.offset_c] = c[i - 1] + 3;",
       "  }",
       "}"))
@@ -1029,6 +1049,9 @@ test_that("generate variable sized array from parameters", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
       "  real_type n;",
       "  std::vector<real_type> a;",
       "};"))
@@ -1039,9 +1062,11 @@ test_that("generate variable sized array from parameters", {
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
       "  const real_type n = 2;",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
       "  std::vector<real_type> a(n);",
       '  dust2::r::read_real_vector(parameters, n, a.data(), "a", true);',
-      "  return shared_state{n, a};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  return shared_state{dim, n, a};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
