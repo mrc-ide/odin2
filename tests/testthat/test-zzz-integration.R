@@ -113,3 +113,15 @@ test_that("can compile a discrete-time model that compares to data", {
   expect_equal(state, cmp$state)
   expect_equal(density, cmp$density)
 })
+
+
+test_that("can generate simple model with array", {
+  gen <- odin({
+    initial(x) <- 1
+    update(x) <- a[1] + a[2] + a[3]
+    n <- 2
+    a[] <- Normal(0, 1)
+    dim(a) <- n + 1
+  }, debug = TRUE, quiet = FALSE)
+
+})

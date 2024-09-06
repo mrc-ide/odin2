@@ -3,6 +3,7 @@ generate_dust_system <- function(dat) {
 
   body <- collector()
   body$add("#include <dust2/common.hpp>")
+  body$add("#include <dust2/array.hpp>")
   body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
@@ -32,13 +33,6 @@ generate_dust_system <- function(dat) {
 
 generate_prepare <- function(dat) {
   dat$sexp_data <- generate_dust_dat(dat$storage$location)
-  ## TODO: could merge this above perhaps, these aren't split it in a
-  ## very useful place right now.
-  if (any(dat$storage$location == "virtual")) {
-    virtual <- names(which(dat$storage$location == "virtual"))
-    dat$sexp_data$virtual <-
-      lapply(dat$equations[virtual], function(x) x$rhs$expr)
-  }
   dat
 }
 
@@ -66,7 +60,18 @@ generate_dust_system_shared_state <- function(dat) {
   type <- dat$storage$type[nms]
   is_array <- nms %in% dat$storage$arrays$name
   type[is_array] <- sprintf("std::vector<%s>", type[is_array])
+  if (nrow(dat$storage$arrays) > 0) {
+    dims <- c(
+      "struct dim_type {",
+      sprintf("  dust2::array::dimensions<%d> %s;",
+              dat$storage$arrays$rank, dat$storage$arrays$name),
+      "} dim;")
+  } else {
+    dims <- NULL
+  }
+
   c("struct shared_state {",
+    sprintf("  %s", dims),
     sprintf("  %s %s;", type, nms),
     "};")
 }
@@ -122,11 +127,11 @@ generate_dust_system_packing <- function(name, dat) {
 
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
-  eqs <- setdiff(dat$phases$build_shared$equations,
-                 dat$storage$contents$virtual)
+  eqs <- dat$phases$build_shared$equations
   body <- collector()
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
+      browser()
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
                                  options)
@@ -134,6 +139,13 @@ generate_dust_system_build_shared <- function(dat) {
                        dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
+  }
+  is_dim <- vlapply(dat$equations[eqs], function(x) identical(x$special, "dim"))
+  if (any(is_dim)) {
+    nms_dim <- vcapply(dat$equations[eqs][is_dim], function(x) x$lhs$name)
+    body$add(sprintf("const shared_state::dim_type dim{%s};",
+                     paste(nms_dim, collapse = ", ")))
+    eqs <- c("dim", setdiff(eqs, nms_dim))
   }
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
@@ -536,6 +548,16 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       }
       res <- sprintf("%s = %s;", lhs, rhs)
     }
+  } else if (identical(eq$special, "dim")) {
+    i <- match(eq$lhs$name_data, dat$storage$arrays$name)
+    dims <- sprintf(
+      "static_cast<size_t>(%s)",
+      generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
+                         options))
+    res <- sprintf("const dust2::array::dimensions<%d> %s{%s};",
+                   dat$storage$arrays$rank[[i]],
+                   eq$lhs$name,
+                   dims)
   } else {
     is_array <- !is.null(eq$lhs$array)
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)

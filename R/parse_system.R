@@ -88,9 +88,7 @@ parse_system_overall <- function(exprs, call) {
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = rep_len(1, sum(is_dim)),
-    dims = I(lapply(exprs[is_dim], function(x) {
-      if (x$lhs$exclude) x$rhs$expr else as.name(x$lhs$name)
-    })))
+    dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
 
   stopifnot(all(arrays$rank == 1))
   ## This needs work, especially as it looks like 'dims' lacks a extra
@@ -273,11 +271,12 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
 parse_storage <- function(equations, phases, variables, arrays, parameters,
                           data, call) {
-  virtual <- names(which(vlapply(equations, function(x) isTRUE(x$lhs$exclude))))
+  dim <- names(which(
+    vlapply(equations, function(x) identical(x$special, "dim"))))
   shared <- setdiff(
     intersect(names(equations), phases$build_shared$equations),
-    virtual)
-  stack <- setdiff(names(equations), c(shared, virtual, arrays$name))
+    dim)
+  stack <- setdiff(names(equations), c(shared, dim, arrays$name))
   internal <- intersect(phases$update$equations, arrays$name)
 
   packing <- list(state = parse_packing(variables, arrays))
@@ -295,7 +294,7 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
     variables = variables,
     shared = shared,
     internal = internal,
-    virtual = virtual,
+    dim = dim,
     data = data$name,
     output = character(),
     stack = stack)
@@ -390,13 +389,13 @@ parse_system_arrays <- function(exprs, call) {
     if (length(eq$lhs$array) > 1) {
       stop("support matrices here")
     }
-    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     if (!is.null(eq$lhs$array)) {
       if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
-        eq$lhs$array[[1]]$to <- as.name(name_dim)
+        eq$lhs$array[[1]]$to <- call("OdinLength", eq$lhs$name)
       }
     }
     ## Add a dimension to the dependencies.
+    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
   }

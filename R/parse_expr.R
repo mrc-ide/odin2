@@ -72,10 +72,6 @@ parse_expr_assignment <- function(expr, src, call) {
   if (identical(special, "dim")) {
     lhs$name_data <- lhs$name
     lhs$name <- paste0("dim_", lhs$name)
-    ## Exclude this dimension from appearing as a symbol if it is very
-    ## simple
-    lhs$exclude <- is.numeric(rhs$expr) || is.name(rhs$expr) ||
-      length(rhs$depends$variables) == 0
   }
 
   list(special = special,

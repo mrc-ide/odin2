@@ -9,6 +9,12 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 
     if (fn == "[") {
       return(generate_dust_array_access(expr, dat, options))
+    } else if (fn == "OdinDim") {
+      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      return(sprintf("%s%s.dim[%d]", dim, expr[[2]], expr[[3]] - 1))
+    } else if (fn == "OdinLength") {
+      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      return(sprintf("%s%s.size", dim, expr[[2]]))
     }
 
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)

@@ -905,7 +905,11 @@ test_that("can generate system with variable size array that needs saving", {
     a[] <- Normal(0, 1)
     dim(a) <- n + 1
   })
+
   dat <- generate_prepare(dat)
+  writeLines(generate_dust_system_shared_state(dat))
+  writeLines(generate_dust_system_build_shared(dat))
+  writeLines(generate_dust_system_update(dat))
 
   expect_equal(
     generate_dust_system_shared_state(dat),
