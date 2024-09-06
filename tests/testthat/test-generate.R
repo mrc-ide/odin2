@@ -548,25 +548,23 @@ test_that("can generate duplicated zero_every method", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {0, 1}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {4, {1}}};",
       "}"))
 })
 
 
-test_that("can generate duplicated zero_every method", {
+test_that("can generate duplicated zero_every method with different freq", {
   dat <- odin_parse({
     update(x) <- 0
     update(y) <- 1
-    update(z) <- 2
     initial(x, zero_every = 4) <- 0
-    initial(y, zero_every = 4) <- 0
-    initial(z, zero_every = 3) <- 0
+    initial(y, zero_every = 3) <- 0
   })
   dat <- generate_prepare(dat)
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{3, {2}}, {4, {0, 1}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {3, {1}}};",
       "}"))
 })
 
@@ -581,38 +579,16 @@ test_that("can generate zero_every for array variable", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  std::vector<size_t> zero_every_1;",
+      "  std::vector<size_t> zero_every_x;",
       "  for (size_t i = 0; i < 4; ++i) {",
-      "    zero_every_1.push_back(i);",
+      "    zero_every_x.push_back(i);",
       "  }",
-      "  return dust2::zero_every_type<real_type>{{4, zero_every_1}};",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}};",
       "}"))
 })
 
 
 test_that("can generate zero_every for array variable with scalar", {
-  dat <- odin_parse({
-    update(x[]) <- x[i] + 1
-    initial(x[], zero_every = 4) <- 0
-    update(y) <- y + 1
-    initial(y, zero_every = 4) <- 0
-    dim(x) <- 4
-  })
-  dat <- generate_prepare(dat)
-  expect_equal(
-    generate_dust_system_zero_every(dat),
-    c(method_args$zero_every,
-      "  std::vector<size_t> zero_every_1;",
-      "  for (size_t i = 0; i < 4; ++i) {",
-      "    zero_every_1.push_back(i);",
-      "  }",
-      "  zero_every_1.push_back(4);",
-      "  return dust2::zero_every_type<real_type>{{4, zero_every_1}};",
-      "}"))
-})
-
-
-test_that("can generate zero_every for array variable separate from scalar", {
   dat <- odin_parse({
     update(x[]) <- x[i] + 1
     initial(x[], zero_every = 4) <- 0
@@ -624,12 +600,11 @@ test_that("can generate zero_every for array variable separate from scalar", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  std::vector<size_t> zero_every_1{4};",
-      "  std::vector<size_t> zero_every_2;",
+      "  std::vector<size_t> zero_every_x;",
       "  for (size_t i = 0; i < 4; ++i) {",
-      "    zero_every_2.push_back(i);",
+      "    zero_every_x.push_back(i);",
       "  }",
-      "  return dust2::zero_every_type<real_type>{{2, zero_every_1}, {4, zero_every_2}};",
+      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}, {2, {4}}};",
       "}"))
 })
 

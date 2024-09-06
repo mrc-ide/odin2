@@ -271,47 +271,33 @@ generate_dust_system_zero_every <- function(dat) {
     every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
                      USE.NAMES = FALSE)
     i <- match(names(dat$zero_every), packing$name)
-    if (all(packing$rank[i] == 0)) {
-      index <- packing$offset[i]
-      grp <- vcapply(split(index, every), paste, collapse = ", ")
-      str <- paste(sprintf("{%s, {%s}}", names(grp), unname(grp)),
-                   collapse = ", ")
-      body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
-    } else {
-      tmp <- split(packing[i, ], every)
-      nms <- sprintf("zero_every_%s", seq_along(tmp))
-      res <- Map(generate_dust_system_zero_every_entry, nms, tmp)
-      str <- paste(sprintf("{%s, %s}", names(tmp), nms), collapse = ", ")
-      body <- c(
-        unlist0(res),
-        sprintf("return dust2::zero_every_type<real_type>{%s};", str))
-    }
-  }
-  cpp_function("auto", "zero_every", args, body, static = TRUE)
-}
-
-
-generate_dust_system_zero_every_entry <- function(name, packing) {
-  if (all(packing$rank == 0)) {
-    offset <- paste(vcapply(packing$offset, generate_dust_sexp, dat$sexp_data),
-                    collapse = ", ")
-    sprintf("std::vector<size_t> %s{%s};", name, offset)
-  } else {
-    res <- lapply(seq_len(nrow(packing)), function(i) {
-      offset <- generate_dust_sexp(packing$offset[[i]], dat$sexp_data)
-      if (packing$rank[[i]] == 0) {
-        sprintf("%s.push_back(%s);", name, offset)
-      } else {
-        end <- generate_dust_sexp(
-          expr_plus(packing$offset[[i]], packing$size[[i]]), dat$sexp_data)
-        c(sprintf("for (size_t i = %s; i < %s; ++i) {", offset, end),
+    is_array <- packing$rank[i] > 0
+    nms <- sprintf("zero_every_%s", packing$name[i])
+    nms[!is_array] <- sprintf(
+      "{%s}",
+      vcapply(packing$offset[i][!is_array], generate_dust_sexp, dat$sexp_data))
+    if (any(is_array)) {
+      create_vector <- function(name, offset, size) {
+        end <- generate_dust_sexp(expr_plus(offset, size), dat$sexp_data)
+        offset <- generate_dust_sexp(offset, dat$sexp_data)
+        c(sprintf("std::vector<size_t> %s;", name),
+          sprintf("for (size_t i = %s; i < %s; ++i) {", offset, end),
           sprintf("  %s.push_back(i);", name),
           "}")
       }
-    })
-    c(sprintf("std::vector<size_t> %s;", name),
-      unlist0(res))
+      create <- unlist0(Map(create_vector,
+                            nms[is_array],
+                            packing$offset[i][is_array],
+                            packing$size[i][is_array]))
+    } else {
+      create <- NULL
+    }
+    str <- paste(sprintf("{%s, %s}", every, nms), collapse = ", ")
+    body <- c(
+      create,
+      sprintf("return dust2::zero_every_type<real_type>{%s};", str))
   }
+  cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 
 
