@@ -103,7 +103,8 @@ odin_error_explain <- function(code, how = "pretty") {
 
 
 ## This is probably destined for the utils package once we're happy
-## with it.
+## with it.  It's hard to test though because it's really just
+## checking how cli renders output.
 render_error <- function(err, pretty) {
   render_paragraph <- function(el) {
     cli::cli_par()
