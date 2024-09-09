@@ -14,7 +14,7 @@ URL: https://mrc-ide.github.io/odin2, https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
-    dust2 (>= 0.1.5),
+    dust2,
     monty,
     rlang
 Suggests:
