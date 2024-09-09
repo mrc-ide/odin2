@@ -500,6 +500,9 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
 generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   if (eq$rhs$type == "parameter") {
     name <- eq$lhs$name
+    type <- dat$storage$type[[name]]
+    read <- if (type == "real_type") "read_real" else sprintf("read_%s", type)
+    type <- if (eq$rhs$args$type == "real_type") "real" else eq$rhs$args$type
     is_array <- name %in% dat$storage$arrays$name
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
@@ -513,22 +516,23 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       required <- if (isFALSE(options$shared_exists)) "true" else "false"
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
       res <- sprintf(
-        'dust2::r::read_real_vector(parameters, %s, %s.data(), "%s", %s);',
-        len, dest, name, required)
+        'dust2::r::%s_vector(parameters, %s, %s.data(), "%s", %s);',
+        read, len, dest, name, required)
     } else {
       lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
+
       if (isFALSE(options$shared_exists)) {
         if (is.null(eq$rhs$args$default)) {
-          rhs <- sprintf('dust2::r::read_real(parameters, "%s")', eq$lhs$name)
+          rhs <- sprintf('dust2::r::%s(parameters, "%s")', read, eq$lhs$name)
         } else {
           default <- generate_dust_sexp(
             eq$rhs$args$default, dat$sexp_data, options)
-          rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                         eq$lhs$name, default)
+          rhs <- sprintf('dust2::r::%s(parameters, "%s", %s)',
+                         read, eq$lhs$name, default)
         }
       } else {
-        rhs <- sprintf('dust2::r::read_real(parameters, "%s", %s)',
-                       eq$lhs$name, lhs)
+        rhs <- sprintf('dust2::r::%s(parameters, "%s", %s)',
+                       read, eq$lhs$name, lhs)
       }
       res <- sprintf("%s = %s;", lhs, rhs)
     }

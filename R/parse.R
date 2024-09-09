@@ -17,7 +17,8 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$data$name, call)
   storage <- parse_storage(
-    equations, phases, system$variables, system$arrays, system$data, call)
+    equations, phases, system$variables, system$arrays, system$parameters,
+    system$data, call)
   if (!is.null(storage$offset)) {
     offset <- Map(build_offset_equation,
                   names(storage$offset), unname(storage$offset))

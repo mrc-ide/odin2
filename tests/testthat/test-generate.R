@@ -1055,3 +1055,32 @@ test_that("generate variable sized array from parameters", {
       "  state_next[0] = shared.a[0] + shared.a[1];",
       "}"))
 })
+
+
+test_that("can include integer parameters", {
+  dat <- odin_parse({
+    a <- parameter(type = "integer")
+    b <- parameter(type = "logical")
+    c <- parameter(type = "real")
+    initial(x) <- 1
+    update(x) <- if (b) a else c
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  int a;",
+      "  bool b;",
+      "  real_type c;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      '  const int a = dust2::r::read_int(parameters, "a");',
+      '  const bool b = dust2::r::read_bool(parameters, "b");',
+      '  const real_type c = dust2::r::read_real(parameters, "c");',
+      "  return shared_state{a, b, c};",
+      "}"))
+})

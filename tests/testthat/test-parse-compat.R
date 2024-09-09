@@ -42,11 +42,6 @@ test_that("can translate simple user calls", {
     list(value = quote(a <- parameter(1)),
          compat = list(type = "user", original = quote(a <- user(1)))))
   expect_error(
-    parse_compat_fix_user(list(value = quote(a <- user(integer = TRUE)))),
-    "Can't yet translate 'user()' calls that use the 'integer' argument",
-    fixed = TRUE,
-    class = "odin_parse_error")
-  expect_error(
     parse_compat_fix_user(list(value = quote(a <- user(min = 0)))),
     "Can't yet translate 'user()' calls that use the 'min' argument",
     fixed = TRUE,
@@ -147,4 +142,18 @@ test_that("can translate compare()", {
 
   expect_equal(
     res$phases$compare$compare[[1]]$src$value[[2]], quote(d))
+})
+
+
+test_that("can translate user(integer = TRUE)", {
+  expect_warning(
+    res <- odin_parse({
+      update(x) <- a
+      initial(x) <- 1
+      a <- user(integer = TRUE)
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(
+    res$equations$a$src$value,
+    quote(a <- parameter(type = "integer")))
 })

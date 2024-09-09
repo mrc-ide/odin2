@@ -366,6 +366,20 @@ Disallowed use of named arguments.  For some primitive R functions (e.g., `+` we
 
 Incorrect number of arguments to a function that does not accept argument names.  You are unlikely to see this error, but we would be interested to know if you do.
 
+# `E1031`
+
+Invalid `type` argument to `parameter()`.  You have provided something other than a literal `"real"`, `"integer"` or `"logical"` (e.g., a missing value, an expression, symbol, or other string).
+
+# `E1032`
+
+Impossible attempt to differentiate parameter with non-real type.  You cannot differentiate integer or logical parameters.  Example:
+
+```r
+a <- parameter(type = "integer", differentiate = TRUE)
+```
+
+Here, you must decide if `a` should be differentiable (in which case remove the `type` argument) or an integer (in which case remove the `differentiate` argument).
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

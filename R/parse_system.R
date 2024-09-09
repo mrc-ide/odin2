@@ -67,6 +67,7 @@ parse_system_overall <- function(exprs, call) {
   is_differentiable <-
     vlapply(exprs[is_parameter], function(x) x$rhs$args$differentiate)
   is_constant <- vlapply(exprs[is_parameter], function(x) x$rhs$args$constant)
+  type <- vcapply(exprs[is_parameter], function(x) x$rhs$args$type)
   if (any(is.na(is_constant))) {
     default_constant <- any(is_differentiable)
     for (i in which(is_parameter)[is.na(is_constant)]) {
@@ -77,6 +78,7 @@ parse_system_overall <- function(exprs, call) {
 
   parameters <- data_frame(
     name = vcapply(exprs[is_parameter], function(x) x$lhs$name),
+    type = type,
     differentiate = is_differentiable,
     constant = is_constant)
 
@@ -269,7 +271,8 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 }
 
 
-parse_storage <- function(equations, phases, variables, arrays, data, call) {
+parse_storage <- function(equations, phases, variables, arrays, parameters,
+                          data, call) {
   virtual <- names(which(vlapply(equations, function(x) isTRUE(x$lhs$exclude))))
   shared <- setdiff(
     intersect(names(equations), phases$build_shared$equations),
@@ -300,9 +303,9 @@ parse_storage <- function(equations, phases, variables, arrays, data, call) {
                         unlist(contents, FALSE, TRUE))
   location[location == "variables"] <- "state"
 
-  ## We'll need integer variables soon, these are always weird.  We
-  ## could also use proper booleans too.
   type <- set_names(rep("real_type", length(location)), names(location))
+  type[parameters$name] <- parameters$type
+
   is_dim <- vlapply(equations[names(location)],
                     function(x) identical(x$special, "dim"))
   is_offset <- names(location) %in% names(offset)

@@ -202,7 +202,8 @@ parse_expr_check_lhs_name <- function(lhs, src, call) {
 ## layer for user(), as this is probably the biggest required change
 ## to people's code, really.
 parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
-  template <- function(default = NULL, constant = NULL, differentiate = FALSE) {
+  template <- function(default = NULL, constant = NULL, differentiate = FALSE,
+                       type = NULL) {
   }
   result <- match_call(rhs, template)
   if (!result$success) {
@@ -244,11 +245,44 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
       "E1009", src, call)
   }
 
+  if (is.null(args$type)) {
+    args$type <- "real"
+  } else {
+    if (!is_scalar_character(args$type)) {
+      str <- deparse1(args$differentiate)
+      odin_parse_error(
+        "'type' must be a scalar character, but was '{str}'",
+        "E1031", src, call)
+    }
+    valid_types <- c("real", "integer", "logical")
+    if (!(args$type %in% valid_types)) {
+      odin_parse_error(
+        c("Invalid value '{args$type} for argument 'type'",
+          "Valid options are: {squote(valid_types)}"),
+        "E1031", src, call)
+    }
+  }
+
   if (args$differentiate && isTRUE(args$constant)) {
     odin_parse_error(
       "Differentiable parameters must not be constant",
       "E1015", src, call)
   }
+
+  if (args$differentiate && args$type != "real") {
+    odin_parse_error(
+      paste("Differentiable parameters must have 'type = \"real\"'",
+            "not 'type = \"{args$type}\"'"),
+      "E1032", src, call)
+  }
+
+  ## NOTE: this is assuming C++ types here, which is not great, but we
+  ## can iron that out when thinking about the js version. It might be
+  ## nicer to do the type translation at generation?
+  args$type <- switch(args$type,
+                      "real" = "real_type",
+                      "integer" = "int",
+                      "logical" = "bool")
 
   list(type = "parameter",
        args = args)
