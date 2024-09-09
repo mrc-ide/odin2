@@ -22,7 +22,7 @@ Some of these features were present in versions of `odin.dust` and many derive f
 
 * Comparison to data and likelihood support (introduced in `odin.dust`)
 * Automatic differentiation
-* Fast and slow parameters
+* More efficient setting of the subset of parameters you are likely to use while fitting (use the `constant` argument to `parameter()`)
 * Multiple parameter sets at once (introduced in `odin.dust` but expanded here)
 * Run multiple copies of a system at once in parallel (introduced in `odin.dust`)
 * Built-in support for periodic variable resetting (e.g., for computing daily incidence)
@@ -35,6 +35,7 @@ Some of these features were present in versions of `odin.dust` and many derive f
 ## Hoped
 
 * Support for multinomial samples and other vector-valued functions
+* Better debugging tools
 
 # Missing features
 
@@ -42,7 +43,7 @@ This list is incomplete, and we'll expand it as we work through the tests.  We'r
 
 Things we do plan on implementing:
 
-* Arrays, of any kind (`mrc-5576`)
+* Arrays (partial implementation is complete)
 * Debugging print statements (only recently introduced into odin)
 * Interpolation
 * Transformation of output
@@ -55,6 +56,8 @@ Things we do plan on implementing:
 Things that we plan to drop in this version
 
 * Many details in `config()` and `options`
+
+Note that many errors are not caught as odin errors, and invalid odin code will be accepted and generate C++ code that fails to compile.
 
 # Changes in syntax
 
