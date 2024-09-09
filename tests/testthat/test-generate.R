@@ -1173,6 +1173,7 @@ test_that("can include integer parameters", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      test_struct_offset("x"),
       "  int a;",
       "  bool b;",
       "  real_type c;",
@@ -1184,6 +1185,8 @@ test_that("can include integer parameters", {
       '  const int a = dust2::r::read_int(parameters, "a");',
       '  const bool b = dust2::r::read_bool(parameters, "b");',
       '  const real_type c = dust2::r::read_real(parameters, "c");',
-      "  return shared_state{a, b, c};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{offset, a, b, c};",
       "}"))
 })
