@@ -29,6 +29,13 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
         shared <- if (isFALSE(options$shared_exists)) "" else "shared."
         return(sprintf("%soffset.%s.%s", shared, where, what))
       }
+    } else if (fn == "length") {
+      return(generate_dust_sexp(call("OdinLength", as.character(expr[[2]])),
+                                dat, options))
+    } else if (fn %in% c("nrow", "ncol")) {
+      return(generate_dust_sexp(
+        call("OdinDim", as.character(expr[[2]]), if (fn == "nrow") 1 else 2),
+        dat, options))
     }
 
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)

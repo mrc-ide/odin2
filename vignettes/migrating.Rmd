@@ -168,6 +168,10 @@ This limitation comes from our implementation in `dust2` and it is possible to r
 
 If your system has a parameter that affects the number of state variables in the system (e.g., the number of age categories that a compartment is stratified by), you may not change this after initialisation.  This will be prevented by the parser once arrays are implemented.
 
+# Changes in the way arrays are handled
+
+The two-arg form of `dim()` has been removed, as we did not believe it was used and it is confusingly different to R.  Previously you could write `dim(x, 3)` to get the length of the third dimension of `x`; this is no longer supported.  Please let us know if this is a problem.
+
 # General changes
 
 This package replaces `odin.dust` and will eventually replace `odin` (as in, we'll copy the entire `odin2` code into `odin` to become version 2.0.0 of that package).
