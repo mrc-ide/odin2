@@ -47,6 +47,22 @@ The error numbers are arbitrary after the first digit.  The first digit will cor
 * `E1xxx` - errors during parsing of individual expressions
 * `E2xxx` - errors when considering the system as a whole
 
+When an error is thrown you will be directed here, for example:
+
+```{r error = TRUE}
+odin2::odin({
+  initial(x) <- 1
+  update(x) <- 1
+  1 < 10
+})
+```
+
+You can then print the explanation:
+
+```{r}
+odin2::odin_error_explain("E1001")
+```
+
 # `E0001`
 
 You have used a feature that is not yet implemented, but which is intended to be implemented.  Try again later.  Probably the code you have written works well in odin v1.x.x but has not been implemented in odin2.
@@ -102,10 +118,13 @@ This code is also reported if you have a spelling mistake, such as
 ```
 inital() <- 1
 ```
+
 instead of `initial()`. It is also reported with this code, which contains two legacy errors.
 ```
+
 compare(d) <- Normal(0, 1)
 ```
+
 Firstly, there is an error you may have made in the previous version, in which the assignment `<-` should be the comparison symbol `~`. Furthermore, in this version, the `compare()` function is not required at all, and you should write `d ~ Normal(0, 1)`.
 
 # `E1006`
