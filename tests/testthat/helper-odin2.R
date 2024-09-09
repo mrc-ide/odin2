@@ -19,6 +19,14 @@ method_args <- list(
 # nolint end
 
 
+test_struct_offset <- function(state) {
+  c("  struct offset_type {",
+    "    struct {",
+    sprintf("      size_t %s;", state),
+    "    } state;",
+    "  } offset;")
+}
+
 test_pkg_setup <- function(path, name = "pkg") {
   dir.create(file.path(path, "inst/odin"), FALSE, TRUE)
   writeLines(c(

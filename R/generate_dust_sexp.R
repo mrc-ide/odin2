@@ -9,6 +9,23 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 
     if (fn == "[") {
       return(generate_dust_array_access(expr, dat, options))
+    } else if (fn == "OdinDim") {
+      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      return(sprintf("%s%s.dim[%d]", dim, expr[[2]], expr[[3]] - 1))
+    } else if (fn == "OdinLength") {
+      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      return(sprintf("%s%s.size", dim, expr[[2]]))
+    } else if (fn == "OdinOffset") {
+      where <- expr[[2]]
+      what <- expr[[3]]
+      packing <- dat$packing[[where]]
+      i <- match(what, packing$name)
+      if (is.numeric(packing$offset[[i]])) {
+        return(as.character(packing$offset[[i]]))
+      } else {
+        shared <- if (isFALSE(options$shared_exists)) "" else "shared."
+        return(sprintf("%soffset.%s.%s", shared, where, what))
+      }
     }
 
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
@@ -50,7 +67,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## parens for now.
       ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
     } else if (is_stochastic_call) {
-      ret <- sprintf("monty::random::%s(rng_state, %s)",
+      ret <- sprintf("monty::random::%s<real_type>(rng_state, %s)",
                      fn, paste(args, collapse = ", "))
     } else {
       ## TODO: we should catch this during parse; erroring here is a
@@ -68,8 +85,6 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       if (location %in% c("state", "stack", "adjoint",
                           if (!shared_exists) "shared")) {
         ret <- name
-      } else if (location == "virtual") {
-        ret <- generate_dust_sexp(dat$virtual[[name]], dat, options)
       } else { # shared, internal, data
         ret <- sprintf("%s.%s", location, name)
       }
@@ -96,8 +111,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## now all we need is information on where things are to be found (the
 ## location) but we'll need to cope with variable packing, array
 ## lengths and types soon.
-generate_dust_dat <- function(location) {
-  list(location = location)
+generate_dust_dat <- function(location, packing) {
+  list(location = location, packing = packing)
 }
 
 

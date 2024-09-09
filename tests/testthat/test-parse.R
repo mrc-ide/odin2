@@ -173,7 +173,8 @@ test_that("can parse systems that involve arrays in internal", {
     data_frame(name = "a", rank = 1, dims = I(list(2)), size = I(list(2))))
   expect_equal(
     d$equations$a$lhs$array,
-    list(list(name = "i", is_range = TRUE, from = 1, to = quote(dim_a))))
+    list(list(name = "i", is_range = TRUE,
+              from = 1, to = quote(OdinLength("a")))))
 })
 
 
@@ -191,7 +192,8 @@ test_that("can parse systems that involve arrays in shared", {
     data_frame(name = "a", rank = 1, dims = I(list(3)), size = I(list(3))))
   expect_equal(
     d$equations$a$lhs$array,
-    list(list(name = "i", is_range = TRUE, from = 1, to = quote(dim_a))))
+    list(list(name = "i", is_range = TRUE,
+              from = 1, to = quote(OdinLength("a")))))
 })
 
 

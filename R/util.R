@@ -117,19 +117,6 @@ expr_plus <- function(a, b) {
 }
 
 
-expr_cumsum <- function(x) {
-  ret <- vector("list", length(x))
-  for (i in seq_along(x)) {
-    if (i == 1) {
-      ret[[i]] <- x[[i]]
-    } else {
-      ret[[i]] <- expr_plus(ret[[i - 1]], x[[i]])
-    }
-  }
-  ret
-}
-
-
 ## From dust2
 writelines_if_changed <- function(text, workdir, path, quiet) {
   path_full <- file.path(workdir, path)
