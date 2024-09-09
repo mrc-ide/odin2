@@ -113,7 +113,10 @@ test_that("can generate packing_state function for system of all scalars", {
   expect_equal(
     generate_dust_system_packing_state(dat),
     c(method_args$packing_state,
-      '  return dust2::packing{{"x", {}}, {"y", {}}};',
+      "  return dust2::packing{",
+      '    {"x", {}},',
+      '    {"y", {}}',
+      "  };",
       "}"))
 })
 
@@ -127,7 +130,8 @@ test_that("can generate empty packing_gradient function", {
   expect_equal(
     generate_dust_system_packing_gradient(dat),
     c(method_args$packing_gradient,
-      '  return dust2::packing{};',
+      "  return dust2::packing{",
+      "  };",
       "}"))
 })
 
@@ -476,7 +480,9 @@ test_that("generate adjoint", {
   expect_equal(
     generate_dust_system_packing_gradient(dat),
     c(method_args$packing_gradient,
-      '  return dust2::packing{{"a", {}}};',
+      "  return dust2::packing{",
+      '    {"a", {}}',
+      "  };",
       "}"))
 
   expect_equal(
@@ -829,7 +835,10 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_packing_state(dat),
     c(method_args$packing_state,
-      '  return dust2::packing{{"x", {3}}, {"y", {}}};',
+      "  return dust2::packing{",
+      '    {"x", std::vector<size_t>(shared.dim.x.dim.begin(), shared.dim.x.dim.end())},',
+      '    {"y", {}}',
+      "  };",
       "}"))
 })
 
@@ -1083,6 +1092,16 @@ test_that("can store arrays in state", {
       "  for (size_t i = 1; i <= shared.dim.d.size; ++i) {",
       "    state_next[i - 1 + shared.offset.state.d] = d[i - 1] + 4;",
       "  }",
+      "}"))
+  expect_equal(
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      "  return dust2::packing{",
+      '    {"a", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())},',
+      '    {"b", std::vector<size_t>(shared.dim.b.dim.begin(), shared.dim.b.dim.end())},',
+      '    {"c", std::vector<size_t>(shared.dim.c.dim.begin(), shared.dim.c.dim.end())},',
+      '    {"d", std::vector<size_t>(shared.dim.d.dim.begin(), shared.dim.d.dim.end())}',
+      "  };",
       "}"))
 })
 

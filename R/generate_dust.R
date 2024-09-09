@@ -123,11 +123,15 @@ generate_dust_system_packing_gradient <- function(dat) {
 generate_dust_system_packing <- function(name, dat) {
   packing <- dat$storage$packing[[name]]
   args <- c("const shared_state&" = "shared")
-  dims <- vcapply(packing$dims, function(el) {
-    paste(vcapply(el, generate_dust_sexp, dat$sexp_data), collapse = ", ")
-  })
-  els <- sprintf('{"%s", {%s}}', packing$name, dims)
-  body <- sprintf("return dust2::packing{%s};", paste(els, collapse = ", "))
+  fmt <- "std::vector<size_t>(shared.dim.%s.dim.begin(), shared.dim.%s.dim.end())"
+  dims <- ifelse(packing$rank == 0, "{}",
+                 sprintf(fmt, packing$name, packing$name))
+  els <- sprintf('{"%s", %s}', packing$name, dims)
+  ## trailing comma if needed
+  els[-length(els)] <- sprintf("%s,", els[-length(els)])
+  body <- c("return dust2::packing{",
+            sprintf("  %s", els),
+            "};")
   cpp_function("dust2::packing", sprintf("packing_%s", name), args, body,
                static = TRUE)
 }
@@ -136,7 +140,6 @@ generate_dust_system_packing <- function(name, dat) {
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
   eqs <- dat$phases$build_shared$equations
-  extra <- NULL
   body <- collector()
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
