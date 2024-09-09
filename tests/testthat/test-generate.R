@@ -1190,3 +1190,43 @@ test_that("can include integer parameters", {
       "  return shared_state{offset, a, b, c};",
       "}"))
 })
+
+
+test_that("can generate a simple multidimensional array equation", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1, 1] / a[2, 1] + a[1, 2] / a[2, 2] + a[1, 3] / a[2, 3]
+    a[, ] <- Normal(0, 1)
+    dim(a) <- c(2, 3)
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+    "  struct dim_type {",
+    "    dust2::array::dimensions<2> a;",
+    "  } dim;",
+    test_struct_offset("x"),
+    "};"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const dust2::array::dimensions<2> dim_a{static_cast<size_t>(2), static_cast<size_t>(3)};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.dim[0]; ++i) {",
+      "    for (size_t j = 1; j <= shared.dim.a.dim[1]; ++j) {",
+      "      internal.a[i - 1 + (j - 1) * (shared.dim.a.mult[1])] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "    }",
+      "  }",
+      "  state_next[0] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * (shared.dim.a.mult[1])] / internal.a[1 + 2 * (shared.dim.a.mult[1])];",
+      "}"))
+})

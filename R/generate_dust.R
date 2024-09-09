@@ -476,15 +476,9 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   name <- lhs$name
   is_array <- !is.null(lhs$array)
   if (is_array) {
-    if (length(lhs$array) > 1) {
-      stop("cope with matrix here")
-    }
-    is_range <- lhs$array[[1]]$is_range
-    if (is_range) {
-      idx <- expr_minus(as.name(INDEX[[1]]), 1)
-    } else {
-      idx <- expr_minus(lhs$array[[1]]$at, 1)
-    }
+    idx <- flatten_index(
+      lapply(lhs$array, function(x) if (x$is_range) as.name(x$name) else x$at),
+      name)
   } else {
     idx <- NULL
   }
@@ -574,14 +568,13 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
-    dims <- sprintf(
-      "static_cast<size_t>(%s)",
-      generate_dust_sexp(dat$storage$arrays$size[[i]], dat$sexp_data,
-                         options))
+    dims <- vcapply(dat$storage$arrays$dims[[i]], generate_dust_sexp,
+                    dat$sexp_data, options)
+    dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims), collapse = ", ")
     res <- sprintf("const dust2::array::dimensions<%d> %s{%s};",
                    dat$storage$arrays$rank[[i]],
                    eq$lhs$name,
-                   dims)
+                   dims_str)
   } else {
     is_array <- !is.null(eq$lhs$array)
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)

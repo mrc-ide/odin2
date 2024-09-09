@@ -170,7 +170,10 @@ test_that("can parse systems that involve arrays in internal", {
   expect_equal(d$storage$location[["a"]], "internal")
   expect_equal(
     d$storage$arrays,
-    data_frame(name = "a", rank = 1, dims = I(list(2)), size = I(list(2))))
+    data_frame(name = "a",
+               rank = 1,
+               dims = I(list(list(2))),
+               size = I(list(2))))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", is_range = TRUE,
@@ -189,7 +192,10 @@ test_that("can parse systems that involve arrays in shared", {
   expect_equal(d$storage$location[["a"]], "shared")
   expect_equal(
     d$storage$arrays,
-    data_frame(name = "a", rank = 1, dims = I(list(3)), size = I(list(3))))
+    data_frame(name = "a",
+               rank = 1,
+               dims = I(list(list(3))),
+               size = I(list(3))))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", is_range = TRUE,
@@ -210,7 +216,7 @@ test_that("pack system entirely composed of arrays", {
     d$storage$packing$state,
     data_frame(name = c("x", "y"),
                rank = 1,
-               dims = I(list(2, 2)),
+               dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
                offset = I(list(0, 2))))
 })
@@ -228,7 +234,7 @@ test_that("pack system of mixed arrays and scalars", {
     d$storage$packing$state,
     data_frame(name = c("x", "y"),
                rank = c(1, 0),
-               dims = I(list(2, NULL)),
+               dims = I(list(list(2), NULL)),
                size = I(list(2, 1)),
                offset = I(list(0, 2))))
 })
