@@ -32,7 +32,7 @@ generate_dust_system <- function(dat) {
 
 
 generate_prepare <- function(dat) {
-  dat$sexp_data <- generate_dust_dat(dat$storage$location)
+  dat$sexp_data <- generate_dust_dat(dat$storage$location, dat$storage$packing)
   dat
 }
 
@@ -60,6 +60,7 @@ generate_dust_system_shared_state <- function(dat) {
   type <- dat$storage$type[nms]
   is_array <- nms %in% dat$storage$arrays$name
   type[is_array] <- sprintf("std::vector<%s>", type[is_array])
+
   if (nrow(dat$storage$arrays) > 0) {
     dims <- c(
       "struct dim_type {",
@@ -70,8 +71,15 @@ generate_dust_system_shared_state <- function(dat) {
     dims <- NULL
   }
 
+  offset <- unlist0(lapply(names(dat$storage$packing), function(nm) {
+    c("  struct {",
+      sprintf("    size_t %s;", dat$storage$packing[[nm]]$name),
+      sprintf("  } %s;", nm))
+  }))
+  offset <- c("struct offset_type {", offset, "} offset;")
   c("struct shared_state {",
     sprintf("  %s", dims),
+    sprintf("  %s", offset),
     sprintf("  %s %s;", type, nms),
     "};")
 }
@@ -128,6 +136,7 @@ generate_dust_system_packing <- function(name, dat) {
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
   eqs <- dat$phases$build_shared$equations
+  extra <- NULL
   body <- collector()
   for (eq in dat$equations[eqs]) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
@@ -145,8 +154,19 @@ generate_dust_system_build_shared <- function(dat) {
     nms_dim <- vcapply(dat$equations[eqs][is_dim], function(x) x$lhs$name)
     body$add(sprintf("const shared_state::dim_type dim{%s};",
                      paste(nms_dim, collapse = ", ")))
-    eqs <- c("dim", setdiff(eqs, nms_dim))
+    eqs <- c("dim", "offset", setdiff(eqs, nms_dim))
+  } else {
+    eqs <- c("offset", eqs)
   }
+
+  offset <- unlist0(lapply(names(dat$storage$packing), function(nm) {
+    value <- vcapply(dat$storage$packing[[nm]]$offset, generate_dust_sexp,
+                     dat$sexp_data, options)
+    sprintf("offset.%s.%s = %s;", nm, dat$storage$packing[[nm]]$name, value)
+  }))
+
+  body$add("shared_state::offset_type offset;")
+  body$add(offset)
   body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
   cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
@@ -487,8 +507,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
       generate_dust_sexp(name, dat$sexp_data, options)
     }
   } else if (location == "state") {
-    packing <- dat$storage$packing$state
-    offset <- packing$offset[[match(name, packing$name)]]
+    offset <- call("OdinOffset", "state", name)
     if (is_array) {
       offset <- expr_plus(idx, offset)
     }
@@ -496,8 +515,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
             name_state,
             generate_dust_sexp(offset, dat$sexp_data, options))
   } else if (location == "adjoint") {
-    packing <- dat$storage$packing$adjoint
-    offset <- packing$offset[[match(name, packing$name)]]
+    offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
       stop("arrays in adjoint probably need checking carefully")
       offset <- expr_plus(idx, offset)
@@ -595,7 +613,10 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
   i <- match(names, packing$name)
   is_scalar <- lengths(packing$dims[i]) == 0
   is_array <- !is_scalar
-  offset <- vcapply(packing$offset[i], generate_dust_sexp, sexp_data)
+
+  offset <- vcapply(packing$name[i], function(nm) {
+    generate_dust_sexp(call("OdinOffset", from, nm), sexp_data)
+  })
   ret <- character(length(names))
   ret[is_scalar] <- sprintf("const auto %s = %s[%s];",
                             names[is_scalar],

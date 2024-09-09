@@ -279,16 +279,7 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   stack <- setdiff(names(equations), c(shared, dim, arrays$name))
   internal <- intersect(phases$update$equations, arrays$name)
 
-  packing <- list(state = parse_packing(variables, arrays))
-  use_offset <- vlapply(packing$state$offset, is.recursive)
-  if (any(use_offset)) {
-    offset <- set_names(packing$state$offset[use_offset],
-                        paste0("offset_", packing$state$name[use_offset]))
-    packing$state$offset[use_offset] <- lapply(names(offset), as.name)
-    shared <- c(shared, names(offset))
-  } else {
-    offset <- NULL
-  }
+  packing <- list(state = parse_packing(variables, arrays, "state"))
 
   contents <- list(
     variables = variables,
@@ -307,15 +298,13 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
 
   is_dim <- vlapply(equations[names(location)],
                     function(x) identical(x$special, "dim"))
-  is_offset <- names(location) %in% names(offset)
-  type[is_dim | is_offset] <- "size_t"
+  type[is_dim] <- "size_t"
 
   list(contents = contents,
        location = location,
        arrays = arrays,
        type = type,
-       packing = packing,
-       offset = offset)
+       packing = packing)
 }
 
 
@@ -404,7 +393,7 @@ parse_system_arrays <- function(exprs, call) {
 }
 
 
-parse_packing <- function(names, arrays) {
+parse_packing <- function(names, arrays, type) {
   scalar <- setdiff(names, arrays$name)
   if (length(scalar) > 0) {
     packing_scalar <- data_frame(
@@ -417,16 +406,31 @@ parse_packing <- function(names, arrays) {
 
   packing <- packing[match(names, packing$name), ]
 
-  ## We might refine this later; moving other fairly simple things
-  ## earlier in the list.
   pack_group <- viapply(packing$size, function(x) {
     if (is.numeric(x)) 1L else 2L
   })
   packing <- packing[order(pack_group), ] # stable sort relative to names
   rownames(packing) <- NULL
 
-  ## These are C-style array offsets (from 0, not 1)
-  packing$offset <- I(expr_cumsum(c(list(0), packing$size[-nrow(packing)])))
+  offset <- vector("list", nrow(packing))
+  for (i in seq_along(offset)) {
+    if (i == 1) {
+      offset[[i]] <- 0
+    } else {
+      if (is.numeric(offset[[i - 1]])) {
+        prev_offset <- offset[[i - 1]]
+      } else {
+        prev_offset <- call("OdinOffset", type, packing$name[[i - 1]])
+      }
+      if (is.numeric(packing$size[[i - 1]])) {
+        prev_size <- packing$size[[i - 1]]
+      } else {
+        prev_size <- call("OdinLength", packing$name[[i - 1]])
+      }
+      offset[[i]] <- expr_plus(prev_offset, prev_size)
+    }
+  }
+  packing$offset <- I(offset)
 
   packing
 }
