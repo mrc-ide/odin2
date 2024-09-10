@@ -1281,4 +1281,13 @@ test_that("can generate sums over arrays", {
   dat <- generate_prepare(dat)
   generate_dust_system_update(dat)
 
+  dat <- odin_parse({
+    update(x[]) <- sum(y[i, ])
+    initial(x[]) <- 0
+    y[, ] <- Normal(0, 1)
+    dim(y) <- c(3, 4)
+    dim(x) <- 3
+  })
+  dat <- generate_prepare(dat)
+  generate_dust_system_update(dat)
 })

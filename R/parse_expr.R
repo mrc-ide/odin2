@@ -445,8 +445,6 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
 
   arg <- expr[[2]]
   if (rlang::is_symbol(arg)) {
-    ## We might prevent this in future, it's a slightly odd bit of
-    ## syntax that only really makes sense for a 1d array
     name <- as.character(arg)
     return(call("OdinReduce", fn, name, complete = TRUE))
   } else if (!rlang::is_call(arg, "[")) {
@@ -458,16 +456,27 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
   name <- as.character(arg[[2]])
   index <- as.list(arg[-(1:2)])
 
-  is_empty <- vlapply(index, rlang::is_missing)
-  if (all(is_empty)) {
-    return(call("OdinReduce", fn, name, complete = TRUE))
+  ## Handle special case efficiently:
+  if (all(vlapply(index, rlang::is_missing))) {
+    return(call("OdinReduce", fn, name, index = NULL))
   }
-  index[is_empty] <- vector("list", sum(is_empty))
-  if (any(!is_empty)) {
-    ## This is basically the same check as parse_expr_check_lhs_index,
-    ## work this out shortly....
-    browser()
-    stop("writeme")
+
+  for (i in seq_along(index)) {
+    v <- parse_index(name, i, index[[i]])
+    deps <- v$depends
+    if (!is.null(deps)) {
+      if (":" %in% deps$functions) {
+        odin_parse_error(
+          c("Invalid use of range operator ':' within '{fn}' call",
+            paste("If you use ':' as a range operator within an index,",
+                  "then it must be the outermost call, for e.g,",
+                  "{.code (a + 1):(b + 1)}, not {.code 1 + (a:b)}")),
+          "E1099", src, call)
+      }
+      ## And see parse_expr_check_lhs_index for more
+    }
+    v$depends <- NULL
+    index[[i]] <- v
   }
 
   call("OdinReduce", fn, name, index = index)
@@ -565,5 +574,23 @@ parse_index <- function(name_data, dim, value) {
     list(name = name_index, type = "single", at = value, depends = depends)
   } else {
     NULL
+  }
+}
+
+
+parse_index <- function(name_data, dim, value) {
+  name <- INDEX[[dim]]
+  if (rlang::is_missing(value)) {
+    to <- call("OdinDim", name_data, dim)
+    list(name = name, is_range = TRUE, from = 1, to = to, depends = NULL)
+  } else if (rlang::is_call(value, ":")) {
+    from <- value[[2]]
+    to <- value[[3]]
+    depends <- join_dependencies(list(find_dependencies(from),
+                                      find_dependencies(to)))
+    list(name = name, is_range = TRUE, from = from, to = to, depends = depends)
+  } else {
+    depends <- find_dependencies(value)
+    list(name = name, is_range = FALSE, at = value, depends = depends)
   }
 }

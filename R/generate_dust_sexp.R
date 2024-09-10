@@ -164,7 +164,8 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   fn <- expr[[2]]
   target <- expr[[3]]
   target_str <- generate_dust_sexp(expr[[3]], dat, options)
-  if (isTRUE(expr$complete)) {
+  index <- expr$index
+  if (is.null(index)) {
     if (dat$location[[target]] == "state") {
       begin <- target_str
       len <- generate_dust_sexp(call("OdinLength", target), dat, options)
@@ -175,6 +176,8 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
     }
     sprintf("odin2::reduce_%s(%s, %s)", fn, begin, end)
   } else {
+    ## OK, here we probably need to get a sensible bit of C++ written;
+    ## we hold all the pieces at this point at least.
     browser()
   }
 }
