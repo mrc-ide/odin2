@@ -1250,7 +1250,6 @@ test_that("can use length() on the rhs", {
 })
 
 
-
 test_that("can use nrow() and ncol() on the rhs", {
   dat <- odin_parse({
     update(x[, ]) <- x[i, j] + nrow(x) / ncol(x)
@@ -1268,4 +1267,18 @@ test_that("can use nrow() and ncol() on the rhs", {
       "    }",
       "  }",
       "}"))
+})
+
+
+test_that("can generate sums over arrays", {
+
+  dat <- odin_parse({
+    update(x) <- sum(y)
+    initial(x) <- 0
+    y[] <- Normal(0, 1)
+    dim(y) <- 3
+  })
+  dat <- generate_prepare(dat)
+  generate_dust_system_update(dat)
+
 })

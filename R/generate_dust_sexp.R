@@ -7,6 +7,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       fn <- as.character(expr[[1]])
     }
 
+    ## There's a group here where we don't want to evaluate the
+    ## arguments, because the interpretation of some values will be
+    ## different to odin's normal rewrite semantics.
     if (fn == "[") {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
@@ -41,8 +44,11 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_sexp(
         call("OdinDim", as.character(expr[[2]]), if (fn == "nrow") 1 else 2),
         dat, options))
+    } else if (fn == "OdinReduce") {
+      return(generate_dust_sexp_reduce(expr, dat, options))
     }
 
+    ## Below here is much simpler, really.
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
     n <- length(args)
 
@@ -150,5 +156,25 @@ flatten_index <- function(idx, name) {
       }
     }
     expr_sum(idx)
+  }
+}
+
+
+generate_dust_sexp_reduce <- function(expr, dat, options) {
+  fn <- expr[[2]]
+  target <- expr[[3]]
+  target_str <- generate_dust_sexp(expr[[3]], dat, options)
+  if (isTRUE(expr$complete)) {
+    if (dat$location[[target]] == "state") {
+      begin <- target_str
+      len <- generate_dust_sexp(call("OdinLength", target), dat, options)
+      end <- sprintf("%s + %s", target_str, len)
+    } else {
+      begin <- sprintf("%s.begin()", target_str)
+      end <- sprintf("%s.end()", target_str)
+    }
+    sprintf("odin2::reduce_%s(%s, %s)", fn, begin, end)
+  } else {
+    browser()
   }
 }

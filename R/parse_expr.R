@@ -363,7 +363,9 @@ parse_expr_usage <- function(expr, src, call) {
     fn <- expr[[1]]
     fn_str <- as.character(fn)
     ignore <- "["
-    if (fn_str %in% monty::monty_dsl_distributions()$name) {
+    if (fn_str == "sum") {
+      expr <- parse_expr_usage_rewrite_reduce(expr, src, call)
+    } else if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
     } else if (fn_str %in% names(FUNCTIONS)) {
       usage <- FUNCTIONS[[fn_str]]
@@ -428,6 +430,47 @@ parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
                     mean = mean)
   expr[-1] <- args
   expr
+}
+
+
+parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
+  fn <- as.character(expr)[[1]]
+  n_args <- length(expr) - 1
+  if (n_args != 1) {
+    odin_parse_error(
+      paste("Invalid call to '{fn}': incorrect number of arguments",
+            "(expected 1 but received {n_args}"),
+      "E1030", src, call)
+  }
+
+  arg <- expr[[2]]
+  if (rlang::is_symbol(arg)) {
+    ## We might prevent this in future, it's a slightly odd bit of
+    ## syntax that only really makes sense for a 1d array
+    name <- as.character(arg)
+    return(call("OdinReduce", fn, name, complete = TRUE))
+  } else if (!rlang::is_call(arg, "[")) {
+    odin_parse_error(
+      paste("Expected argument to '{fn}' to be an array"),
+      "E1099", src, call)
+  }
+
+  name <- as.character(arg[[2]])
+  index <- as.list(arg[-(1:2)])
+
+  is_empty <- vlapply(index, rlang::is_missing)
+  if (all(is_empty)) {
+    return(call("OdinReduce", fn, name, complete = TRUE))
+  }
+  index[is_empty] <- vector("list", sum(is_empty))
+  if (any(!is_empty)) {
+    ## This is basically the same check as parse_expr_check_lhs_index,
+    ## work this out shortly....
+    browser()
+    stop("writeme")
+  }
+
+  call("OdinReduce", fn, name, index = index)
 }
 
 
