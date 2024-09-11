@@ -21,7 +21,24 @@ find_dependencies <- function(expr) {
   descend(expr)
   list(functions = unique(functions$get()),
        variables = unique(variables$get()))
+}
 
+
+join_dependencies <- function(x) {
+  stopifnot(is.list(x))
+  x <- x[!vlapply(x, is.null)]
+  ok <- vlapply(x, function(el) {
+    identical(names(el), c("functions", "variables"))
+  })
+  stopifnot(all(ok))
+  if (length(x) == 0L) {
+    list(functions = character(0), variables = character(0))
+  } else if (length(x) == 1L) {
+    x[[1L]]
+  } else {
+    list(functions = unique(unlist(lapply(x, "[[", "functions"))),
+         variables = unique(unlist(lapply(x, "[[", "variables"))))
+  }
 }
 
 

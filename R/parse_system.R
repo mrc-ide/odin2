@@ -85,16 +85,12 @@ parse_system_overall <- function(exprs, call) {
   data <- data_frame(
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
+  dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
-    rank = rep_len(1, sum(is_dim)),
-    dims = I(lapply(exprs[is_dim], function(x) x$rhs$expr)))
-
-  stopifnot(all(arrays$rank == 1))
-  ## This needs work, especially as it looks like 'dims' lacks a extra
-  ## layer of list here; we'll pick this up in mrc-5647 in
-  ## multidimensional arrays.
-  arrays$size <- arrays$dims
+    rank = lengths(dims),
+    dims = I(dims),
+    size = I(lapply(dims, expr_prod)))
 
   exprs <- list(equations = exprs[is_equation],
                 update = exprs[is_update],
@@ -366,21 +362,18 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
-  ## TODO: this will change later, because we'll create new variables
-  ## here that will hold sizes, and any incremental sizes.  We will
-  ## want to use this all over the show I think, but for now this is
-  ## ok, because it is at this point that we would compute additional
-  ## expressions for the sizes.
-  ## Then we go back and assign together uses in ranges.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
-    if (length(eq$lhs$array) > 1) {
-      stop("support matrices here")
-    }
     if (!is.null(eq$lhs$array)) {
-      if (eq$lhs$array[[1]]$is_range && eq$lhs$array[[1]]$to == Inf) {
-        eq$lhs$array[[1]]$to <- call("OdinLength", eq$lhs$name)
+      for (j in seq_along(eq$lhs$array)) {
+        if (eq$lhs$array[[j]]$is_range && eq$lhs$array[[j]]$to == Inf) {
+          if (length(eq$lhs$array) == 1) {
+            eq$lhs$array[[j]]$to <- call("OdinLength", eq$lhs$name)
+          } else {
+            eq$lhs$array[[j]]$to <- call("OdinDim", eq$lhs$name, j)
+          }
+        }
       }
     }
     ## Add a dimension to the dependencies.

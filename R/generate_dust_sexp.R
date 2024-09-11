@@ -15,6 +15,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (fn == "OdinLength") {
       dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
       return(sprintf("%s%s.size", dim, expr[[2]]))
+    } else if (fn == "OdinMult") {
+      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      return(sprintf("%s%s.mult[%d]", dim, expr[[2]], expr[[3]] - 1))
     } else if (fn == "OdinOffset") {
       where <- expr[[2]]
       what <- expr[[3]]
@@ -117,10 +120,23 @@ generate_dust_dat <- function(location, packing) {
 
 
 generate_dust_array_access <- function(expr, dat, options) {
-  if (length(expr) != 3) {
-    stop("need more to generate multidimensional access")
-  }
   target <- generate_dust_sexp(expr[[2]], dat, options)
-  idx <- generate_dust_sexp(expr_minus(expr[[3]], 1), dat, options)
+  name <- as.character(expr[[2]])
+  idx <- generate_dust_sexp(flatten_index(expr[-(1:2)], name), dat, options)
   sprintf("%s[%s]", target, idx)
+}
+
+
+flatten_index <- function(idx, name) {
+  idx <- lapply(idx, expr_minus, 1)
+  if (length(idx) == 1) {
+    idx[[1]]
+  } else {
+    for (i in seq_along(idx)) {
+      if (i > 1) {
+        idx[[i]] <- expr_times(idx[[i]], call("OdinMult", name, i))
+      }
+    }
+    expr_sum(idx)
+  }
 }

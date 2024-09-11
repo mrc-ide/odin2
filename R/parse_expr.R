@@ -16,10 +16,17 @@ parse_expr <- function(expr, src, call) {
 
 parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
-  rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
-
   special <- lhs$special
   lhs$special <- NULL
+
+  if (identical(special, "dim")) {
+    lhs$name_data <- lhs$name
+    lhs$name <- paste0("dim_", lhs$name)
+    rhs <- parse_expr_assignment_rhs_dim(expr[[3]], src, call)
+  } else {
+    rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
+  }
+
   if (rhs$type == "data") {
     if (!is.null(special)) {
       odin_parse_error(
@@ -67,11 +74,6 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     ## index variables are not real dependencies, so remove them:
     rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
-  }
-
-  if (identical(special, "dim")) {
-    lhs$name_data <- lhs$name
-    lhs$name <- paste0("dim_", lhs$name)
   }
 
   list(special = special,
@@ -177,6 +179,20 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
        expr = rhs,
        is_stochastic = is_stochastic,
        depends = depends)
+}
+
+
+parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
+  if (rlang::is_call(rhs, "c")) {
+    value <- as.list(rhs[-1])
+  } else {
+    value <- list(rhs)
+  }
+  depends <- join_dependencies(lapply(value, find_dependencies))
+  list(type = "dim",
+       value = value,
+       depends = depends,
+       is_stochastic = FALSE) # TODO - try and delete this?
 }
 
 
