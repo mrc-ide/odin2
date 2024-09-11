@@ -11,7 +11,12 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
       dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
-      return(sprintf("%s%s.dim[%d]", dim, expr[[2]], expr[[3]] - 1))
+      name <- expr[[2]]
+      if (dat$rank[[name]] == 1) {
+        return(sprintf("%s%s.size", dim, name))
+      } else {
+        return(sprintf("%s%s.dim[%d]", dim, name, expr[[3]] - 1))
+      }
     } else if (fn == "OdinLength") {
       dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
       return(sprintf("%s%s.size", dim, expr[[2]]))
@@ -121,8 +126,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## now all we need is information on where things are to be found (the
 ## location) but we'll need to cope with variable packing, array
 ## lengths and types soon.
-generate_dust_dat <- function(location, packing) {
-  list(location = location, packing = packing)
+generate_dust_dat <- function(location, packing, rank) {
+  list(location = location, packing = packing, rank = rank)
 }
 
 
