@@ -173,7 +173,7 @@ If your system has a parameter that affects the number of state variables in the
 
 # Changes in the way arrays are handled
 
-The two-arg form of `dim()` has been removed, as we did not believe it was used and it is confusingly different to R.  Previously you could write `dim(x, 3)` to get the length of the third dimension of `x`; this is no longer supported.  Please let us know if this is a problem.
+The two-argument form of `dim()` has been removed, as we did not believe it was used and it is confusingly different to R.  Previously you could write `dim(x, 3)` to get the length of the third dimension of `x`; this is no longer supported.  Please let us know if this is a problem.
 
 # General changes
 
