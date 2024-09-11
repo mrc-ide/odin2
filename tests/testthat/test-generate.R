@@ -1230,3 +1230,42 @@ test_that("can generate a simple multidimensional array equation", {
       "  state_next[0] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * (shared.dim.a.mult[1])] / internal.a[1 + 2 * (shared.dim.a.mult[1])];",
       "}"))
 })
+
+
+test_that("can use length() on the rhs", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + length(x)
+    initial(x[]) <- 0
+    dim(x) <- 4
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + shared.dim.x.size;",
+      "  }",
+      "}"))
+})
+
+
+
+test_that("can use nrow() and ncol() on the rhs", {
+  dat <- odin_parse({
+    update(x[, ]) <- x[i, j] + nrow(x) / ncol(x)
+    initial(x[]) <- 0
+    dim(x) <- c(4, 3)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.dim[0]; ++i) {",
+      "    for (size_t j = 1; j <= shared.dim.x.dim[1]; ++j) {",
+      "      state_next[i - 1 + (j - 1) * (shared.dim.x.mult[1]) + 0] = x[i - 1 + (j - 1) * (shared.dim.x.mult[1])] + shared.dim.x.dim[0] / shared.dim.x.dim[1];",
+      "    }",
+      "  }",
+      "}"))
+})

@@ -32,7 +32,10 @@ generate_dust_system <- function(dat) {
 
 
 generate_prepare <- function(dat) {
-  dat$sexp_data <- generate_dust_dat(dat$storage$location, dat$storage$packing)
+  rank <- set_names(dat$storage$arrays$rank, dat$storage$arrays$name)
+  dat$sexp_data <- generate_dust_dat(dat$storage$location,
+                                     dat$storage$packing,
+                                     rank)
   dat
 }
 
@@ -477,7 +480,9 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   is_array <- !is.null(lhs$array)
   if (is_array) {
     idx <- flatten_index(
-      lapply(lhs$array, function(x) if (x$is_range) as.name(x$name) else x$at),
+      lapply(lhs$array, function(x) {
+        if (x$type == "range") as.name(x$name) else x$at
+      }),
       name)
   } else {
     idx <- NULL
@@ -584,7 +589,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     is_array <- !is.null(eq$lhs$array)
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
-        if (idx$is_range) {
+        if (idx$type == "range") {
           from <- generate_dust_sexp(idx$from, dat$sexp_data, options)
           to <- generate_dust_sexp(idx$to, dat$sexp_data, options)
           res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",

@@ -125,12 +125,11 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   }
 
   if (rlang::is_call(lhs, "[")) {
-    ## TODO: do we get a nice error out of here?
     name <- parse_expr_check_lhs_name(lhs[[2]], src, call)
     array <- Map(parse_expr_check_lhs_index,
-                 lhs[-(1:2)],
                  seq_len(length(lhs) - 2),
-                 MoreArgs = list(src = src, call = call))
+                 lhs[-(1:2)],
+                 MoreArgs = list(name = name, src = src, call = call))
   } else {
     name <- parse_expr_check_lhs_name(lhs, src, call)
     array <- NULL
@@ -451,18 +450,25 @@ rewrite_stochastic_to_expectation <- function(expr) {
 ##
 ## * negative numbers not allowed
 ## * ranges must go up
-parse_expr_check_lhs_index <- function(index, dim, src, call) {
-  name <- INDEX[[dim]]
-  if (rlang::is_missing(index)) {
-    list(name = name, is_range = TRUE, from = 1, to = Inf)
-  } else if (is.numeric(index)) {
-    ## check integer-like?
-    list(name = name, is_range = FALSE, at = index)
-  } else if (rlang::is_call(index) || rlang::is_symbol(index)) {
-    vars <- all.vars(index)
-    nms <- all.names(index)
-    fns <- setdiff(nms, vars)
-    if (":" %in% fns && ":" %in% all.names(index[-1])) {
+parse_expr_check_lhs_index <- function(name, dim, index, src, call) {
+  ret <- parse_index(name, dim, index)
+
+  if (is.null(ret)) {
+    odin_parse_error(
+      "Invalid value for array index lhs",
+      "E1026", src, call)
+  }
+
+  ## We'll need to repeat most, but not all, of these checks when
+  ## validating indicies used in sum/prod on the *rhs* but we will do
+  ## it again as the checks are simple and the error messages need to
+  ## reflect the context.
+  if (any(lengths(ret$depends) > 0)) {
+    if (":" %in% ret$depends$functions) {
+      ## Previously in odin1 we tried to help disambiguate some calls
+      ## in the error message; we might want to put that back in at
+      ## some point, but it's not a big priority, most of the time
+      ## this is pretty simple.
       odin_parse_error(
         c("Invalid use of range operator ':' on lhs of array assignment",
           paste("If you use ':' as a range operator on the lhs of an",
@@ -471,32 +477,50 @@ parse_expr_check_lhs_index <- function(index, dim, src, call) {
                 "{.code 1 + (a:b)}")),
         "E1022", src, call)
     }
-    err <- setdiff(fns, c("+", "-", "(", ":"))
+    err <- setdiff(ret$depends$functions, c("+", "-", "(", ":"))
     if (length(err) > 0) {
       odin_parse_error(
         "Invalid function{?s} used in lhs of array assignment: {squote(err)}",
         "E1023", src, call)
     }
-    if ("-" %in% fns && uses_unary_minus(index)) {
+    if ("-" %in% ret$depends$functions && uses_unary_minus(index)) {
       odin_parse_error(
         "Invalid use of unary minus in lhs of array assignment",
         "E1024", src, call)
     }
-    err <- intersect(INDEX, nms)
+    err <- intersect(INDEX, ret$depends$variables)
     if (length(err) > 0) {
       odin_parse_error(
         paste("Invalid use of special variable{?s} in lhs of array",
               "assignment: {squote(err)}"),
         "E1025", src, call)
     }
-    if (rlang::is_call(index, ":")) {
-      list(name = name, is_range = TRUE, from = index[[2]], to = index[[3]])
-    } else {
-      list(name = name, is_range = FALSE, at = index)
-    }
+  }
+
+  ret$depends <- NULL
+  ret
+}
+
+
+## Later, we could allow 'c()' in here to allow access to a series of
+## values, though doing that in C++ would be a bit of a trick, but
+## many things are possible now with newer C++ loops.
+parse_index <- function(name_data, dim, value) {
+  name_index <- INDEX[[dim]]
+  if (rlang::is_missing(value)) {
+    to <- call("OdinDim", name_data, dim)
+    list(name = name_index, type = "range", from = 1, to = to, depends = NULL)
+  } else if (rlang::is_call(value, ":")) {
+    from <- value[[2]]
+    to <- value[[3]]
+    depends <- join_dependencies(list(find_dependencies(from),
+                                      find_dependencies(to)))
+    list(name = name_index, type = "range", from = from, to = to,
+         depends = depends)
+  } else if (is.language(value) || is.numeric(value)) {
+    depends <- find_dependencies(value)
+    list(name = name_index, type = "single", at = value, depends = depends)
   } else {
-    odin_parse_error(
-      "Invalid value for array index lhs",
-      "E1026", src, call)
+    NULL
   }
 }

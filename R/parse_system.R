@@ -362,21 +362,12 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
+  ## TODO: This can be moved into the original parse of the
+  ## expression, I think? We can revisit this later once the array
+  ## bits have settled perhaps.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
-    if (!is.null(eq$lhs$array)) {
-      for (j in seq_along(eq$lhs$array)) {
-        if (eq$lhs$array[[j]]$is_range && eq$lhs$array[[j]]$to == Inf) {
-          if (length(eq$lhs$array) == 1) {
-            eq$lhs$array[[j]]$to <- call("OdinLength", eq$lhs$name)
-          } else {
-            eq$lhs$array[[j]]$to <- call("OdinDim", eq$lhs$name, j)
-          }
-        }
-      }
-    }
-    ## Add a dimension to the dependencies.
     name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq

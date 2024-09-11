@@ -176,8 +176,8 @@ test_that("can parse systems that involve arrays in internal", {
                size = I(list(2))))
   expect_equal(
     d$equations$a$lhs$array,
-    list(list(name = "i", is_range = TRUE,
-              from = 1, to = quote(OdinLength("a")))))
+    list(list(name = "i", type = "range",
+              from = 1, to = quote(OdinDim("a", 1L)))))
 })
 
 
@@ -198,8 +198,8 @@ test_that("can parse systems that involve arrays in shared", {
                size = I(list(3))))
   expect_equal(
     d$equations$a$lhs$array,
-    list(list(name = "i", is_range = TRUE,
-              from = 1, to = quote(OdinLength("a")))))
+    list(list(name = "i", type = "range",
+              from = 1, to = quote(OdinDim("a", 1L)))))
 })
 
 
