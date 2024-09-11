@@ -362,8 +362,9 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
-  ## This can be moved into the original parse of the expression, I
-  ## think?
+  ## TODO: This can be moved into the original parse of the
+  ## expression, I think? We can revisit this later once the array
+  ## bits have settled perhaps.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
