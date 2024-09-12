@@ -576,21 +576,3 @@ parse_index <- function(name_data, dim, value) {
     NULL
   }
 }
-
-
-parse_index <- function(name_data, dim, value) {
-  name <- INDEX[[dim]]
-  if (rlang::is_missing(value)) {
-    to <- call("OdinDim", name_data, dim)
-    list(name = name, is_range = TRUE, from = 1, to = to, depends = NULL)
-  } else if (rlang::is_call(value, ":")) {
-    from <- value[[2]]
-    to <- value[[3]]
-    depends <- join_dependencies(list(find_dependencies(from),
-                                      find_dependencies(to)))
-    list(name = name, is_range = TRUE, from = from, to = to, depends = depends)
-  } else {
-    depends <- find_dependencies(value)
-    list(name = name, is_range = FALSE, at = value, depends = depends)
-  }
-}

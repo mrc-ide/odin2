@@ -2,8 +2,7 @@ generate_dust_system <- function(dat) {
   dat <- generate_prepare(dat)
 
   body <- collector()
-  body$add("// [[dust2::linking_to(odin2)]]")
-  body$add("#include <odin2.hpp>")
+  body$add("#include <dust2/common.hpp>")
   body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")

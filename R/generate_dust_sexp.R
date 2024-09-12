@@ -165,19 +165,25 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   target <- expr[[3]]
   target_str <- generate_dust_sexp(expr[[3]], dat, options)
   index <- expr$index
+  dim <- paste0(
+    if (isFALSE(options$shared_exists)) "dim_" else "shared.dim.",
+    target)
+  stopifnot(fn == "sum")
   if (is.null(index)) {
-    if (dat$location[[target]] == "state") {
-      begin <- target_str
-      len <- generate_dust_sexp(call("OdinLength", target), dat, options)
-      end <- sprintf("%s + %s", target_str, len)
-    } else {
-      begin <- sprintf("%s.begin()", target_str)
-      end <- sprintf("%s.end()", target_str)
-    }
-    sprintf("odin2::reduce_%s(%s, %s)", fn, begin, end)
+    sprintf("dust2::array::sum(%s, %s)", target_str, dim)
   } else {
-    ## OK, here we probably need to get a sensible bit of C++ written;
-    ## we hold all the pieces at this point at least.
-    browser()
+    index_str <- paste(vcapply(index, function(el) {
+      if (el$type == "single") {
+        from <- expr_minus(el$at, 1)
+        to <- from
+      } else {
+        from <- expr_minus(el$from, 1)
+        to <- expr_minus(el$to, 1)
+      }
+      sprintf("{%s, %s}",
+              generate_dust_sexp(from, dat, options),
+              generate_dust_sexp(to, dat, options))
+    }), collapse = ", ")
+    sprintf("dust2::array::sum(%s, %s, %s)", target_str, dim, index_str)
   }
 }

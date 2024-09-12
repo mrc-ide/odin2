@@ -10,7 +10,7 @@
 ##' For your `DESCRIPTION` file:
 ##'
 ##' * `dust2` must be in `Imports`
-##' * `cpp11`, `dust2`, `odin2` and `monty` must be in `LinkingTo`
+##' * `cpp11`, `dust2` and `monty` must be in `LinkingTo`
 ##'
 ##' For your `NAMESPACE` file:
 ##'
@@ -25,7 +25,7 @@
 ##' `DESCRIPTION`:
 ##'
 ##' ```
-##' Remotes: mrc-ide/dust2, mrc-ide/monty, mrc-ide/odin2
+##' Remotes: mrc-ide/dust2, mrc-ide/monty
 ##' ```
 ##'
 ##' Note that you do not need to include odin2 itself as a dependency.
