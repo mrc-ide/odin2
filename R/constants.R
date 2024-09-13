@@ -58,6 +58,7 @@ FUNCTIONS <- list(
   length = 1,
   nrow = 1,
   ncol = 1,
+  sum = 1,
   ceiling = ceiling,
   sign = sign,
   floor = floor,

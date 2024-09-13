@@ -399,6 +399,58 @@ a <- parameter(type = "integer", differentiate = TRUE)
 
 Here, you must decide if `a` should be differentiable (in which case remove the `type` argument) or an integer (in which case remove the `differentiate` argument).
 
+# `E1033`
+
+The argument to sum must be an array.  This can either be a complete array (in which case the argument will be a symbol).  So this is fine:
+
+```r
+a <- sum(x)
+b[] <- sum(x[, i])
+```
+
+But these are errors:
+
+```r
+a <- sum(a + y)
+b[] <- sum([, i] + 1)
+```
+
+Because summation is associative (or commutative) in this case we could write:
+
+```r
+a <- sum(a) + sum(y)
+b[] <- sum([, i]) + 1
+```
+
+but in more complicated cases you may have to jump through more hoops to get the expression you want, and this may involve saving out an intermediate variable.  For example, rather than writing:
+
+```r
+a <- sum(x^2)
+```
+
+You might write:
+
+```r
+xx[] <- x[i]^2
+a <- sum(xx)
+```
+
+# `E1034`
+
+Invalid use of `:` within a partial sum.  If you use `:` it must be the *outermost* operator within an index, so this is fine:
+
+```r
+sum(x[a:b])
+```
+
+but this is not
+
+```r
+sum(x[a:b + 1])
+```
+
+See [E1022](#e1022) for more information in the case where this same class of error is applied to indexing the left hand side of an assignment.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

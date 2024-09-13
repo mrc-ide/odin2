@@ -85,3 +85,65 @@ test_that("array equations assigning with brackets", {
     "Array expressions must always use '[]' on the lhs",
     fixed = TRUE)
 })
+
+
+test_that("can parse call to a whole array", {
+  res <- parse_expr(quote(a <- sum(x)), NULL, NULL)
+  expect_equal(res$rhs$expr,
+               quote(OdinReduce("sum", "x", index = NULL)))
+  expect_equal(res$rhs$depends,
+               list(functions = "sum", variables = "x"))
+})
+
+
+test_that("all empty index on sum is a complete sum", {
+  expr <- quote(OdinReduce("sum", "x", index = NULL))
+  expect_equal(parse_expr(quote(a <- sum(x[])), NULL, NULL)$rhs$expr, expr)
+  expect_equal(parse_expr(quote(a <- sum(x[, ])), NULL, NULL)$rhs$expr, expr)
+  expect_equal(parse_expr(quote(a <- sum(x[, , ])), NULL, NULL)$rhs$expr, expr)
+})
+
+
+test_that("can parse call sum over part of array", {
+  res <- parse_expr(quote(a[] <- sum(x[, i])), NULL, NULL)
+  expect_equal(
+    res$rhs$expr,
+    call("OdinReduce", "sum", "x", index = list(
+      list(name = "i", type = "range", from = 1, to = quote(OdinDim("x", 1L))),
+      list(name = "j", type = "single", at = quote(i)))))
+  expect_equal(res$rhs$depends,
+               list(functions = c("sum", "["), variables = "x"))
+})
+
+
+test_that("can parse call sum over part of part of array", {
+  res <- parse_expr(quote(a[] <- sum(x[a:b, i])), NULL, NULL)
+  expect_equal(
+    res$rhs$expr,
+    call("OdinReduce", "sum", "x", index = list(
+      list(name = "i", type = "range", from = quote(a), to = quote(b)),
+      list(name = "j", type = "single", at = quote(i)))))
+  expect_equal(res$rhs$depends,
+               list(functions = c("sum", "[", ":"),
+                    variables = c("x", "a", "b")))
+})
+
+
+test_that("can check that sum has the right number of arguments", {
+  expect_error(
+    parse_expr(quote(a <- sum(x, 1)), NULL, NULL),
+    "Invalid call to 'sum': incorrect number of arguments")
+})
+
+
+test_that("argument to quote must be symbol or array access", {
+  expect_error(
+    parse_expr(quote(a <- sum(x + y)), NULL, NULL),
+    "Expected argument to 'sum' to be an array")
+})
+
+test_that("require that range access is simple", {
+  expect_error(
+    parse_expr(quote(y <- sum(x[a:b + c])), NULL, NULL),
+    "Invalid use of range operator ':' within 'sum' call")
+})
