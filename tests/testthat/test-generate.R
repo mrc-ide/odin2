@@ -1311,3 +1311,16 @@ test_that("can generate partial sums over arrays", {
       "  }",
       "}"))
 })
+
+
+test_that("can add interpolation", {
+  dat <- odin_parse({
+    update(x) <- interpolate(at, ay, "constant")
+    initial(x) <- 0
+    at <- parameter()
+    ay <- parameter()
+    dim(at) <- n
+    dim(ay) <- n
+    n <- 5
+  })
+})

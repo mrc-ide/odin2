@@ -157,8 +157,7 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
   } else if (rlang::is_call(rhs, "data")) {
     parse_expr_assignment_rhs_data(rhs, src, call)
   } else if (rlang::is_call(rhs, "interpolate")) {
-    odin_parse_error("'interpolate()' is not implemented yet",
-                     "E0001", src, call)
+    parse_expr_assignment_rhs_interpolate(rhs, src, call)
   } else {
     parse_expr_assignment_rhs_expression(rhs, src, call)
   }
@@ -306,6 +305,12 @@ parse_expr_assignment_rhs_data <- function(rhs, src, call) {
                      "E1010", src, call)
   }
   list(type = "data")
+}
+
+
+parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
+  list(type = "interpolate",
+       mode = mode)
 }
 
 
