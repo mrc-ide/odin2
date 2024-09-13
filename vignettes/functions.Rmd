@@ -164,6 +164,32 @@ We provide several functions for retrieving dimensions from an array
 
 We do not currently offer a function for accessing the size of higher dimensions, please let us know if this is an issue (see `vignette("migrating")`)
 
+Frequently, you will want to take a sum over an array, or part of an array, using `sum`.  To sum over all elements of an array, use `sum()` with the name of the array you would like to sum over:
+
+```r
+dim(x) <- 10
+x_tot <- sum(x)
+```
+
+If `m` is a matrix you can compute the sums over the second column by writing:
+
+```r
+m1_tot <- sum(m[, 2])
+```
+
+This partial sum approach is frequently used within implicit loops:
+
+```
+m_col_totals[] <- sum([, i])
+```
+
+You can use this approach to compute a matrix-vector product $\mathbf(Ax)$:
+
+```
+ax_tmp[, ] <- a[i, j] * x[j]
+ax[] <- sum(a[, i])
+```
+
 # Distribution functions
 
 We support distribution functions in two places:

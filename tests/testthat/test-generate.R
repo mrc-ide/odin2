@@ -1270,8 +1270,7 @@ test_that("can use nrow() and ncol() on the rhs", {
 })
 
 
-test_that("can generate sums over arrays", {
-
+test_that("can generate complete sums over arrays", {
   dat <- odin_parse({
     update(x) <- sum(y)
     initial(x) <- 0
@@ -1279,8 +1278,18 @@ test_that("can generate sums over arrays", {
     dim(y) <- 3
   })
   dat <- generate_prepare(dat)
-  generate_dust_system_update(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.y.size; ++i) {",
+      "    internal.y[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.y, shared.dim.y);",
+      "}"))
+})
 
+
+test_that("can generate partial sums over arrays", {
   dat <- odin_parse({
     update(x[]) <- sum(y[i, ])
     initial(x[]) <- 0
@@ -1289,5 +1298,16 @@ test_that("can generate sums over arrays", {
     dim(x) <- 3
   })
   dat <- generate_prepare(dat)
-  generate_dust_system_update(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.y.dim[0]; ++i) {",
+      "    for (size_t j = 1; j <= shared.dim.y.dim[1]; ++j) {",
+      "      internal.y[i - 1 + (j - 1) * (shared.dim.y.mult[1])] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "    }",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = dust2::array::sum<real_type>(internal.y, shared.dim.y, {i - 1, i - 1}, {0, shared.dim.y.dim[1] - 1});",
+      "  }",
+      "}"))
 })
