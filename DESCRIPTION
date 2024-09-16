@@ -28,7 +28,7 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Remotes:
-    mrc-ide/dust2@mrc-5758,
+    mrc-ide/dust2,
     mrc-ide/monty
 VignetteBuilder: knitr
 Language: en-GB
