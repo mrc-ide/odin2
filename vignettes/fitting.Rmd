@@ -276,7 +276,7 @@ There are several things we can do here to improve how this chain mixes
 Here, we apply most of these suggestions at once, using a variance-covariance matrix [that I prepared earlier](https://www.youtube.com/watch?v=ziqD1xvSpF4):
 
 ```{r}
-filter <- dust2::dust_likelihood_create(sir(), 0, data, n_particles = 1000)
+filter <- dust2::dust_unfilter_create(sir(), 0, data, n_particles = 1000)
 likelihood <- dust2::dust_likelihood_monty(filter, sir_packer)
 vcv <- matrix(c(0.0005, 0.0003, 0.0003, 0.0003), 2, 2)
 sampler <- monty::monty_sampler_random_walk(vcv)
