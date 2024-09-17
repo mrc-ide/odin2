@@ -54,6 +54,11 @@ is_scalar_character <- function(x) {
 }
 
 
+is_scalar_character <- function(x) {
+  is.character(x) && length(x) == 1 && !is.na(x)
+}
+
+
 collector <- function(init = character(0)) {
   env <- new.env(parent = emptyenv())
   env$res <- init
