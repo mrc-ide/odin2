@@ -127,8 +127,8 @@ filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 200)
 Each time we run this filter the likelihood will be slightly (or very) different:
 
 ```{r}
-dust2::dust_filter_run(filter, pars)
-dust2::dust_filter_run(filter, pars)
+dust2::dust_likelihood_run(filter, pars)
+dust2::dust_likelihood_run(filter, pars)
 ```
 
 If you run the filter enough times a distribution will emerge of course.  Let's compare two points in parameter space, varying the `beta` parameter and running the filter 100 times each:
@@ -136,8 +136,8 @@ If you run the filter enough times a distribution will emerge of course.  Let's 
 ```{r}
 pars1 <- modifyList(pars, list(beta = 0.25))
 pars2 <- modifyList(pars, list(beta = 0.23))
-ll1 <- replicate(100, dust2::dust_filter_run(filter, pars1))
-ll2 <- replicate(100, dust2::dust_filter_run(filter, pars2))
+ll1 <- replicate(100, dust2::dust_likelihood_run(filter, pars1))
+ll2 <- replicate(100, dust2::dust_likelihood_run(filter, pars2))
 
 xb <- seq(floor(min(ll1, ll2)), ceiling(max(ll1, ll2)), by = 1)
 hist(ll2, breaks = xb, col = "#0000ff99", freq = FALSE,
@@ -151,13 +151,13 @@ So even a relatively small difference in a parameter leads to a difference in th
 If you run a particle filter with the argument `save_history = TRUE` then we save the trajectories of particles over time:
 
 ```{r}
-dust2::dust_filter_run(filter, list(beta = 0.2, gamma = 0.1), save_history = TRUE)
+dust2::dust_likelihood_run(filter, list(beta = 0.2, gamma = 0.1), save_history = TRUE)
 ```
 
-You can access these with `dust2::dust_filter_last_history()`:
+You can access these with `dust2::dust_likelihood_last_history()`:
 
 ```{r}
-h <- dust2::dust_filter_last_history(filter)
+h <- dust2::dust_likelihood_last_history(filter)
 ```
 
 The result here is a 4 x 100 x 200 array:
@@ -213,7 +213,7 @@ sir_packer$unpack(c(0.3, 0.1))
 Combining the filter and packer we create a `monty` model, which we'll call `likelihood`, as that's what it represents:
 
 ```{r}
-likelihood <- dust2::dust_filter_monty(filter, sir_packer)
+likelihood <- dust2::dust_likelihood_monty(filter, sir_packer)
 ```
 
 This likelihood is now also a `monty_model` object:
@@ -228,7 +228,7 @@ The `monty` package provides a high-level interface for working with these objec
 monty::monty_model_density(likelihood, c(0.2, 0.1))
 ```
 
-The difference to using `dust2::dust_filter_run` here is now we provide a parameter vector from our *statistical model*, rather than the inputs to the odin/dust model.  This conforms to the interface that `monty` uses and lets us run things like MCMC.
+The difference to using `dust2::dust_likelihood_run` here is now we provide a parameter vector from our *statistical model*, rather than the inputs to the odin/dust model.  This conforms to the interface that `monty` uses and lets us run things like MCMC.
 
 We can combine the prior and the likelihood to create a posterior:
 
@@ -276,8 +276,8 @@ There are several things we can do here to improve how this chain mixes
 Here, we apply most of these suggestions at once, using a variance-covariance matrix [that I prepared earlier](https://www.youtube.com/watch?v=ziqD1xvSpF4):
 
 ```{r}
-filter <- dust2::dust_filter_create(sir(), 0, data, n_particles = 1000)
-likelihood <- dust2::dust_filter_monty(filter, sir_packer)
+filter <- dust2::dust_unfilter_create(sir(), 0, data, n_particles = 1000)
+likelihood <- dust2::dust_likelihood_monty(filter, sir_packer)
 vcv <- matrix(c(0.0005, 0.0003, 0.0003, 0.0003), 2, 2)
 sampler <- monty::monty_sampler_random_walk(vcv)
 samples <- monty::monty_sample(posterior, sampler, 1000,
@@ -331,14 +331,14 @@ unfilter <- dust2::dust_unfilter_create(sir(), 0, data)
 In contrast with `filter`, above, multiple calls to `unfilter` with the same parameter set yield the same result.
 
 ```{r}
-dust2::dust_unfilter_run(unfilter, pars)
-dust2::dust_unfilter_run(unfilter, pars)
+dust2::dust_likelihood_run(unfilter, pars)
+dust2::dust_likelihood_run(unfilter, pars)
 ```
 
 We can now proceed as before, reusing our `packer`, `prior` and `sampler` objects, which are still useable here:
 
 ```{r}
-likelihood_det <- dust2::dust_filter_monty(unfilter, sir_packer)
+likelihood_det <- dust2::dust_likelihood_monty(unfilter, sir_packer)
 posterior_det <- prior + likelihood_det
 samples_det <- monty::monty_sample(posterior_det, sampler, 1000,
                                    initial = sir_packer$pack(pars))
@@ -390,17 +390,17 @@ This system can be used as a stochastic model (created via `dust2::dust_filter_c
 unfilter <- dust2::dust_unfilter_create(sir(), 0, data)
 ```
 
-When you run the unfilter, you can now provide the argument `adjoint = TRUE` which will enable use of `dust_unfilter_last_gradient()` (we may make this the default in future).
+When you run the unfilter, you can now provide the argument `adjoint = TRUE` which will enable use of `dust_likelihood_last_gradient()` (we may make this the default in future).
 
 ```{r}
-dust2::dust_unfilter_run(unfilter, pars, adjoint = TRUE)
-dust2::dust_unfilter_last_gradient(unfilter)
+dust2::dust_likelihood_run(unfilter, pars, adjoint = TRUE)
+dust2::dust_likelihood_last_gradient(unfilter)
 ```
 
 We can create a `monty` model with this, as before:
 
 ```{r}
-likelihood <- dust2::dust_filter_monty(unfilter, sir_packer)
+likelihood <- dust2::dust_likelihood_monty(unfilter, sir_packer)
 likelihood
 ```
 
@@ -506,7 +506,7 @@ filter2 <- dust2::dust_filter_create(sir(), 0, data2, n_particles = 200)
 When passing parameters into the filter, you now should mirror the format used in `dust2::dust_system_run()`; a list of lists:
 
 ```{r}
-dust2::dust_filter_run(filter2, pars2)
+dust2::dust_likelihood_run(filter2, pars2)
 ```
 
 We now have two likelihoods returned by the filter; one per group.
@@ -515,13 +515,13 @@ For the deterministic unfilter the process is the same:
 
 ```{r}
 unfilter2 <- dust2::dust_unfilter_create(sir(), 0, data2)
-dust2::dust_unfilter_run(unfilter2, pars2)
+dust2::dust_likelihood_run(unfilter2, pars2)
 ```
 
 however, our gradient has picked up a dimension:
 
 ```{r}
-dust2::dust_unfilter_last_gradient(unfilter2)
+dust2::dust_likelihood_last_gradient(unfilter2)
 ```
 
 Here, the first **column** is the gradient of the first parameter set, and the first **row** is the gradient of `beta` over parameter sets.
@@ -529,8 +529,8 @@ Here, the first **column** is the gradient of the first parameter set, and the f
 Compare with the single parameter case:
 
 ```{r}
-dust2::dust_unfilter_run(unfilter, pars2[[1]])
-dust2::dust_unfilter_last_gradient(unfilter)
+dust2::dust_likelihood_run(unfilter, pars2[[1]])
+dust2::dust_likelihood_last_gradient(unfilter)
 ```
 
 ## For monty models
@@ -544,7 +544,7 @@ p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
 However, there's a small bit of functionality we need to add here in dust2, still.
 
 ```{r}
-likelihood2 <- dust2::dust_filter_monty(filter2, sir_packer)
+likelihood2 <- dust2::dust_likelihood_monty(filter2, sir_packer)
 monty::monty_model_density(likelihood2, p)
 ```
 

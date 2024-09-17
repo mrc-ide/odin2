@@ -35,13 +35,13 @@ test_that("can compute gradient", {
 
   obj <- dust2::dust_unfilter_create(sir(), time_start, data)
   x <- c(beta = 0.1, gamma = 0.2, I0 = 10)
-  ll <- dust2::dust_unfilter_run(obj, as.list(x), adjoint = TRUE)
-  gr <- dust2::dust_unfilter_last_gradient(obj)
+  ll <- dust2::dust_likelihood_run(obj, as.list(x), adjoint = TRUE)
+  gr <- dust2::dust_likelihood_last_gradient(obj)
 
-  expect_identical(ll, dust2::dust_unfilter_run(obj, as.list(x)))
+  expect_identical(ll, dust2::dust_likelihood_run(obj, as.list(x)))
 
   gr_num <- numDeriv::grad(
-    function(x) dust2::dust_unfilter_run(obj, as.list(x)), x,
+    function(x) dust2::dust_likelihood_run(obj, as.list(x)), x,
     method = "Richardson", method.args = list(r = 6))
 
   expect_equal(gr_num, gr, tolerance = 1e-4)
