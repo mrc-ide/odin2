@@ -401,12 +401,14 @@ Here, you must decide if `a` should be differentiable (in which case remove the 
 
 # `E1033`
 
-The argument to sum must be an array.  This can either be a complete array (in which case the argument will be a symbol).  So this is fine:
+The argument to sum must be an array.  This can either be a complete array (in which case the argument will be a symbol), or an indexed array.  So these are both fine:
 
 ```r
 a <- sum(x)
 b[] <- sum(x[, i])
 ```
+
+with the first summing over the whole array and the second summing over rows (each element of `b` will contain a sum over the corresponding row of `x`.
 
 But these are errors:
 
