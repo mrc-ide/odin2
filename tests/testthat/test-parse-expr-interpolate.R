@@ -9,7 +9,7 @@ test_that("require that interpolation mode is one of the known types", {
     fixed = TRUE)
   expect_error(
     parse_expr(quote(x <- interpolate(a, b)), NULL, NULL),
-    "Invalid 'mode' argument to 'interpolate()'",
+    "Invalid call to 'interpolate()'",
     fixed = TRUE)
 })
 
