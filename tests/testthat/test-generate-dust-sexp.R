@@ -110,7 +110,7 @@ test_that("can coerce to different types", {
     "a + static_cast<int>(b)")
   expect_equal(
     generate_dust_sexp(quote(c + as.numeric(d)), dat, NULL),
-    "c + static_cast<real_type>(d)")
+    "shared.c + static_cast<real_type>(internal.d)")
   expect_equal(
     generate_dust_sexp(quote(as.logical(1)), dat, NULL),
     "static_cast<bool>(1)")
