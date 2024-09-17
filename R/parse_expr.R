@@ -363,46 +363,55 @@ parse_expr_usage <- function(expr, src, call) {
     fn <- expr[[1]]
     fn_str <- as.character(fn)
     ignore <- "["
-    if (fn_str %in% monty::monty_dsl_distributions()$name) {
+    if (fn_str == "sum") {
+      expr <- parse_expr_usage_rewrite_reduce(expr, src, call)
+    } else if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
     } else if (fn_str %in% names(FUNCTIONS)) {
-      usage <- FUNCTIONS[[fn_str]]
-      if (is.function(usage)) {
-        res <- match_call(expr, usage)
-        if (!res$success) {
-          err <- conditionMessage(res$error)
-          odin_parse_error("Invalid call to '{fn_str}': {err}",
-                           "E1028", src, call)
-        }
-      } else {
-        n_args <- length(expr) - 1
-        if (!is.null(names(expr))) {
-          odin_parse_error(
-            "Calls to '{fn_str}' may not have any named arguments",
-            "E1029", src, call)
-        }
-        if (length(usage) == 1) {
-          if (n_args != usage) {
-            odin_parse_error(
-              paste("Invalid call to '{fn_str}': incorrect number of arguments",
-                    "(expected {usage} but received {n_args})"),
-              "E1030", src, call)
-          }
-        } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
-          collapse <- if (diff(usage) == 1) " or " else " to "
-          usage_str <- paste(usage, collapse = collapse)
-          odin_parse_error(
-            paste("Invalid call to '{fn_str}': incorrect number of arguments",
-                  "(expected {usage_str} but received {n_args})"),
-            "E1030", src, call)
-        }
-      }
+      parse_expr_check_call(expr, src, call)
       args <- lapply(expr[-1], parse_expr_usage, src, call)
       expr <- as.call(c(list(fn), args))
     } else if (!(fn_str %in% ignore)) {
       odin_parse_error(
         "Unsupported function '{fn_str}'",
         "E1027", src, call)
+    }
+  }
+  expr
+}
+
+
+parse_expr_check_call <- function(expr, usage, src, call) {
+  fn <- as.character(expr[[1]])
+  usage <- FUNCTIONS[[fn]]
+  if (is.function(usage)) {
+    res <- match_call(expr, usage)
+    if (!res$success) {
+      err <- conditionMessage(res$error)
+      odin_parse_error("Invalid call to '{fn}': {err}",
+                       "E1028", src, call)
+    }
+  } else {
+    n_args <- length(expr) - 1
+    if (!is.null(names(expr))) {
+      odin_parse_error(
+        "Calls to '{fn}' may not have any named arguments",
+        "E1029", src, call)
+    }
+    if (length(usage) == 1) {
+      if (n_args != usage) {
+        odin_parse_error(
+          paste("Invalid call to '{fn}': incorrect number of arguments",
+                "(expected {usage} but received {n_args})"),
+          "E1030", src, call)
+      }
+    } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
+      collapse <- if (diff(usage) == 1) " or " else " to "
+      usage_str <- paste(usage, collapse = collapse)
+      odin_parse_error(
+        paste("Invalid call to '{fn}': incorrect number of arguments",
+              "(expected {usage_str} but received {n_args})"),
+        "E1030", src, call)
     }
   }
   expr
@@ -428,6 +437,54 @@ parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
                     mean = mean)
   expr[-1] <- args
   expr
+}
+
+
+parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
+  parse_expr_check_call(expr, src, call)
+
+  fn <- as.character(expr[[1]])
+  arg <- expr[[2]]
+  if (rlang::is_symbol(arg)) {
+    name <- as.character(arg)
+    return(call("OdinReduce", fn, name, index = NULL))
+  } else if (!rlang::is_call(arg, "[")) {
+    odin_parse_error(
+      c("Expected argument to '{fn}' to be an array",
+        i = paste("The argument to '{fn}' should be name of an array (as",
+                  "a symbol) to sum over all elements of the array, or",
+                  "an array access (using '[]') to sum over part of",
+                  "an array")),
+      "E1033", src, call)
+  }
+
+  name <- as.character(arg[[2]])
+  index <- as.list(arg[-(1:2)])
+
+  ## Handle special case efficiently:
+  if (all(vlapply(index, rlang::is_missing))) {
+    return(call("OdinReduce", fn, name, index = NULL))
+  }
+
+  for (i in seq_along(index)) {
+    v <- parse_index(name, i, index[[i]])
+    deps <- v$depends
+    if (!is.null(deps)) {
+      if (":" %in% deps$functions) {
+        odin_parse_error(
+          c("Invalid use of range operator ':' within '{fn}' call",
+            paste("If you use ':' as a range operator within an index,",
+                  "then it must be the outermost call, for e.g,",
+                  "{.code (a + 1):(b + 1)}, not {.code 1 + (a:b)}")),
+          "E1034", src, call)
+      }
+      ## And see parse_expr_check_lhs_index for more
+    }
+    v$depends <- NULL
+    index[[i]] <- v
+  }
+
+  call("OdinReduce", fn, name, index = index)
 }
 
 

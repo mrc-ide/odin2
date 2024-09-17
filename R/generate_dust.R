@@ -3,7 +3,6 @@ generate_dust_system <- function(dat) {
 
   body <- collector()
   body$add("#include <dust2/common.hpp>")
-  body$add("#include <dust2/array.hpp>")
   body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")

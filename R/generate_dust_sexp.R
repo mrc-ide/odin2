@@ -7,6 +7,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       fn <- as.character(expr[[1]])
     }
 
+    ## There's a group here where we don't want to evaluate the
+    ## arguments, because the interpretation of some values will be
+    ## different to odin's normal rewrite semantics.
     if (fn == "[") {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
@@ -41,8 +44,11 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_sexp(
         call("OdinDim", as.character(expr[[2]]), if (fn == "nrow") 1 else 2),
         dat, options))
+    } else if (fn == "OdinReduce") {
+      return(generate_dust_sexp_reduce(expr, dat, options))
     }
 
+    ## Below here is much simpler, really.
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
     n <- length(args)
 
@@ -150,5 +156,35 @@ flatten_index <- function(idx, name) {
       }
     }
     expr_sum(idx)
+  }
+}
+
+
+generate_dust_sexp_reduce <- function(expr, dat, options) {
+  fn <- expr[[2]]
+  target <- expr[[3]]
+  target_str <- generate_dust_sexp(expr[[3]], dat, options)
+  index <- expr$index
+  dim <- paste0(
+    if (isFALSE(options$shared_exists)) "dim_" else "shared.dim.",
+    target)
+  stopifnot(fn == "sum")
+  if (is.null(index)) {
+    sprintf("dust2::array::sum<real_type>(%s, %s)", target_str, dim)
+  } else {
+    index_str <- paste(vcapply(index, function(el) {
+      if (el$type == "single") {
+        from <- expr_minus(el$at, 1)
+        to <- from
+      } else {
+        from <- expr_minus(el$from, 1)
+        to <- expr_minus(el$to, 1)
+      }
+      sprintf("{%s, %s}",
+              generate_dust_sexp(from, dat, options),
+              generate_dust_sexp(to, dat, options))
+    }), collapse = ", ")
+    sprintf("dust2::array::sum<real_type>(%s, %s, %s)",
+            target_str, dim, index_str)
   }
 }
