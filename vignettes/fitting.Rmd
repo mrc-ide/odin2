@@ -400,7 +400,7 @@ dust2::dust_likelihood_last_gradient(unfilter)
 We can create a `monty` model with this, as before:
 
 ```{r}
-likelihood <- dust2::dust_filter_monty(likelihood, sir_packer)
+likelihood <- dust2::dust_likelihood_monty(unfilter, sir_packer)
 likelihood
 ```
 
@@ -544,7 +544,7 @@ p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
 However, there's a small bit of functionality we need to add here in dust2, still.
 
 ```{r}
-likelihood2 <- dust2::dust_filter_monty(filter2, sir_packer)
+likelihood2 <- dust2::dust_likelihood_monty(filter2, sir_packer)
 monty::monty_model_density(likelihood2, p)
 ```
 
