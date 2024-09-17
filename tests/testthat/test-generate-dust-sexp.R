@@ -95,6 +95,28 @@ test_that("can use functions from the library", {
 })
 
 
+test_that("can coerce to different types", {
+  dat <- generate_dust_dat(
+    c(a = "state",
+      b = "stack",
+      c = "shared",
+      d = "internal",
+      e = "data"),
+    packing = list(state = parse_packing("a", NULL, "state")),
+    rank = NULL)
+  options <- list()
+  expect_equal(
+    generate_dust_sexp(quote(a + as.integer(b)), dat, NULL),
+    "a + static_cast<int>(b)")
+  expect_equal(
+    generate_dust_sexp(quote(c + as.numeric(d)), dat, NULL),
+    "c + static_cast<real_type>(d)")
+  expect_equal(
+    generate_dust_sexp(quote(as.logical(1)), dat, NULL),
+    "static_cast<bool>(1)")
+})
+
+
 test_that("can generate min/max", {
   dat <- generate_dust_dat(
     c(a = "state",

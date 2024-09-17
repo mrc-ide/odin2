@@ -313,3 +313,22 @@ test_that("check functions against valid list", {
     parse_expr(quote(a <- sin(1) + pgamma(2)), NULL, NULL),
     "Unsupported function 'pgamma'")
 })
+
+
+test_that("allow parsing coercion functions", {
+  expr <- quote(a <- b + as.integer(c))
+  res <- parse_expr(expr, NULL, NULL)
+  expect_equal(res$rhs$expr, expr[[3]])
+  expect_equal(res$rhs$depends, list(functions = c("+", "as.integer"),
+                                     variables = c("b", "c")))
+})
+
+
+test_that("check that coersion functions use simple calls only", {
+  expect_error(
+    parse_expr(quote(a <- as.integer(x = 1)), NULL, NULL),
+    "Calls to 'as.integer' may not have any named arguments")
+  expect_error(
+    parse_expr(quote(a <- as.logical(1, 2)), NULL, NULL),
+    "Invalid call to 'as.logical'")
+})
