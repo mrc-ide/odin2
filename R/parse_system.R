@@ -95,12 +95,6 @@ parse_system_overall <- function(exprs, call) {
   is_interpolate <- vlapply(exprs,
                             function(x) identical(x$rhs$type, "interpolate"))
   if (any(is_interpolate)) {
-    interpolate <- data_frame(
-      name = vcapply(exprs[is_interpolate], function(x) x$lhs$name_data),
-      time = vcapply(exprs[is_interpolate], function(x) x$rhs$expr$time),
-      value = vcapply(exprs[is_interpolate], function(x) x$rhs$expr$value),
-      mode = vcapply(exprs[is_interpolate], function(x) x$rhs$expr$mode))
-
     interpolate_use <- lapply(
       exprs[is_interpolate],
       function(eq) {
@@ -113,7 +107,6 @@ parse_system_overall <- function(exprs, call) {
           src = eq$src)
       })
   } else {
-    interpolate <- NULL
     interpolate_use <- NULL
   }
 
@@ -129,7 +122,6 @@ parse_system_overall <- function(exprs, call) {
        variables = variables,
        parameters = parameters,
        arrays = arrays,
-       interpolate = interpolate,
        data = data,
        exprs = exprs)
 }

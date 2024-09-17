@@ -322,22 +322,29 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
                        x = conditionMessage(result$error)),
                      "E1003", src, call)
   }
-
-  tryCatch(
-    mode <- match_value(result$value$mode, c("constant", "linear", "spline")),
-    error = function(e) {
-      odin_parse_error(
-        "Invalid 'mode' argument to 'interpolate()'",
-        "E1099", src, call, parent = e)
-    })
+  is_missing <- vlapply(result$value, rlang::is_missing)
+  if (any(is_missing)) {
+    msg <- names(result$value)[is_missing]
+    odin_parse_error(c("Invalid call to 'interpolate()'",
+                       x = "Missing argument{?s} {squote(msg)}"),
+                     "E1003", src, call)
+  }
 
   for (nm in c("time", "value")) {
     if (!rlang::is_symbol(result$value[[nm]])) {
       odin_parse_error(
         "Expected '{nm}' argument to 'interpolate()' to be a symbol",
-        "E1099", src, call, parent = e)
+        "E1035", src, call)
     }
   }
+  tryCatch(
+    mode <- match_value(result$value$mode, c("constant", "linear", "spline")),
+    error = function(e) {
+      odin_parse_error(
+        "Invalid 'mode' argument to 'interpolate()'",
+        "E1036", src, call, parent = e)
+    })
+
 
   time <- as.character(result$value$time)
   value <- as.character(result$value$value)

@@ -435,7 +435,6 @@ You might write:
 ```r
 xx[] <- x[i]^2
 a <- sum(xx)
-```
 
 # `E1034`
 
@@ -452,6 +451,22 @@ sum(x[a:b + 1])
 ```
 
 See [E1022](#e1022) for more information in the case where this same class of error is applied to indexing the left hand side of an assignment.
+
+# `E1035`
+
+Invalid arguments to interpolation.  The first two arguments (`time` and `value`, respectively) must be symbols corresponding to arrays.  The whole array is used by `interpolate()` so these cannot be subset.
+
+# `E1036`
+
+Invalid interpolation mode.  The `mode` argument to `interpolate` must be a string, and must be one of the values `"constant"` (for piecewise constant), `"linear"` (for piecewise linear) or `"spline"` (for cubic splines).
+
+Example:
+
+```r
+a <- interpolate(at, ay, "wiggly")
+```
+
+Invalid data for interpolation.  Both the `time` (first) and `value`
 
 # `E2001`
 
