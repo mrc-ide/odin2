@@ -141,9 +141,9 @@ generate_dust_system_packing <- function(name, dat) {
 
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
-  eqs <- dat$phases$build_shared$equations
   body <- collector()
-  for (eq in dat$equations[eqs]) {
+  eqs <- get_phase_equations("build_shared", dat)
+  for (eq in eqs) {
     if (eq$lhs$name %in% dat$storage$arrays$name) {
       i <- match(eq$lhs$name, dat$storage$arrays$name)
       size <- generate_dust_sexp(
@@ -154,14 +154,15 @@ generate_dust_system_build_shared <- function(dat) {
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }
-  is_dim <- vlapply(dat$equations[eqs], function(x) identical(x$special, "dim"))
+  is_dim <- vlapply(eqs, function(x) identical(x$special, "dim"))
   if (any(is_dim)) {
-    nms_dim <- vcapply(dat$equations[eqs][is_dim], function(x) x$lhs$name)
+    nms_dim <- vcapply(eqs[is_dim], function(x) x$lhs$name)
     body$add(sprintf("const shared_state::dim_type dim{%s};",
                      paste(nms_dim, collapse = ", ")))
-    eqs <- c("dim", "offset", setdiff(eqs, nms_dim))
+    nms_return <- c("dim", "offset",
+                    setdiff(dat$phases$build_shared$equations, nms_dim))
   } else {
-    eqs <- c("offset", eqs)
+    nms_return <- c("offset", dat$phases$build_shared$equations)
   }
 
   offset <- unlist0(lapply(names(dat$storage$packing), function(nm) {
@@ -172,7 +173,8 @@ generate_dust_system_build_shared <- function(dat) {
 
   body$add("shared_state::offset_type offset;")
   body$add(offset)
-  body$add(sprintf("return shared_state{%s};", paste(eqs, collapse = ", ")))
+  body$add(sprintf("return shared_state{%s};",
+                   paste(nms_return, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
   cpp_function("shared_state", "build_shared", args, body$get(), static = TRUE)
 }
@@ -214,9 +216,9 @@ generate_dust_system_build_internal <- function(dat) {
 
 
 generate_dust_system_update_shared <- function(dat) {
-  eqs <- dat$phases$update_shared$equations
   body <- collector()
-  for (eq in dat$equations[eqs]) {
+  eqs <- get_phase_equations("update_shared", dat)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state", dat))
   }
   args <- c("cpp11::list" = "parameters", "shared_state&" = "shared")
@@ -247,8 +249,9 @@ generate_dust_system_initial <- function(dat) {
               "real_type*" = "state")
   }
   body <- collector()
-  eqs <- dat$phases$initial$equations
-  for (eq in c(dat$equations[eqs], dat$phases$initial$variables)) {
+  eqs <- c(get_phase_equations("initial", dat),
+           dat$phases$initial$variables)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state", dat))
   }
   cpp_function("void", "initial", args, body$get(), static = TRUE)
@@ -272,8 +275,9 @@ generate_dust_system_update <- function(dat) {
   unpack <- intersect(dat$variables, dat$phases$update$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
-  eqs <- dat$phases$update$equations
-  for (eq in c(dat$equations[eqs], dat$phases$update$variables)) {
+  eqs <- c(get_phase_equations("update", dat),
+           dat$phases$update$variables)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
   }
   cpp_function("void", "update", args, body$get(), static = TRUE)
@@ -293,8 +297,9 @@ generate_dust_system_rhs <- function(dat) {
   unpack <- intersect(dat$variables, dat$phases$deriv$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
-  eqs <- dat$phases$deriv$equations
-  for (eq in c(dat$equations[eqs], dat$phases$deriv$variables)) {
+  eqs <- c(get_phase_equations("deriv", dat),
+           dat$phases$deriv$variables)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_deriv", dat))
   }
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
@@ -359,8 +364,8 @@ generate_dust_system_compare_data <- function(dat) {
   ## with compare_ perhaps?
   body$add("real_type ll = 0;")
 
-  eqs <- dat$phases$compare$equations
-  for (eq in c(dat$equations[eqs])) {
+  eqs <- get_phase_equations("compare", dat)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state", dat))
   }
 
@@ -406,8 +411,9 @@ generate_dust_system_adjoint_update <- function(dat) {
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
                          "adjoint"))
-  eqs <- dat$adjoint$update$equations
-  for (eq in c(dat$equations[eqs], dat$adjoint$update$adjoint)) {
+  eqs <- c(get_phase_equations("update", dat, adjoint = TRUE),
+           dat$adjoint$update$adjoint)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
@@ -436,8 +442,9 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
     generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
                          "adjoint"))
 
-  eqs <- dat$adjoint$compare$equations
-  for (eq in c(dat$equations[eqs], dat$adjoint$compare$adjoint)) {
+  eqs <- c(get_phase_equations("compare", dat, adjoint = TRUE),
+           dat$adjoint$compare$adjoint)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
@@ -465,8 +472,9 @@ generate_dust_system_adjoint_initial <- function(dat) {
     generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
                          "adjoint"))
 
-  eqs <- dat$adjoint$initial$equations
-  for (eq in c(dat$equations[eqs], dat$adjoint$initial$adjoint)) {
+  eqs <- c(get_phase_equations("initial", dat, adjoint = TRUE),
+           dat$adjoint$initial$adjoint)
+  for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "adjoint_next", dat))
   }
 
@@ -627,4 +635,14 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
                            from,
                            offset[is_array])
   ret
+}
+
+
+get_phase_equations <- function(phase, dat, adjoint = FALSE) {
+  if (adjoint) {
+    nms <- dat$adjoint[[phase]]$equations
+  } else {
+    nms <- dat$phases[[phase]]$equations
+  }
+  dat$equations[names(dat$equations) %in% nms]
 }

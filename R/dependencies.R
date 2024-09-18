@@ -67,3 +67,15 @@ topological_order <- function(deps) {
 
   list(success = TRUE, value = ret)
 }
+
+
+collapse_dependencies <- function(deps) {
+  nms <- names(deps)
+  if (!anyDuplicated(nms)) {
+    return(deps)
+  }
+  i <- duplicated(nms)
+  dups <- unique(nms[i])
+  deps[dups] <- lapply(dups, function(nm) unique(unlist0(deps[nms == nm])))
+  deps[!i]
+}

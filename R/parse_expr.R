@@ -302,7 +302,9 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
                       "logical" = "bool")
 
   list(type = "parameter",
-       args = args)
+       args = args,
+       depends = list(functions = character(),
+                      variables = character()))
 }
 
 
@@ -585,7 +587,8 @@ parse_expr_check_lhs_index <- function(name, dim, index, src, call) {
                 "{.code 1 + (a:b)}")),
         "E1022", src, call)
     }
-    err <- setdiff(ret$depends$functions, c("+", "-", "(", ":"))
+    allowed <- c("+", "-", "(", ":", "length", "nrow", "ncol")
+    err <- setdiff(ret$depends$functions, allowed)
     if (length(err) > 0) {
       odin_parse_error(
         "Invalid function{?s} used in lhs of array assignment: {squote(err)}",

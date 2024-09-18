@@ -248,3 +248,48 @@ test_that("can use sqrt", {
       initial(x) <- 100
     }))
 })
+
+
+test_that("can cope with array equations involving multiple assignment", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- b
+    b <- a[1] + a[2]
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(a) <- n
+    a[1] <- 1
+    a[2] <- Normal(0, 1)
+  })
+  ## One copy of 'a' in the update equations
+  expect_equal(d$phases$update$equations,
+               c("a", "b"))
+  ## Correct topological order, with two copies of 'a'
+  expect_equal(names(d$equations),
+               c("n", "dim_a", "a", "a", "b"))
+  expect_equal(d$equations[[3]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$equations[[4]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+})
+
+
+test_that("allow multline array statement within update", {
+  d <- odin_parse({
+    initial(x[]) <- 1
+    update(x[1]) <- a[1]
+    update(x[2]) <- a[2]
+    dim(a) <- 2
+    a[] <- Normal(0, 1)
+    dim(x) <- 2
+  })
+
+  expect_equal(d$phases$update$equations, "a")
+  ## Correct topological order, with two copies of 'a'
+  expect_equal(names(d$equations),
+               c("dim_a", "dim_x", "a"))
+  expect_length(d$phases$update$variables, 2)
+  expect_equal(d$phases$update$variables[[1]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$phases$update$variables[[2]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+})

@@ -1350,3 +1350,59 @@ test_that("can add interpolation", {
     "  return shared_state{dim, offset, n, at, ay, interpolate_y};",
     "}"))
 })
+
+
+test_that("can generate multi-part array", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- b
+    b <- a[1] + a[2]
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(a) <- n
+    a[1] <- 1
+    a[2] <- Normal(0, 1)
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  internal.a[0] = 1;",
+      "  internal.a[1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  const real_type b = internal.a[0] + internal.a[1];",
+      "  state_next[0] = b;",
+      "}"))
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      '  const int n = dust2::r::read_int(parameters, "n");',
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
+      "  const shared_state::dim_type dim{dim_a};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, n};",
+      "}"))
+})
+
+
+test_that("can generate multi-part array in variables", {
+  dat <- odin_parse({
+    initial(x[]) <- 1
+    update(x[1]) <- a[1]
+    update(x[2]) <- a[2]
+    dim(a) <- 2
+    a[] <- Normal(0, 1)
+    dim(x) <- 2
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = internal.a[0];",
+      "  state_next[1 + 0] = internal.a[1];",
+      "}"))
+})

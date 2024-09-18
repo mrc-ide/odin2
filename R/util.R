@@ -177,3 +177,13 @@ read_lines <- function(path) {
 dir_create <- function(path) {
   dir.create(path, showWarnings = FALSE, recursive = TRUE)
 }
+
+
+match_all <- function(x, tab) {
+  which(x %in% tab)
+}
+
+
+last <- function(x) {
+  x[[length(x)]]
+}
