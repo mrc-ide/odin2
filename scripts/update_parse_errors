@@ -1,0 +1,4 @@
+#!/usr/bin/env Rscript
+errors <- reside.utils::errors_parse(
+  "vignettes/errors.Rmd", "E[0-9]{4}", "odin2::odin_error_explain")
+save(list = "errors", file = file.path("R/sysdata.rda"), version = 2)
