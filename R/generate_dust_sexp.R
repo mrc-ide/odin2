@@ -90,6 +90,11 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (is_stochastic_call) {
       ret <- sprintf("monty::random::%s<real_type>(rng_state, %s)",
                      fn, paste(args, collapse = ", "))
+    } else if (fn %in% c("as.logical", "as.integer", "as.numeric")) {
+      type_to <- c(as.logical = "bool",
+                   as.integer = "int",
+                   as.numeric = "real_type")[[fn]]
+      ret <- sprintf("static_cast<%s>(%s)", type_to, args[[1]])
     } else {
       ## TODO: we should catch this during parse; erroring here is a
       ## bug as we don't offer context.
