@@ -45,7 +45,7 @@ parse_expr_assignment <- function(expr, src, call) {
     if (!is.null(special)) {
       odin_parse_error(
         "Calls to 'interpolate()' must be assigned to a symbol",
-        "E1099", src, call)
+        "E1037", src, call)
     }
     lhs$name_data <- lhs$name
     lhs$name <- paste0("interpolate_", lhs$name)
