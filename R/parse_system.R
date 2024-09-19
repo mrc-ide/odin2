@@ -251,7 +251,7 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       c("Dimensions of arrays are not determined at initial creation",
         set_names(detail, "x"),
         set_names(hint, "i")),
-      "E2099", src, call)
+      "E2011", src, call)
   }
 
   ## Now, we try and work out which parts of the graph are needed at

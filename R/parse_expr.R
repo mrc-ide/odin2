@@ -95,7 +95,7 @@ parse_expr_assignment <- function(expr, src, call) {
           i = paste("Your equation references itself in its right-hand side,",
                     "which is only allowed for array equations or",
                     "update() and deriv() expressions")),
-        "E1099", src, call)
+        "E1038", src, call)
     }
   }
 
@@ -215,12 +215,12 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   if (is_stochastic) {
     odin_parse_error(
       "Array extent cannot be stochastic",
-      "E1099", src, call)
+      "E1039", src, call)
   }
   if ("time" %in% depends$variables) {
     odin_parse_error(
       "Array extent cannot be determined by time",
-      "E1099", src, call)
+      "E1040", src, call)
   }
   list(type = "dim",
        value = value,
