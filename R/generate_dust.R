@@ -143,14 +143,17 @@ generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
   body <- collector()
   eqs <- get_phase_equations("build_shared", dat)
+  allocated <- character()
   for (eq in eqs) {
-    if (eq$lhs$name %in% dat$storage$arrays$name) {
-      i <- match(eq$lhs$name, dat$storage$arrays$name)
+    name <- eq$lhs$name
+    if (name %in% dat$storage$arrays$name && !(name %in% allocated)) {
+      i <- match(name, dat$storage$arrays$name)
       size <- generate_dust_sexp(
-        call("OdinLength", eq$lhs$name),
+        call("OdinLength", name),
         dat$sexp_data, options)
       body$add(sprintf("std::vector<%s> %s(%s);",
-                       dat$storage$type[[eq$lhs$name]], eq$lhs$name, size))
+                       dat$storage$type[[name]], name, size))
+      allocated <- c(allocated, name)
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }

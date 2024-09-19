@@ -131,14 +131,7 @@ parse_system_depends <- function(equations, variables, call) {
   ## First, compute the topological order ignoring variables
   names(equations) <- nms
   deps <- collapse_dependencies(lapply(equations, function(eq) {
-    ## In an earlier proof-of-concept here we also removed eq$lhs$name
-    ## from the dependencies - we do need to do that for arrays at
-    ## least, so at some point some more effort is required here.
-    ##
-    ## TODO: we expect to see a cyclic dependency here now, and we'll
-    ## add a test in this PR and then fix this for arrays, but leave
-    ## an error in for other equations.
-    setdiff(eq$rhs$depends$variables, implicit)
+    setdiff(eq$rhs$depends$variables, c(implicit, eq$lhs$name))
   }))
   res <- topological_order(deps)
   if (!res$success) {
@@ -196,8 +189,9 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
   stage <- rep(NA_character_, length(equations))
 
   for (i in seq_along(equations)) {
-    rhs <- equations[[i]]$rhs
-    vars <- rhs$depends[["variables"]]
+    eq <- equations[[i]]
+    rhs <- eq$rhs
+    vars <- setdiff(rhs$depends[["variables"]], eq$lhs$name)
     if (identical(rhs$type, "parameter")) {
       is_constant <- isTRUE(rhs$args$constant)
       stage[[i]] <- if (is_constant) "system_create" else "parameter_update"

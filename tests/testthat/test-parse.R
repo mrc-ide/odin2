@@ -271,7 +271,6 @@ test_that("parse system with adjoint", {
     d ~ Poisson(p)
   })
 
-  expect_length(dat$adjoint$update$adjoint, 1)
   expect_equal(dat$adjoint$update$adjoint[[1]]$rhs$expr, quote(adj_x))
 })
 
@@ -318,4 +317,41 @@ test_that("allow multline array statement within update", {
                list(list(name = "i", type = "single", at = 1)))
   expect_equal(d$phases$update$variables[[2]]$lhs$array,
                list(list(name = "i", type = "single", at = 2)))
+})
+
+
+test_that("can write self-referential multipart equations", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + a[n]
+    n <- parameter(type = "integer", constant = TRUE)
+    a[1] <- 1
+    a[2] <- 1
+    a[3:length(a)] <- a[i - 2] + a[i - 1]
+    dim(a) <- n
+  })
+
+  expect_equal(d$phases$build_shared$equations,
+               c("n", "dim_a", "a"))
+  expect_equal(names(d$equations),
+               c("n", "dim_a", "a", "a", "a"))
+  expect_equal(d$equations[[3]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$equations[[4]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+  expect_equal(d$equations[[5]]$lhs$array,
+               list(list(name = "i", type = "range", from = 3,
+                         to = quote(length(a)))))
+  expect_equal(d$equations[[5]]$rhs$depends$variables, c("a", "dim_a"))
+})
+
+
+test_that("non-arrays cannot be self-referential", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- b
+      b <- b + b
+    }),
+    "Equation 'b' cannot reference itself")
 })

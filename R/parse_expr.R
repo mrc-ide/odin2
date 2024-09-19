@@ -84,6 +84,21 @@ parse_expr_assignment <- function(expr, src, call) {
     rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
   }
 
+  if (lhs$name %in% rhs$depends$variables) {
+    allow_self_reference <-
+      !is.null(lhs$array) ||
+      ((special %||% "") %in% c("update", "deriv"))
+    if (!allow_self_reference) {
+      rhs$depends$variables <- setdiff(rhs$depends$variables, lhs$name)
+      odin_parse_error(
+        c("Equation '{lhs$name}' cannot reference itself",
+          i = paste("Your equation references itself in its right-hand side,",
+                    "which is only allowed for array equations or",
+                    "update() and deriv() expressions")),
+        "E1099", src, call)
+    }
+  }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
