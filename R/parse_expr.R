@@ -41,6 +41,14 @@ parse_expr_assignment <- function(expr, src, call) {
         "E1014", src, call)
     }
     special <- "parameter"
+  } else if (rhs$type == "interpolate") {
+    if (!is.null(special)) {
+      odin_parse_error(
+        "Calls to 'interpolate()' must be assigned to a symbol",
+        "E1037", src, call)
+    }
+    lhs$name_data <- lhs$name
+    lhs$name <- paste0("interpolate_", lhs$name)
   }
 
   if (identical(special, "initial")) {
@@ -157,8 +165,7 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
   } else if (rlang::is_call(rhs, "data")) {
     parse_expr_assignment_rhs_data(rhs, src, call)
   } else if (rlang::is_call(rhs, "interpolate")) {
-    odin_parse_error("'interpolate()' is not implemented yet",
-                     "E0001", src, call)
+    parse_expr_assignment_rhs_interpolate(rhs, src, call)
   } else {
     parse_expr_assignment_rhs_expression(rhs, src, call)
   }
@@ -190,8 +197,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   depends <- join_dependencies(lapply(value, find_dependencies))
   list(type = "dim",
        value = value,
-       depends = depends,
-       is_stochastic = FALSE) # TODO - try and delete this?
+       depends = depends)
 }
 
 
@@ -306,6 +312,51 @@ parse_expr_assignment_rhs_data <- function(rhs, src, call) {
                      "E1010", src, call)
   }
   list(type = "data")
+}
+
+
+parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
+  result <- match_call(rhs, function(time, value, mode) NULL)
+  if (!result$success) {
+    odin_parse_error(c("Invalid call to 'interpolate()'",
+                       x = conditionMessage(result$error)),
+                     "E1003", src, call)
+  }
+  is_missing <- vlapply(result$value, rlang::is_missing)
+  if (any(is_missing)) {
+    msg <- names(result$value)[is_missing]
+    odin_parse_error(c("Invalid call to 'interpolate()'",
+                       x = "Missing argument{?s} {squote(msg)}"),
+                     "E1003", src, call)
+  }
+
+  for (nm in c("time", "value")) {
+    if (!rlang::is_symbol(result$value[[nm]])) {
+      odin_parse_error(
+        "Expected '{nm}' argument to 'interpolate()' to be a symbol",
+        "E1035", src, call)
+    }
+  }
+  tryCatch(
+    mode <- match_value(result$value$mode, c("constant", "linear", "spline")),
+    error = function(e) {
+      odin_parse_error(
+        "Invalid 'mode' argument to 'interpolate()'",
+        "E1036", src, call, parent = e)
+    })
+
+
+  time <- as.character(result$value$time)
+  value <- as.character(result$value$value)
+  depends <- list(functions = character(),
+                  variables = c(time, value))
+
+  expr <- call("OdinInterpolateAlloc",
+               mode = mode, time = time, value = value)
+
+  list(type = "interpolate",
+       expr = expr,
+       depends = depends)
 }
 
 

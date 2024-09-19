@@ -92,7 +92,25 @@ parse_system_overall <- function(exprs, call) {
     dims = I(dims),
     size = I(lapply(dims, expr_prod)))
 
-  exprs <- list(equations = exprs[is_equation],
+  is_interpolate <- vlapply(exprs,
+                            function(x) identical(x$rhs$type, "interpolate"))
+  if (any(is_interpolate)) {
+    interpolate_use <- lapply(
+      exprs[is_interpolate],
+      function(eq) {
+        list(
+          lhs = list(name = eq$lhs$name_data),
+          rhs = list(type = "expression",
+                     expr = call("OdinInterpolateEval", eq$lhs$name),
+                     depends = list(functions = character(),
+                                    variables = eq$lhs$name)),
+          src = eq$src)
+      })
+  } else {
+    interpolate_use <- NULL
+  }
+
+  exprs <- list(equations = c(exprs[is_equation], interpolate_use),
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
                 output = exprs[is_output],
@@ -177,7 +195,9 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       stage[[nm]] <-
         stages[[if (is_constant) "system_create" else "parameter_update"]]
     } else {
-      stage_min <- stages[[if (rhs$is_stochastic) "time" else "system_create"]]
+      is_time_stage <- isTRUE(rhs$is_stochastic) ||
+        rlang::is_call(rhs$expr, "OdinInterpolateEval")
+      stage_min <- stages[[if (is_time_stage) "time" else "system_create"]]
       stage[[nm]] <- max(stage_min, stage[rhs$depends$variables])
     }
   }

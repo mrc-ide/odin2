@@ -218,14 +218,6 @@ test_that("delays not yet supported", {
 })
 
 
-test_that("delays not yet supported", {
-  expect_error(
-    parse_expr(quote(a <- interpolate(b, "constant")), NULL, NULL),
-    "'interpolate()' is not implemented yet",
-    fixed = TRUE)
-})
-
-
 test_that("Reject unclassifiable expressions", {
   expect_error(
     parse_expr(quote(a), NULL, NULL),

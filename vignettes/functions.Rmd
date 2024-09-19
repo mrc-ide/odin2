@@ -190,6 +190,27 @@ ax_tmp[, ] <- a[i, j] * x[j]
 ax[] <- sum(a[, i])
 ```
 
+# Interpolation
+
+You can create variables that interpolate against time.  This is useful in a few contexts, for example:
+
+* A piecewise constant function that represents the level of some external factor
+* A smooth function that represents an environmental input
+
+Currently all interpolation functions are *scalar valued* meaning that at each time a single output is produced.
+
+The usage is:
+
+```r
+interpolate(time, value, mode)
+```
+
+* `time` is a vector representing time values
+* `value` is a vector representing the series you would like to interpolate, the same length as `time`
+* `mode` is a string, one of `constant`, `linear` or `spline`
+
+Once complete we will show usage of interpolating functions in their own vignette.
+
 # Distribution functions
 
 We support distribution functions in two places:

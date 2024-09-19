@@ -1311,3 +1311,42 @@ test_that("can generate partial sums over arrays", {
       "  }",
       "}"))
 })
+
+
+test_that("can add interpolation", {
+  dat <- odin_parse({
+    update(x) <- y
+    initial(x) <- 0
+    y <- interpolate(at, ay, "constant")
+    at <- parameter()
+    ay <- parameter()
+    dim(at) <- n
+    dim(ay) <- n
+    n <- 5
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const real_type y = shared.interpolate_y.eval(time);",
+      "  state_next[0] = y;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+    "  const real_type n = 5;",
+    "  const dust2::array::dimensions<1> dim_at{static_cast<size_t>(n)};",
+    "  const dust2::array::dimensions<1> dim_ay{static_cast<size_t>(n)};",
+    "  std::vector<real_type> at(dim_at.size);",
+    '  dust2::r::read_real_vector(parameters, dim_at.size, at.data(), "at", true);',
+    "  std::vector<real_type> ay(dim_ay.size);",
+    '  dust2::r::read_real_vector(parameters, dim_ay.size, ay.data(), "ay", true);',
+    '  const real_type interpolate_y = dust2::interpolate::InterpolateConstant(at, ay, "at", "ay");',
+    "  const shared_state::dim_type dim{dim_at, dim_ay};",
+    "  shared_state::offset_type offset;",
+    "  offset.state.x = 0;",
+    "  return shared_state{dim, offset, n, at, ay, interpolate_y};",
+    "}"))
+})
