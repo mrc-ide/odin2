@@ -355,3 +355,24 @@ test_that("non-arrays cannot be self-referential", {
     }),
     "Equation 'b' cannot reference itself")
 })
+
+
+test_that("error if arrays have non-constant dimension", {
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- sum(a)
+      a[] <- 1
+      dim(a) <- n
+      n <- parameter(type = "integer")
+    }),
+    "Dimensions of arrays are not determined at initial creation")
+  expect_match(
+    err$body[[1]],
+    "'a' is determined at stage 'parameter_update', it depends on 'n'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[2]],
+    "Try adding `constant = TRUE` into the 'parameter()' call for 'n'",
+    fixed = TRUE)
+})

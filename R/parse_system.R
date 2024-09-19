@@ -220,10 +220,38 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
   is_dim <- vlapply(equations, function(x) identical(x$special, "dim"))
   stage_dim <- stage[names(which(is_dim))]
-  if (any(stage_dim != "system_create")) {
-    ## TODO: this does need a decent error, referencing the invalid
-    ## equations and explaining why we think the dimension is time.
-    stop("invalid dimension time")
+  is_err <- stage_dim != "system_create"
+  if (any(is_err)) {
+    err <- equations[is_dim][is_err]
+    err_nms <- vcapply(err, function(x) x$lhs$name_data)
+    err_stage <- stage_dim[is_err]
+    err_deps <- vcapply(err, function(x) {
+      deps <- x$rhs$depends$variables_recursive
+      paste(sprintf("'%s' (%s)", deps, stage[deps]), collapse = ", ")
+    })
+    detail <- sprintf(
+      "'%s' is determined at stage '%s', it depends on %s",
+      err_nms, err_stage, err_deps)
+    src <- unname(lapply(err, "[[", "src"))
+    hint <- NULL
+
+    if (any(err_stage == "parameter_update")) {
+      deps <- unlist0(lapply(err[err_stage == "parameter_update"],
+                             function(x) x$rhs$depends$variables_recursive))
+      deps_pars <- deps[vlapply(equations[deps], function(eq) {
+        eq$special == "parameter" && stage[[eq$lhs$name]] == "parameter_update"
+      })]
+      if (length(deps_pars) > 0) {
+        hint <- paste(
+          "Try adding {.code constant = TRUE} into the 'parameter()' call{?s}",
+          "for {squote(deps_pars)}")
+      }
+    }
+    odin_parse_error(
+      c("Dimensions of arrays are not determined at initial creation",
+        set_names(detail, "x"),
+        set_names(hint, "i")),
+      "E2099", src, call)
   }
 
   ## Now, we try and work out which parts of the graph are needed at
