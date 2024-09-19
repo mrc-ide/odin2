@@ -390,7 +390,7 @@ test_that("error if arrays have non-constant dimension", {
     "Dimensions of arrays are not determined at initial creation")
   expect_match(
     err$body[[1]],
-    "'a' is determined at stage 'parameter_update', it depends on 'n'",
+    "'a' is determined at stage 'time', it depends on 'n' (time)",
     fixed = TRUE)
   expect_length(err$body, 1)
 })
