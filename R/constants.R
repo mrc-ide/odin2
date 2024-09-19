@@ -67,6 +67,7 @@ FUNCTIONS <- list(
   floor = floor,
   round = function(x) NULL, # no digits support yet
   trunc = function(x) NULL,
+  sqrt = sqrt,
   abs = abs,
   exp = exp,
   expm1 = expm1,

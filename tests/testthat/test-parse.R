@@ -238,3 +238,13 @@ test_that("pack system of mixed arrays and scalars", {
                size = I(list(2, 1)),
                offset = I(list(0, 2))))
 })
+
+
+test_that("can use sqrt", {
+  ## Reported missing by Marc in 0.1.2
+  expect_no_error(
+    odin_parse({
+      update(x) <- sqrt(x)
+      initial(x) <- 100
+    }))
+})
