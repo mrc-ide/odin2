@@ -394,3 +394,41 @@ test_that("error if arrays have non-constant dimension", {
     fixed = TRUE)
   expect_length(err$body, 1)
 })
+
+
+test_that("only arrays can be duplicated", {
+  err <- expect_error(
+    odin_parse({
+      update(x) <- a
+      initial(x) <- 0
+      a <- 1
+      a <- 2
+    }),
+    "Only arrays can be assigned over multiple statements, but 'a' is")
+})
+
+
+test_that("only arrays can be duplicated", {
+  expect_error(
+    odin_parse({
+      update(x) <- a
+      initial(x) <- 0
+      a <- 1
+      a <- 2
+    }),
+    "Only arrays can be assigned over multiple statements, but 'a' is")
+})
+
+
+test_that("multline array equations must be contiguous", {
+  expect_error(
+    odin_parse({
+      update(x) <- sum(a)
+      initial(x) <- 0
+      a[1] <- 1
+      b <- 2
+      a[2] <- b
+      dim(a) <- 2
+    }),
+    "Multiline array equations must be contiguous statements, but 'a'")
+})

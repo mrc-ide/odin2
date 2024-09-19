@@ -437,50 +437,43 @@ parse_system_arrays <- function(exprs, call) {
     exprs[[i]] <- eq
   }
 
-  ## id <- vcapply(exprs, "[[", "id")
-  ## if (anyDuplicated(id)) {
-  ##   ## TODO: check here that all duplicates
-  ##   for (i in unique(id[duplicated(id)])) {
-  ##     j <- id == i
-  ##     exprs[j] <- parse_system_arrays_check_duplicated(exprs[j], call)
-  ##   }
-  ## }
-
-  ## Now, check combine any duplicates:
-  ## special <- vcapply(exprs, function(x) x$special %||% "")
-  ## name <- vcapply(exprs, function(x) x$lhs$name %||% "")
-  ## key <- paste(special, name, sep = ":")
-  ## if (any(duplicated(key))) {
-  ##   for (nm in unique(key[duplicated(key)])) {
-  ##     ## Here we'd be looking for everyone being array assignments
-  ##     ## exprs <- parse_system_arrays_can_combine(key == nm, exprs, call)
-  ##   }
-  ## }
+  id <- sprintf("%s:%s", nms, vcapply(exprs, function(x) x$special %||% ""))
+  if (anyDuplicated(id)) {
+    for (i in unique(id[duplicated(id)])) {
+      parse_system_arrays_check_duplicated(id == i, exprs, call)
+    }
+  }
 
   exprs
 }
 
 
-parse_system_arrays_check_duplicated <- function(exprs, call) {
-  is_array_assignment <- vlapply(exprs, function(eq) {
+parse_system_arrays_check_duplicated <- function(i, exprs, call) {
+  index <- which(i)
+  nm <- exprs[[index[[1]]]]$lhs$name
+
+  is_array_assignment <- vlapply(exprs[i], function(eq) {
     eq$rhs$type == "expression" && !is.null(eq$lhs$array)
   })
   if (!all(is_array_assignment)) {
-    stop("cope with this...")
+    src <- lapply(exprs[i], "[[", "src")
+    odin_parse_error(
+      paste("Only arrays can be assigned over multiple statements, but",
+            "'{nm}' is assigned as a symbol"),
+      "E2012", src, call)
   }
 
-  index <- lapply(exprs, function(x) x$src$index)
-  for (i in seq_along(index)[-1]) {
-    if (index[[i]][[1]] != last(index[[i - 1]]) + 1) {
-      stop("equations are not contiguous")
-    }
+  if (any(diff(index) > 1)) {
+    index_others <- Filter(
+      function(j) j > index[[1]] && j < last(index),
+      which(!i))
+    others <- unique(vcapply(exprs[index_others], function(x) x$lhs$name))
+    src <- lapply(exprs[seq(index[[1]], last(index))], "[[", "src")
+    odin_parse_error(
+      paste("Multiline array equations must be contiguous",
+            "statements, but '{nm}' is interleaved with {squote(others)}"),
+      "E2013", src, call)
   }
-
-  for (i in seq_along(exprs)) {
-    exprs[[i]]$id <- sprintf("%s:%d", exprs[[i]]$id, i)
-  }
-
-  exprs
 }
 
 

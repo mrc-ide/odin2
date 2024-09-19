@@ -641,3 +641,36 @@ n <- parameter(type = "integer", constant = TRUE)
 ```
 
 Similarly, if `n` depended on `time`, or if it was (or depended on) anything stochastic, this would be an error because then the array dimension would have to change every time step.
+
+# `E2012`
+
+Assignments to the same variable must all be to arrays.  You cannot write, for example:
+
+```
+a <- 1 + 2
+a <- sqrt(a)
+```
+
+to compute `a` in two stages.
+
+Sometimes this error will be thrown because you have been inconsistent with use of array-assignment square brackets, for example:
+
+```
+a <- 0
+a[2] <- 1
+```
+
+Above, the first line probably should have been `a[] <- 0 or `a[1] <- 0`.
+
+
+# `E2013`
+
+Multiline array equations must be written as consecutive statements, with no assignments to other variables in between (comments are fine).  So this is an error:
+
+```
+a[1] <- 1
+b <- 10
+a[2] <- b
+```
+
+Because the assignment to `b` occurs within the block of assignments to `a[]`.  When we evaluate the expressions, all of the assignments to `a` will happen in one go (in the order written) and if you interleave them it gives the false idea of controlling the flow of equations more than you really can.
