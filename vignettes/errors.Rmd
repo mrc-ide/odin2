@@ -479,7 +479,7 @@ we expect to see
 
 ```
 a <- interpolate(a, y, "linear")
-dim(x) <- 10
+dim(a) <- 10
 ```
 
 This is similar to the requirement that array-valued parameters are assigned at once (in contrast to odin version 1).
