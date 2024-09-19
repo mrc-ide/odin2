@@ -179,11 +179,6 @@ dir_create <- function(path) {
 }
 
 
-match_all <- function(x, tab) {
-  which(x %in% tab)
-}
-
-
 last <- function(x) {
   x[[length(x)]]
 }

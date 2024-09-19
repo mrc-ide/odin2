@@ -140,9 +140,7 @@ parse_system_depends <- function(equations, variables, call) {
     ## an error in for other equations.
     setdiff(eq$rhs$depends$variables, implicit)
   }))
-
   res <- topological_order(deps)
-
   if (!res$success) {
     nms <- names(deps)[res$error]
     details <- vcapply(nms, function(x) {
@@ -254,12 +252,10 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
                             FALSE, FALSE))
       eqs <- intersect(names(equations), deps)
       eqs <- union(eqs, unlist0(deps_recursive[eqs]))
-
       used <- union(used, eqs)
 
       is_time <- stage[eqs] %in% c("time", "data")
       eqs_time <- intersect(names(equations), eqs[is_time])
-
       unpack <- intersect(variables, c(eqs, deps))
       required <- union(required, eqs[!is_time])
 
@@ -302,7 +298,6 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
     }
   }
 
-  ## Work out the remainder here:
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(

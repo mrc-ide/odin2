@@ -53,7 +53,6 @@ parse_check_usage_find_unknown <- function(exprs, dat, call) {
            dat$phases$initial$variables,
            dat$phases$compare$compare,
            unname(dat$equations))
-
   unknown <- lapply(eqs, function(eq) setdiff(eq$rhs$depends$variables, known))
   err <- lengths(unknown) > 0
   if (!any(err)) {
