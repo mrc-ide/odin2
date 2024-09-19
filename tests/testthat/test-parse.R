@@ -250,6 +250,32 @@ test_that("can use sqrt", {
 })
 
 
+test_that("parse simple stochastic system", {
+  dat <- odin_parse({
+    update(x) <- Normal(x, 1)
+    initial(x) <- 0
+  })
+  expect_length(dat$phases$update$variables, 1)
+  expect_equal(dat$phases$update$variables[[1]]$lhs$name, "x")
+  expect_equal(dat$phases$update$unpack, "x")
+})
+
+
+test_that("parse system with adjoint", {
+  dat <- odin_parse({
+    update(x) <- x + a
+    initial(x) <- 1
+    a <- parameter(differentiate = TRUE)
+    p <- exp(x)
+    d <- data()
+    d ~ Poisson(p)
+  })
+
+  expect_length(dat$adjoint$update$adjoint, 1)
+  expect_equal(dat$adjoint$update$adjoint[[1]]$rhs$expr, quote(adj_x))
+})
+
+
 test_that("can cope with array equations involving multiple assignment", {
   d <- odin_parse({
     initial(x) <- 1
