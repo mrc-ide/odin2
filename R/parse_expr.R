@@ -210,6 +210,18 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     value <- list(rhs)
   }
   depends <- join_dependencies(lapply(value, find_dependencies))
+  is_stochastic <- any(
+    depends$functions %in% monty::monty_dsl_distributions()$name)
+  if (is_stochastic) {
+    odin_parse_error(
+      "Array extent cannot be stochastic",
+      "E1099", src, call)
+  }
+  if ("time" %in% depends$variables) {
+    odin_parse_error(
+      "Array extent cannot be determined by time",
+      "E1099", src, call)
+  }
   list(type = "dim",
        value = value,
        depends = depends)
