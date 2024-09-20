@@ -248,3 +248,187 @@ test_that("can use sqrt", {
       initial(x) <- 100
     }))
 })
+
+
+test_that("parse simple stochastic system", {
+  dat <- odin_parse({
+    update(x) <- Normal(x, 1)
+    initial(x) <- 0
+  })
+  expect_length(dat$phases$update$variables, 1)
+  expect_equal(dat$phases$update$variables[[1]]$lhs$name, "x")
+  expect_equal(dat$phases$update$unpack, "x")
+})
+
+
+test_that("parse system with adjoint", {
+  dat <- odin_parse({
+    update(x) <- x + a
+    initial(x) <- 1
+    a <- parameter(differentiate = TRUE)
+    p <- exp(x)
+    d <- data()
+    d ~ Poisson(p)
+  })
+
+  expect_equal(dat$adjoint$update$adjoint[[1]]$rhs$expr, quote(adj_x))
+})
+
+
+test_that("can cope with array equations involving multiple assignment", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- b
+    b <- a[1] + a[2]
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(a) <- n
+    a[1] <- 1
+    a[2] <- Normal(0, 1)
+  })
+  ## One copy of 'a' in the update equations
+  expect_equal(d$phases$update$equations,
+               c("a", "b"))
+  ## Correct topological order, with two copies of 'a'
+  expect_equal(names(d$equations),
+               c("n", "dim_a", "a", "a", "b"))
+  expect_equal(d$equations[[3]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$equations[[4]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+})
+
+
+test_that("allow multline array statement within update", {
+  d <- odin_parse({
+    initial(x[]) <- 1
+    update(x[1]) <- a[1]
+    update(x[2]) <- a[2]
+    dim(a) <- 2
+    a[] <- Normal(0, 1)
+    dim(x) <- 2
+  })
+
+  expect_equal(d$phases$update$equations, "a")
+  ## Correct topological order, with two copies of 'a'
+  expect_equal(names(d$equations),
+               c("dim_a", "dim_x", "a"))
+  expect_length(d$phases$update$variables, 2)
+  expect_equal(d$phases$update$variables[[1]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$phases$update$variables[[2]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+})
+
+
+test_that("can write self-referential multipart equations", {
+  d <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + a[n]
+    n <- parameter(type = "integer", constant = TRUE)
+    a[1] <- 1
+    a[2] <- 1
+    a[3:length(a)] <- a[i - 2] + a[i - 1]
+    dim(a) <- n
+  })
+
+  expect_equal(d$phases$build_shared$equations,
+               c("n", "dim_a", "a"))
+  expect_equal(names(d$equations),
+               c("n", "dim_a", "a", "a", "a"))
+  expect_equal(d$equations[[3]]$lhs$array,
+               list(list(name = "i", type = "single", at = 1)))
+  expect_equal(d$equations[[4]]$lhs$array,
+               list(list(name = "i", type = "single", at = 2)))
+  expect_equal(d$equations[[5]]$lhs$array,
+               list(list(name = "i", type = "range", from = 3,
+                         to = quote(length(a)))))
+  expect_equal(d$equations[[5]]$rhs$depends$variables, c("a", "dim_a"))
+})
+
+
+test_that("non-arrays cannot be self-referential", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- b
+      b <- b + b
+    }),
+    "Equation 'b' cannot reference itself")
+})
+
+
+test_that("error if arrays have non-constant dimension", {
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- sum(a)
+      a[] <- 1
+      dim(a) <- n
+      n <- parameter(type = "integer")
+    }),
+    "Dimensions of arrays are not determined at initial creation")
+  expect_match(
+    err$body[[1]],
+    "'a' is determined at stage 'parameter_update', it depends on 'n'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[2]],
+    "Try adding `constant = TRUE` into the 'parameter()' call for 'n'",
+    fixed = TRUE)
+})
+
+
+test_that("error if arrays have non-constant dimension", {
+  err <- expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- sum(a)
+      a[] <- 1
+      dim(a) <- n
+      n <- Poisson(2)
+    }),
+    "Dimensions of arrays are not determined at initial creation")
+  expect_match(
+    err$body[[1]],
+    "'a' is determined at stage 'time', it depends on 'n' (time)",
+    fixed = TRUE)
+  expect_length(err$body, 1)
+})
+
+
+test_that("only arrays can be duplicated", {
+  err <- expect_error(
+    odin_parse({
+      update(x) <- a
+      initial(x) <- 0
+      a <- 1
+      a <- 2
+    }),
+    "Only arrays can be assigned over multiple statements, but 'a' is")
+})
+
+
+test_that("only arrays can be duplicated", {
+  expect_error(
+    odin_parse({
+      update(x) <- a
+      initial(x) <- 0
+      a <- 1
+      a <- 2
+    }),
+    "Only arrays can be assigned over multiple statements, but 'a' is")
+})
+
+
+test_that("multline array equations must be contiguous", {
+  expect_error(
+    odin_parse({
+      update(x) <- sum(a)
+      initial(x) <- 0
+      a[1] <- 1
+      b <- 2
+      a[2] <- b
+      dim(a) <- 2
+    }),
+    "Multiline array equations must be contiguous statements, but 'a'")
+})

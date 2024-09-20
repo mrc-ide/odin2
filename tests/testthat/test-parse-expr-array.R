@@ -147,3 +147,23 @@ test_that("require that range access is simple", {
     parse_expr(quote(y <- sum(x[a:b + c])), NULL, NULL),
     "Invalid use of range operator ':' within 'sum' call")
 })
+
+
+test_that("array dimensions cannot be stochastic", {
+  expect_error(
+    parse_expr(quote(dim(a) <- Poisson(2)), NULL, NULL),
+    "Array extent cannot be stochastic")
+  expect_error(
+    parse_expr(quote(dim(a) <- 3 + a * Poisson(2)), NULL, NULL),
+    "Array extent cannot be stochastic")
+})
+
+
+test_that("array dimensions cannot be determined by time", {
+  expect_error(
+    parse_expr(quote(dim(a) <- time), NULL, NULL),
+    "Array extent cannot be determined by time")
+  expect_error(
+    parse_expr(quote(dim(a) <- 3 + a * time), NULL, NULL),
+    "Array extent cannot be determined by time")
+})

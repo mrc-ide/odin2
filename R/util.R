@@ -177,3 +177,8 @@ read_lines <- function(path) {
 dir_create <- function(path) {
   dir.create(path, showWarnings = FALSE, recursive = TRUE)
 }
+
+
+last <- function(x) {
+  x[[length(x)]]
+}

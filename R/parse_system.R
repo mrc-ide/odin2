@@ -27,10 +27,6 @@ parse_system_overall <- function(exprs, call) {
       "E0001", src, call)
   }
 
-  ## TODO: names must not be duplicated across all equations.  This
-  ## check is quite hard to get right because of arrays, and is best
-  ## done elsewhere.  For now we'll just ignore this problem...
-
   target <- if (is_continuous) "deriv" else "update"
   is_target <- special == target
 
@@ -127,36 +123,37 @@ parse_system_overall <- function(exprs, call) {
 }
 
 
-## TODO: update this to cope with the idea that there might be
-## duplicated entries
 parse_system_depends <- function(equations, variables, call) {
   automatic <- c("time", "dt")
   implicit <- c(variables, automatic)
 
+  nms <- vcapply(equations, function(eq) eq$lhs$name)
   ## First, compute the topological order ignoring variables
-  names(equations) <- vcapply(equations, function(eq) eq$lhs$name)
-  deps <- lapply(equations, function(eq) {
-    ## In an earlier proof-of-concept here we also removed eq$lhs$name
-    ## from the dependencies - we do need to do that for arrays at
-    ## least, so at some point some more effort is required here.
-    setdiff(eq$rhs$depends$variables, implicit)
-  })
+  names(equations) <- nms
+  deps <- collapse_dependencies(lapply(equations, function(eq) {
+    setdiff(eq$rhs$depends$variables, c(implicit, eq$lhs$name))
+  }))
   res <- topological_order(deps)
   if (!res$success) {
     nms <- names(deps)[res$error]
     details <- vcapply(nms, function(x) {
       sprintf("%s: depends on: %s", x, paste(deps[[x]], collapse = ", "))
     })
-    src <- unname(lapply(equations[res$error], "[[", "src"))
+    i <- match(nms, names(deps))
+    src <- unname(lapply(equations[res$error[i]], "[[", "src"))
     odin_parse_error(
       c("Cyclic dependency detected within equation{?s} {squote(nms)}",
         set_names(details, "i")),
       "E2005", src, call)
   }
 
+  ## Reorder equations by topological order, preserving ordering
+  ## within duplicated names:
+  equations <- equations[order(match(nms, names(deps)[res$value]))]
+
   ## Now, we need to get the variables a second time, and only exclude
   ## automatic variables
-  deps <- lapply(equations[res$value], function(eq) {
+  deps <- lapply(equations, function(eq) {
     setdiff(eq$rhs$depends$variables, automatic)
   })
   deps_recursive <- list()
@@ -165,13 +162,18 @@ parse_system_depends <- function(equations, variables, call) {
     deps_recursive[[nm]] <- union(
       vars,
       unlist(deps_recursive[vars], FALSE, FALSE))
-    equations[[nm]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
+    for (i in which(names(equations) == nm)) {
+      equations[[i]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
+    }
   }
 
-  equations[names(deps)]
+  equations
 }
 
 
+## Next step, make phase (again) a property of a name, not an id.  I
+## don't think the alternative is interesting enough to warrant the
+## effort.  Then things simplify back out quite nicely again....
 parse_system_phases <- function(exprs, equations, variables, data, call) {
   ## First compute the 'stage' that things occur in; there are only
   ## three of these, but "time" covers a multitude of sins and
@@ -183,39 +185,81 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
               time = 3,
               data = 4)
   implicit <- c(variables, "time", "dt")
-  stage <- c(
-    set_names(rep(stages[["time"]], length(implicit)), implicit),
-    set_names(rep(stages[["data"]], length(data)), data))
-  ## TODO: look for `names(equations)` everywhere and update to cope
-  ## with duplication.
-  for (nm in names(equations)) {
-    rhs <- equations[[nm]]$rhs
+
+  stage <- rep(NA_character_, length(equations))
+
+  for (i in seq_along(equations)) {
+    eq <- equations[[i]]
+    rhs <- eq$rhs
+    vars <- setdiff(rhs$depends[["variables"]], eq$lhs$name)
     if (identical(rhs$type, "parameter")) {
       is_constant <- isTRUE(rhs$args$constant)
-      stage[[nm]] <-
-        stages[[if (is_constant) "system_create" else "parameter_update"]]
+      stage[[i]] <- if (is_constant) "system_create" else "parameter_update"
+    } else if (any(vars %in% data)) {
+      stage[[i]] <- "data"
+    } else if (isTRUE(rhs$is_stochastic) || any(vars %in% implicit)) {
+      stage[[i]] <- "time"
+    } else if (rlang::is_call(rhs$expr, "OdinInterpolateEval")) {
+      stage[[i]] <- "time"
     } else {
-      is_time_stage <- isTRUE(rhs$is_stochastic) ||
-        rlang::is_call(rhs$expr, "OdinInterpolateEval")
-      stage_min <- stages[[if (is_time_stage) "time" else "system_create"]]
-      stage[[nm]] <- max(stage_min, stage[rhs$depends$variables])
+      stage_i <- stage[names(equations) %in% vars]
+      if (length(stage_i) == 0) {
+        stage[[i]] <- "system_create"
+      } else {
+        stage[[i]] <- names(stages)[[max(stages[stage_i])]]
+      }
     }
   }
 
-  stage <- set_names(names(stages)[stage], names(stage))
+  if (anyDuplicated(names(equations))) {
+    stages_i <- tapply(stages[stage], names(equations), max)
+    stage <- set_names(names(stages)[stages_i], names(stages_i))
+  } else {
+    stage <- set_names(stage, names(equations))
+  }
 
   is_dim <- vlapply(equations, function(x) identical(x$special, "dim"))
   stage_dim <- stage[names(which(is_dim))]
-  if (any(stage_dim != "system_create")) {
-    stop("invalid dimension time")
+  is_err <- stage_dim != "system_create"
+  if (any(is_err)) {
+    err <- equations[is_dim][is_err]
+    err_nms <- vcapply(err, function(x) x$lhs$name_data)
+    err_stage <- stage_dim[is_err]
+    err_deps <- vcapply(err, function(x) {
+      deps <- x$rhs$depends$variables_recursive
+      paste(sprintf("'%s' (%s)", deps, stage[deps]), collapse = ", ")
+    })
+    detail <- sprintf(
+      "'%s' is determined at stage '%s', it depends on %s",
+      err_nms, err_stage, err_deps)
+    src <- unname(lapply(err, "[[", "src"))
+    hint <- NULL
+
+    if (any(err_stage == "parameter_update")) {
+      deps <- unlist0(lapply(err[err_stage == "parameter_update"],
+                             function(x) x$rhs$depends$variables_recursive))
+      deps_pars <- deps[vlapply(equations[deps], function(eq) {
+        eq$special == "parameter" && stage[[eq$lhs$name]] == "parameter_update"
+      })]
+      if (length(deps_pars) > 0) {
+        hint <- paste(
+          "Try adding {.code constant = TRUE} into the 'parameter()' call{?s}",
+          "for {squote(deps_pars)}")
+      }
+    }
+    odin_parse_error(
+      c("Dimensions of arrays are not determined at initial creation",
+        set_names(detail, "x"),
+        set_names(hint, "i")),
+      "E2011", src, call)
   }
 
   ## Now, we try and work out which parts of the graph are needed at
   ## different "phases".  These roughly correspond to dust functions.
 
-  deps_recursive <- lapply(equations, function(x) {
+  deps_recursive <- collapse_dependencies(lapply(equations, function(x) {
     x$rhs$depends$variables_recursive
-  })
+  }))
 
   used <- character()
   required <- character()
@@ -229,7 +273,7 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       deps <- unique(unlist(lapply(e, function(x) x$rhs$depends$variables),
                             FALSE, FALSE))
       eqs <- intersect(names(equations), deps)
-      eqs <- union(eqs, unlist(deps_recursive[eqs], FALSE, FALSE))
+      eqs <- union(eqs, unlist0(deps_recursive[eqs]))
       used <- union(used, eqs)
 
       is_time <- stage[eqs] %in% c("time", "data")
@@ -393,7 +437,43 @@ parse_system_arrays <- function(exprs, call) {
     exprs[[i]] <- eq
   }
 
+  id <- sprintf("%s:%s", nms, vcapply(exprs, function(x) x$special %||% ""))
+  if (anyDuplicated(id)) {
+    for (i in unique(id[duplicated(id)])) {
+      parse_system_arrays_check_duplicated(id == i, exprs, call)
+    }
+  }
+
   exprs
+}
+
+
+parse_system_arrays_check_duplicated <- function(i, exprs, call) {
+  index <- which(i)
+  nm <- exprs[[index[[1]]]]$lhs$name
+
+  is_array_assignment <- vlapply(exprs[i], function(eq) {
+    eq$rhs$type == "expression" && !is.null(eq$lhs$array)
+  })
+  if (!all(is_array_assignment)) {
+    src <- lapply(exprs[i], "[[", "src")
+    odin_parse_error(
+      paste("Only arrays can be assigned over multiple statements, but",
+            "'{nm}' is assigned as a symbol"),
+      "E2012", src, call)
+  }
+
+  if (any(diff(index) > 1)) {
+    index_others <- Filter(
+      function(j) j > index[[1]] && j < last(index),
+      which(!i))
+    others <- unique(vcapply(exprs[index_others], function(x) x$lhs$name))
+    src <- lapply(exprs[seq(index[[1]], last(index))], "[[", "src")
+    odin_parse_error(
+      paste("Multiline array equations must be contiguous",
+            "statements, but '{nm}' is interleaved with {squote(others)}"),
+      "E2013", src, call)
+  }
 }
 
 

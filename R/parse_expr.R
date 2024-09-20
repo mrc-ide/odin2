@@ -84,6 +84,21 @@ parse_expr_assignment <- function(expr, src, call) {
     rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
   }
 
+  if (lhs$name %in% rhs$depends$variables) {
+    allow_self_reference <-
+      !is.null(lhs$array) ||
+      ((special %||% "") %in% c("update", "deriv"))
+    if (!allow_self_reference) {
+      rhs$depends$variables <- setdiff(rhs$depends$variables, lhs$name)
+      odin_parse_error(
+        c("Equation '{lhs$name}' cannot reference itself",
+          i = paste("Your equation references itself in its right-hand side,",
+                    "which is only allowed for array equations or",
+                    "update() and deriv() expressions")),
+        "E1038", src, call)
+    }
+  }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -195,6 +210,18 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     value <- list(rhs)
   }
   depends <- join_dependencies(lapply(value, find_dependencies))
+  is_stochastic <- any(
+    depends$functions %in% monty::monty_dsl_distributions()$name)
+  if (is_stochastic) {
+    odin_parse_error(
+      "Array extent cannot be stochastic",
+      "E1039", src, call)
+  }
+  if ("time" %in% depends$variables) {
+    odin_parse_error(
+      "Array extent cannot be determined by time",
+      "E1040", src, call)
+  }
   list(type = "dim",
        value = value,
        depends = depends)
@@ -302,7 +329,9 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
                       "logical" = "bool")
 
   list(type = "parameter",
-       args = args)
+       args = args,
+       depends = list(functions = character(),
+                      variables = character()))
 }
 
 
@@ -585,7 +614,8 @@ parse_expr_check_lhs_index <- function(name, dim, index, src, call) {
                 "{.code 1 + (a:b)}")),
         "E1022", src, call)
     }
-    err <- setdiff(ret$depends$functions, c("+", "-", "(", ":"))
+    allowed <- c("+", "-", "(", ":", "length", "nrow", "ncol")
+    err <- setdiff(ret$depends$functions, allowed)
     if (length(err) > 0) {
       odin_parse_error(
         "Invalid function{?s} used in lhs of array assignment: {squote(err)}",

@@ -484,6 +484,40 @@ dim(a) <- 10
 
 This is similar to the requirement that array-valued parameters are assigned at once (in contrast to odin version 1).
 
+# `E1038`
+
+This equation cannot reference itself.  There are some types of equations that **can** reference themselves, for example:
+
+```
+update(x) <- x + 1         # references 'x' from the previous step
+deriv(x) <- x              # derivative referencing the actual variable
+x[2:n] <- x[i] / x[i - 1]  # referencing elsewhere in the array
+```
+
+However, in general this makes little sense and is disallowed, for example:
+
+```
+b <- b + 1
+```
+
+This is not allowed because we have a cycle in the graph for `b` (a special case of [E2005](#e2005)).
+
+# `E1039`
+
+Array extent cannot be stochastic.  This is really a special case of [E2011](#e2011) but detectable in a single expression.  An example that would throw this error is:
+
+```
+dim(a) <- Poisson(2)
+```
+
+# `E1040`
+
+Array extent cannot be determined by time.  This is really a special case of [E2011](#e2011) but detectable in a single expression.  An example that would throw this error is:
+
+```
+dim(a) <- if (time > 10) 100 else 20
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
@@ -587,3 +621,56 @@ d <- data()
 ```
 
 Here, `d` defines some data, and we try to use it from `update()` but we just can't do that.
+
+# `E2011`
+
+Array extents must be determined at system creation.  This means that they cannot be changed when setting parameters into the model, or by time.
+
+An example that would throw this error:
+
+```
+dim(a) <- n
+n <- parameter(type = "integer")
+```
+
+Here, parameter is not constant (it can be updated); you can fix this by writing this as:
+
+```
+dim(a) <- n
+n <- parameter(type = "integer", constant = TRUE)
+```
+
+Similarly, if `n` depended on `time`, or if it was (or depended on) anything stochastic, this would be an error because then the array dimension would have to change every time step.
+
+# `E2012`
+
+Assignments to the same variable must all be to arrays.  You cannot write, for example:
+
+```
+a <- 1 + 2
+a <- sqrt(a)
+```
+
+to compute `a` in two stages.
+
+Sometimes this error will be thrown because you have been inconsistent with use of array-assignment square brackets, for example:
+
+```
+a <- 0
+a[2] <- 1
+```
+
+Above, the first line probably should have been `a[] <- 0 or `a[1] <- 0`.
+
+
+# `E2013`
+
+Multiline array equations must be written as consecutive statements, with no assignments to other variables in between (comments are fine).  So this is an error:
+
+```
+a[1] <- 1
+b <- 10
+a[2] <- b
+```
+
+Because the assignment to `b` occurs within the block of assignments to `a[]`.  When we evaluate the expressions, all of the assignments to `a` will happen in one go (in the order written) and if you interleave them it gives the false idea of controlling the flow of equations more than you really can.
