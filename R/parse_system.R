@@ -114,6 +114,16 @@ parse_system_overall <- function(exprs, call) {
                 compare = exprs[is_compare],
                 data = exprs[is_data])
 
+  nms <- vcapply(exprs$equations, function(x) x$lhs$name)
+  err <- intersect(nms, variables)
+  if (length(err) > 0) {
+    src <- lapply(exprs$equations[nms %in% err], "[[", "src")
+    odin_parse_error(
+      paste("{?Equation uses name/Equations use names} belonging to",
+            "variable{?s}: {squote(err)}"),
+      "E2099", src, call)
+  }
+
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
        parameters = parameters,

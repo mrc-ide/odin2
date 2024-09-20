@@ -22,7 +22,8 @@ test_that("require that assignment lhs is reasonable", {
     "Expected a symbol on the lhs of assignment")
   expect_error(
     parse_expr(quote(update(1) <- 1), NULL, NULL),
-    "Expected a symbol within 'update()' on lhs of assignment")
+    "Expected a symbol within 'update()' on the lhs of assignment",
+    fixed = TRUE)
   ## TODO: alternatively, error that f() is not a special function?
   expect_error(
     parse_expr(quote(f(1) <- 1), NULL, NULL),
@@ -337,7 +338,7 @@ test_that("check that coersion functions use simple calls only", {
 test_that("give nice error if assigning to nonsense array", {
   expect_error(
     parse_expr(quote(1[2] <- 1), NULL, NULL),
-    "Invalid assignment into array")
+    "Expected a symbol on the lhs of array assignment")
 })
 
 
@@ -359,13 +360,13 @@ test_that("give nice error if interpolate used incorrectly", {
 test_that("give nice errors if special functions used in incorrect location", {
   expect_error(
     parse_expr(quote(y <- update(x)), NULL, NULL),
-    "Special function 'update' is not allowed on rhs")
+    "Special function 'update' is not allowed on the rhs")
   expect_error(
     parse_expr(quote(y <- initial(x)), NULL, NULL),
-    "Special function 'initial' is not allowed on rhs")
+    "Special function 'initial' is not allowed on the rhs")
   expect_error(
     parse_expr(quote(y <- 2 / deriv(x)), NULL, NULL),
-    "Special function 'deriv' is not allowed on rhs")
+    "Special function 'deriv' is not allowed on the rhs")
 })
 
 
@@ -373,4 +374,23 @@ test_that("if expressions must have else clauses", {
   expect_error(
     parse_expr(quote(y <- if (foo) 1), NULL, NULL),
     "All 'if' statements must have an 'else' clause")
+})
+
+
+test_that("disallow function definitions in odin code", {
+  expect_error(
+    parse_expr(quote(fn <- function(x) x + 1), NULL, NULL),
+    "Can't use 'function' within odin code")
+})
+
+
+test_that("sensible error if silly values for functions provided", {
+  expect_error(
+    parse_expr(quote(x <- 1(2)), NULL, NULL),
+    "Unsupported expression used as function '1()'",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(x <- f(x)(2)), NULL, NULL),
+    "Unsupported expression used as function 'f(x)()'",
+    fixed = TRUE)
 })

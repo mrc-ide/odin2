@@ -151,7 +151,8 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     if (is.null(special)) {
       context <- "on the lhs of array assignment"
     } else {
-      context <- sprintf("within '%s()' on lhs of array assignment", special)
+      context <- sprintf("within '%s()' on the lhs of array assignment",
+                         special)
     }
     name <- parse_expr_check_lhs_name(lhs[[2]], context, src, call)
     array <- Map(parse_expr_check_lhs_index,
@@ -199,6 +200,23 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
 
 parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   depends <- find_dependencies(rhs)
+
+  special_rhs <- c("parameter", "interpolate", "data")
+  err <- intersect(special_rhs, depends$functions)
+  if (length(err) > 0) {
+    odin_parse_error(
+      "'{err[[1]]}()' must be the only call on the rhs if used",
+      "E1099", src, call)
+  }
+
+  special_lhs <- c("initial", "update", "deriv", "output", "config")
+  err <- intersect(special_lhs, c(depends$functions, depends$variables))
+  if (length(err) > 0) {
+    odin_parse_error(
+      paste("Special function '{err[[1]]}' is not allowed on the rhs",
+            "of an expression"),
+      "E1099", src, call)
+  }
 
   ## TODO: we're going to check usage in a couple of places, but this
   ## is the first pass.
@@ -459,6 +477,12 @@ parse_expr_print <- function(expr, src, call) {
 parse_expr_usage <- function(expr, src, call) {
   if (is.recursive(expr)) {
     fn <- expr[[1]]
+    if (!is.symbol(fn)) {
+      odin_parse_error(
+        c("Unsupported expression used as function '{deparse1(fn)}()'",
+          i = "Functions must be symbols, not numbers or other expressions"),
+        "E1099", src, call)
+    }
     fn_str <- as.character(fn)
     ignore <- "["
     if (fn_str == "sum") {
@@ -469,6 +493,11 @@ parse_expr_usage <- function(expr, src, call) {
       parse_expr_check_call(expr, src, call)
       args <- lapply(expr[-1], parse_expr_usage, src, call)
       expr <- as.call(c(list(fn), args))
+    } else if (fn_str %in% c("function", "while", "repeat", "for")) {
+      ## Slightly better message, as these are not really functions.
+      odin_parse_error(
+        "Can't use '{fn_str}' within odin code",
+        "E1099", src, call)
     } else if (!(fn_str %in% ignore)) {
       odin_parse_error(
         "Unsupported function '{fn_str}'",

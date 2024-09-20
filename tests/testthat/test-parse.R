@@ -432,3 +432,26 @@ test_that("multline array equations must be contiguous", {
     }),
     "Multiline array equations must be contiguous statements, but 'a'")
 })
+
+
+test_that("equations cannot shadow variables", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- 1
+      x <- 2
+    }),
+    "Equation uses name belonging to variable: 'x'")
+
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- 1
+      initial(y) <- 1
+      update(y) <- z
+      x <- 2
+      y <- 3
+      z <- 4
+    }),
+    "Equations use names belonging to variables: 'x' and 'y'")
+})

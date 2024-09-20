@@ -184,9 +184,9 @@ test_that("dim rhs must be simple", {
 test_that("validate assignment into arrays", {
   expect_error(
     parse_expr(quote(1[] <- 1), NULL, NULL),
-    "Expected a symbol on lhs of array assignment")
+    "Expected a symbol on the lhs of array assignment")
   expect_error(
     parse_expr(quote(deriv(1[]) <- 1), NULL, NULL),
-    "Expected a symbol within 'deriv()' on lhs of array assignment",
+    "Expected a symbol within 'deriv()' on the lhs of array assignment",
     fixed = TRUE)
 })
