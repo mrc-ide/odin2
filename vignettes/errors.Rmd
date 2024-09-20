@@ -116,16 +116,34 @@ The code above is valid R (as in, it can be parsed) but it is nonsensical.  At p
 This code is also reported if you have a spelling mistake, such as
 
 ```
-inital() <- 1
+inital(x) <- 1
 ```
 
-instead of `initial()`. It is also reported with this code, which contains two legacy errors.
+instead of `initial(x)`. It is also reported with this code, which contains two legacy errors.
 ```
 
 compare(d) <- Normal(0, 1)
 ```
 
 Firstly, there is an error you may have made in the previous version, in which the assignment `<-` should be the comparison symbol `~`. Furthermore, in this version, the `compare()` function is not required at all, and you should write `d ~ Normal(0, 1)`.
+
+If you assign into an array, then the array name must be a symbol, so this is invalid:
+
+```
+f(x)[] <- 1
+```
+
+as is this:
+
+```
+deriv(1[]) <- 1
+```
+
+Sometimes you will see this error if you have accidentally nested special functions
+
+```
+deriv(deriv(x)) <- 1
+```
 
 # `E1006`
 

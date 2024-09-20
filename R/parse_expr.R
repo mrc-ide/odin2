@@ -124,13 +124,13 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     special <- deparse1(lhs[[1]])
     m <- match_call(lhs, special_def[[special]])
     if (!m$success) {
-      odin_parse_error(c("Invalid special function call",
+      odin_parse_error(c("Invalid call to special function '{special}'",
                          x = conditionMessage(m$error)),
         "E1003", src, call)
     }
     if (rlang::is_missing(m$value$name)) {
       odin_parse_error(
-        c("Invalid special function call",
+        c("Invalid call to special function '{special}'",
           i = paste("Missing target for '{special}()', typically the first",
                     "(unnamed) argument")),
         "E1003", src, call)
@@ -148,13 +148,23 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   }
 
   if (rlang::is_call(lhs, "[")) {
-    name <- parse_expr_check_lhs_name(lhs[[2]], src, call)
+    if (is.null(special)) {
+      context <- "on the lhs of array assignment"
+    } else {
+      context <- sprintf("within '%s()' on lhs of array assignment", special)
+    }
+    name <- parse_expr_check_lhs_name(lhs[[2]], context, src, call)
     array <- Map(parse_expr_check_lhs_index,
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
                  MoreArgs = list(name = name, src = src, call = call))
   } else {
-    name <- parse_expr_check_lhs_name(lhs, src, call)
+    if (is.null(special)) {
+      context <- "on the lhs of assignment"
+    } else {
+      context <- sprintf("within '%s()' on the lhs of assignment", special)
+    }
+    name <- parse_expr_check_lhs_name(lhs, context, src, call)
     array <- NULL
   }
 
@@ -222,20 +232,28 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
       "Array extent cannot be determined by time",
       "E1040", src, call)
   }
+  ## See parse_expr_check_lhs_index, which has similar restrictions
+  allowed <- c("+", "-", "(", "length", "nrow", "ncol")
+  err <- setdiff(depends$functions, allowed)
+  if (length(err) > 0) {
+    odin_parse_error(
+      "Invalid function{?s} used on rhs of 'dim()': {squote(err)}",
+      "E1099", src, call)
+  }
   list(type = "dim",
        value = value,
        depends = depends)
 }
 
 
-parse_expr_check_lhs_name <- function(lhs, src, call) {
+parse_expr_check_lhs_name <- function(lhs, context, src, call) {
   ## There are lots of checks we should add here, but fundamentally
   ## it's a case of making sure that we have been given a symbol and
   ## that symbol is not anything reserved, nor does it start with
   ## anything reserved.  Add these in later, see
   ## "ir_parse_expr_check_lhs_name" for details.
   if (!rlang::is_symbol(lhs)) {
-    odin_parse_error("Expected a symbol on the lhs", "E1005", src, call)
+    odin_parse_error("Expected a symbol {context}", "E1005", src, call)
   }
   name <- deparse1(lhs)
   name
@@ -480,10 +498,17 @@ parse_expr_check_call <- function(expr, usage, src, call) {
     }
     if (length(usage) == 1) {
       if (n_args != usage) {
-        odin_parse_error(
-          paste("Invalid call to '{fn}': incorrect number of arguments",
-                "(expected {usage} but received {n_args})"),
-          "E1030", src, call)
+        if (fn == "if" && n_args == 2) {
+          odin_parse_error(
+            "All 'if' statements must have an 'else' clause",
+            "E1099", src, call)
+
+        } else {
+          odin_parse_error(
+            paste("Invalid call to '{fn}': incorrect number of arguments",
+                  "(expected {usage} but received {n_args})"),
+            "E1030", src, call)
+        }
       }
     } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
       collapse <- if (diff(usage) == 1) " or " else " to "
