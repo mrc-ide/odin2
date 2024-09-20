@@ -211,6 +211,14 @@ test_that("parameter calls must be assigned to a symbol", {
 })
 
 
+test_that("interpolate calls must be assigned to a symbol", {
+  expect_error(
+    parse_expr(quote(deriv(d) <- interpolate(at, ay, "constant")), NULL, NULL),
+    "Calls to 'interpolate()' must be assigned to a symbol",
+    fixed = TRUE)
+})
+
+
 test_that("print not yet supported", {
   expect_error(
     parse_expr(quote(print(x)), NULL, NULL),
