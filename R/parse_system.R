@@ -121,7 +121,7 @@ parse_system_overall <- function(exprs, call) {
     odin_parse_error(
       paste("{?Equation uses name/Equations use names} belonging to",
             "variable{?s}: {squote(err)}"),
-      "E2099", src, call)
+      "E2014", src, call)
   }
 
   list(time = if (is_continuous) "continuous" else "discrete",

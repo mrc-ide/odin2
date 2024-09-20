@@ -206,7 +206,7 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   if (length(err) > 0) {
     odin_parse_error(
       "'{err[[1]]}()' must be the only call on the rhs if used",
-      "E1099", src, call)
+      "E1041", src, call)
   }
 
   special_lhs <- c("initial", "update", "deriv", "output", "config")
@@ -215,7 +215,7 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
     odin_parse_error(
       paste("Special function '{err[[1]]}' is not allowed on the rhs",
             "of an expression"),
-      "E1099", src, call)
+      "E1042", src, call)
   }
 
   ## TODO: we're going to check usage in a couple of places, but this
@@ -256,7 +256,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   if (length(err) > 0) {
     odin_parse_error(
       "Invalid function{?s} used on rhs of 'dim()': {squote(err)}",
-      "E1099", src, call)
+      "E1043", src, call)
   }
   list(type = "dim",
        value = value,
@@ -481,7 +481,7 @@ parse_expr_usage <- function(expr, src, call) {
       odin_parse_error(
         c("Unsupported expression used as function '{deparse1(fn)}()'",
           i = "Functions must be symbols, not numbers or other expressions"),
-        "E1099", src, call)
+        "E1044", src, call)
     }
     fn_str <- as.character(fn)
     ignore <- "["
@@ -494,10 +494,11 @@ parse_expr_usage <- function(expr, src, call) {
       args <- lapply(expr[-1], parse_expr_usage, src, call)
       expr <- as.call(c(list(fn), args))
     } else if (fn_str %in% c("function", "while", "repeat", "for")) {
-      ## Slightly better message, as these are not really functions.
+      ## Slightly better message than below, as these are not really
+      ## functions.
       odin_parse_error(
         "Can't use '{fn_str}' within odin code",
-        "E1099", src, call)
+        "E1045", src, call)
     } else if (!(fn_str %in% ignore)) {
       odin_parse_error(
         "Unsupported function '{fn_str}'",
@@ -530,7 +531,7 @@ parse_expr_check_call <- function(expr, usage, src, call) {
         if (fn == "if" && n_args == 2) {
           odin_parse_error(
             "All 'if' statements must have an 'else' clause",
-            "E1099", src, call)
+            "E1046", src, call)
 
         } else {
           odin_parse_error(
