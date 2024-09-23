@@ -289,7 +289,7 @@ There are some special odin functions that may appear on the right hand side and
 The function `parameter()` introduces a "parameter"; something that you will initialise your system with, or update after initialisation.  This is the primary mechanism for controlling how systems behave.  The `parameter` function accepts arguments:
 
 * `default`: The first argument, typically unnamed, holds the default value if none is provided at initialisation
-* `constant`: Logical, indicateing if the parameter cannot be changed after being initially set.  This must be `TRUE` for things leading into array extents
+* `constant`: Logical, indicating if the parameter cannot be changed after being initially set.  This must be `TRUE` for things leading into array extents
 * `differentiate`: Logical, indicating if the likelihood (from comparison to data) should be differentiated with respect to this parameter.
 * `type`: The data type for the variable, as a string.  Must be one of `real` (the default), `integer` or `logical`.
 

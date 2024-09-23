@@ -103,7 +103,7 @@ initial(x = a) <- 1
 
 # `E1004`
 
-Assignment to reserved words (in odin, C, C++ or Javascript) is not allowed.  An example statement that would trigger this:
+Assignment to reserved words (in odin, C, C++ or JavaScript) is not allowed.  An example statement that would trigger this:
 
 ```
 new <- 2 * old
