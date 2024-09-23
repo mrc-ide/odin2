@@ -101,6 +101,16 @@ initial(a, b) <- 1
 initial(x = a) <- 1
 ```
 
+# `E1004`
+
+Assignment to reserved words (in odin, C, C++ or Javascript) is not allowed.  An example statement that would trigger this:
+
+```
+new <- 2 * old
+```
+
+This is an error because [`new` is a keyword in C++](https://en.cppreference.com/w/cpp/language/new).  The list of forbidden keywords can be found in `vignette("functions"`) (Section: "Restricted names").
+
 # `E1005`
 
 Invalid target on lhs of assignment.
@@ -600,7 +610,17 @@ as this is really the same as (in R)
 a <- if (condition) 1 else NULL
 ```
 
-which would not be valid in R.  Always provide an `else` branch.
+which would not be valid in odin because we can't assign a `NULL` value.  Always provide an `else` branch.
+
+# `E1047`
+
+Assignment to a name that starts with a restricted prefix.  Names cannot begin with `odin_`, `interpolate_`, `delay_` or `adjoint_`.
+
+An example that would trigger this:
+
+```
+delay_cases_days <- 10
+```
 
 # `E2001`
 

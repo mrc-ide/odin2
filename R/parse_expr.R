@@ -274,6 +274,23 @@ parse_expr_check_lhs_name <- function(lhs, context, src, call) {
     odin_parse_error("Expected a symbol {context}", "E1005", src, call)
   }
   name <- deparse1(lhs)
+
+  if (name %in% RESERVED) {
+    err_in <- c(if (name %in% RESERVED_ODIN) "odin",
+                if (name %in% RESERVED_CPP) "C++",
+                if (name %in% RESERVED_JS) "JavaScript")
+    odin_parse_error(
+      c("Can't assign to reserved name '{name}'",
+        i = "'{name}' is a reserved word in {err_in}"),
+      "E1004", src, call)
+  }
+  if (grepl(RESERVED_ODIN_PREFIX_RE, name)) {
+    prefix <- sub(RESERVED_ODIN_PREFIX_RE, "\\1", name)
+    odin_parse_error(
+      "Invalid name '{name}' starts with reserved prefix '{prefix}'",
+      "E1099", src, call)
+  }
+
   name
 }
 
@@ -495,7 +512,7 @@ parse_expr_usage <- function(expr, src, call) {
       expr <- as.call(c(list(fn), args))
     } else if (fn_str %in% c("function", "while", "repeat", "for")) {
       ## Slightly better message than below, as these are not really
-      ## functions.
+      ## functions
       odin_parse_error(
         "Can't use '{fn_str}' within odin code",
         "E1045", src, call)

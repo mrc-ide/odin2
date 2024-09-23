@@ -280,3 +280,14 @@ x[] <- a
 ```
 
 `x` will be a vector where every element is the same, the result of a *single* draw from a standard normal.
+
+# Restricted names
+
+You cannot assign to a name that is reserved in:
+
+* [C++](https://en.cppreference.com/w/cpp/keyword) - includes useful words such as `new` and `switch`
+* [C](http://en.cppreference.com/w/c/keyword) - largely a subset of C++'s words, but also excludes `restrict`
+* [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words) - includes useful words such as `default` and `export`
+* A few words restricted by odin itself: `time`, `dt`, `parameter`, `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`, `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`, `shared`, `internal`.  We may reduce this list in future.
+
+In addition, odin restricts a few prefixes; a name cannot start with `odin_`, `interpolate_`, `delay_` or `adjoint_`.

@@ -402,3 +402,25 @@ test_that("sensible error if silly values for functions provided", {
     "Unsupported expression used as function 'f(x)()'",
     fixed = TRUE)
 })
+
+
+test_that("Can't assign to reserved names", {
+  expect_error(parse_expr(quote(i <- 1), NULL, NULL),
+               "Can't assign to reserved name 'i'")
+  expect_error(parse_expr(quote(deriv <- 1), NULL, NULL),
+               "Can't assign to reserved name 'deriv'")
+  expect_error(parse_expr(quote(time <- 1), NULL, NULL),
+               "Can't assign to reserved name 'time'")
+  expect_error(parse_expr(quote(dim <- 1), NULL, NULL),
+               "Can't assign to reserved name 'dim'")
+  expect_error(parse_expr(quote(parameter <- 1), NULL, NULL),
+               "Can't assign to reserved name 'parameter'")
+})
+
+
+test_that("Can't assign to names with reserved prefixes", {
+  expect_error(parse_expr(quote(odin_x <- 1), NULL, NULL),
+               "Invalid name 'odin_x' starts with reserved prefix 'odin'")
+  expect_error(parse_expr(quote(adjoint_x <- 1), NULL, NULL),
+               "Invalid name 'adjoint_x' starts with reserved prefix 'adjoint'")
+})
