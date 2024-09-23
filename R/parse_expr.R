@@ -288,7 +288,7 @@ parse_expr_check_lhs_name <- function(lhs, context, src, call) {
     prefix <- sub(RESERVED_ODIN_PREFIX_RE, "\\1", name)
     odin_parse_error(
       "Invalid name '{name}' starts with reserved prefix '{prefix}'",
-      "E1099", src, call)
+      "E1047", src, call)
   }
 
   name
