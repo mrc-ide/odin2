@@ -39,7 +39,7 @@ test_that("can compile a simple ode model", {
 
 
 test_that("can compile a discrete-time model that compares to data", {
-  dat <- odin_parse({
+  res <- odin({
     ## Core equations for transitions between compartments:
     update(S) <- S - n_SI
     update(I) <- I + n_SI - n_IR
@@ -75,13 +75,8 @@ test_that("can compile a discrete-time model that compares to data", {
     incidence <- data()
     lambda <- cases_inc + noise
     incidence ~ Poisson(lambda)
-  })
+  }, debug = TRUE, quiet = TRUE)
 
-  code <- generate_dust_system(dat)
-  path <- "dust.cpp"
-  unlink(path)
-  writeLines(code, path)
-  res <- dust2::dust_compile(path, debug = TRUE, quiet = TRUE)
   expect_s3_class(res(), "dust_system_generator")
   expect_mapequal(res()$properties,
                   list(time_type = "discrete",

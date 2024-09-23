@@ -19,13 +19,18 @@ test_that("can parse simple expressions involving functions/variables", {
 test_that("require that assignment lhs is reasonable", {
   expect_error(
     parse_expr(quote(1 <- 1), NULL, NULL),
-    "Expected a symbol on the lhs")
+    "Expected a symbol on the lhs of assignment")
+  expect_error(
+    parse_expr(quote(update(1) <- 1), NULL, NULL),
+    "Expected a symbol within 'update()' on the lhs of assignment",
+    fixed = TRUE)
+  ## TODO: alternatively, error that f() is not a special function?
   expect_error(
     parse_expr(quote(f(1) <- 1), NULL, NULL),
-    "Expected a symbol on the lhs")
+    "Expected a symbol on the lhs of assignment")
   expect_error(
     parse_expr(quote(compare(x) <- Normal(0, 1)), NULL, NULL),
-    "Expected a symbol on the lhs")
+    "Expected a symbol on the lhs of assignment")
 })
 
 
@@ -43,13 +48,13 @@ test_that("allow calls on lhs", {
 test_that("require that special calls are (currently) simple", {
   expect_error(
     parse_expr(quote(update(x, TRUE) <- 1), NULL, NULL),
-    "Invalid special function call")
+    "Invalid call to special function 'update'")
   expect_error(
     parse_expr(quote(initial() <- 1), NULL, NULL),
-    "Invalid special function call")
+    "Invalid call to special function 'initial'")
   err <- expect_error(
     parse_expr(quote(initial(x = 1) <- 1), NULL, NULL),
-    "Invalid special function call")
+    "Invalid call to special function 'initial'")
 })
 
 
@@ -72,9 +77,9 @@ test_that("can parse parameter definitions with defaults", {
 
 
 test_that("can parse parameter definitions with expression defaults", {
-  res <- parse_expr(quote(a <- parameter(4 / 3)), NULL, NULL)
+  res <- parse_expr(quote(a <- parameter(-4 / 3)), NULL, NULL)
   expect_equal(res$rhs$type, "parameter")
-  expect_equal(res$rhs$args$default, quote(4 / 3))
+  expect_equal(res$rhs$args$default, quote(-4 / 3))
   expect_equal(res$rhs$args$constant, NA)
   expect_false(res$rhs$args$differentiate)
 })
@@ -198,6 +203,18 @@ test_that("parameter calls must be assigned to a symbol", {
   expect_error(
     parse_expr(quote(deriv(d) <- parameter()), NULL, NULL),
     "Calls to 'parameter()' must be assigned to a symbol",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(initial(x) <- parameter()), NULL, NULL),
+    "Calls to 'parameter()' must be assigned to a symbol",
+    fixed = TRUE)
+})
+
+
+test_that("interpolate calls must be assigned to a symbol", {
+  expect_error(
+    parse_expr(quote(deriv(d) <- interpolate(at, ay, "constant")), NULL, NULL),
+    "Calls to 'interpolate()' must be assigned to a symbol",
     fixed = TRUE)
 })
 
@@ -323,4 +340,87 @@ test_that("check that coersion functions use simple calls only", {
   expect_error(
     parse_expr(quote(a <- as.logical(1, 2)), NULL, NULL),
     "Invalid call to 'as.logical'")
+})
+
+
+test_that("give nice error if assigning to nonsense array", {
+  expect_error(
+    parse_expr(quote(1[2] <- 1), NULL, NULL),
+    "Expected a symbol on the lhs of array assignment")
+})
+
+
+test_that("give nice error if parameter used in incorrect location", {
+  expect_error(
+    parse_expr(quote(x <- 1 + parameter(2)), NULL, NULL),
+    "'parameter()' must be the only call on the rhs",
+    fixed = TRUE)
+})
+
+
+test_that("give nice error if interpolate used incorrectly", {
+  expect_error(
+    parse_expr(quote(a <- interpolate() + 1), NULL, NULL),
+    "'interpolate()' must be the only call on the rhs",
+    fixed = TRUE)
+})
+
+test_that("give nice errors if special functions used in incorrect location", {
+  expect_error(
+    parse_expr(quote(y <- update(x)), NULL, NULL),
+    "Special function 'update' is not allowed on the rhs")
+  expect_error(
+    parse_expr(quote(y <- initial(x)), NULL, NULL),
+    "Special function 'initial' is not allowed on the rhs")
+  expect_error(
+    parse_expr(quote(y <- 2 / deriv(x)), NULL, NULL),
+    "Special function 'deriv' is not allowed on the rhs")
+})
+
+
+test_that("if expressions must have else clauses", {
+  expect_error(
+    parse_expr(quote(y <- if (foo) 1), NULL, NULL),
+    "All 'if' statements must have an 'else' clause")
+})
+
+
+test_that("disallow function definitions in odin code", {
+  expect_error(
+    parse_expr(quote(fn <- function(x) x + 1), NULL, NULL),
+    "Can't use 'function' within odin code")
+})
+
+
+test_that("sensible error if silly values for functions provided", {
+  expect_error(
+    parse_expr(quote(x <- 1(2)), NULL, NULL),
+    "Unsupported expression used as function '1()'",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(x <- f(x)(2)), NULL, NULL),
+    "Unsupported expression used as function 'f(x)()'",
+    fixed = TRUE)
+})
+
+
+test_that("Can't assign to reserved names", {
+  expect_error(parse_expr(quote(i <- 1), NULL, NULL),
+               "Can't assign to reserved name 'i'")
+  expect_error(parse_expr(quote(deriv <- 1), NULL, NULL),
+               "Can't assign to reserved name 'deriv'")
+  expect_error(parse_expr(quote(time <- 1), NULL, NULL),
+               "Can't assign to reserved name 'time'")
+  expect_error(parse_expr(quote(dim <- 1), NULL, NULL),
+               "Can't assign to reserved name 'dim'")
+  expect_error(parse_expr(quote(parameter <- 1), NULL, NULL),
+               "Can't assign to reserved name 'parameter'")
+})
+
+
+test_that("Can't assign to names with reserved prefixes", {
+  expect_error(parse_expr(quote(odin_x <- 1), NULL, NULL),
+               "Invalid name 'odin_x' starts with reserved prefix 'odin'")
+  expect_error(parse_expr(quote(adjoint_x <- 1), NULL, NULL),
+               "Invalid name 'adjoint_x' starts with reserved prefix 'adjoint'")
 })

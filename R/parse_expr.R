@@ -124,13 +124,13 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     special <- deparse1(lhs[[1]])
     m <- match_call(lhs, special_def[[special]])
     if (!m$success) {
-      odin_parse_error(c("Invalid special function call",
+      odin_parse_error(c("Invalid call to special function '{special}'",
                          x = conditionMessage(m$error)),
         "E1003", src, call)
     }
     if (rlang::is_missing(m$value$name)) {
       odin_parse_error(
-        c("Invalid special function call",
+        c("Invalid call to special function '{special}'",
           i = paste("Missing target for '{special}()', typically the first",
                     "(unnamed) argument")),
         "E1003", src, call)
@@ -148,13 +148,24 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
   }
 
   if (rlang::is_call(lhs, "[")) {
-    name <- parse_expr_check_lhs_name(lhs[[2]], src, call)
+    if (is.null(special)) {
+      context <- "on the lhs of array assignment"
+    } else {
+      context <- sprintf("within '%s()' on the lhs of array assignment",
+                         special)
+    }
+    name <- parse_expr_check_lhs_name(lhs[[2]], context, src, call)
     array <- Map(parse_expr_check_lhs_index,
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
                  MoreArgs = list(name = name, src = src, call = call))
   } else {
-    name <- parse_expr_check_lhs_name(lhs, src, call)
+    if (is.null(special)) {
+      context <- "on the lhs of assignment"
+    } else {
+      context <- sprintf("within '%s()' on the lhs of assignment", special)
+    }
+    name <- parse_expr_check_lhs_name(lhs, context, src, call)
     array <- NULL
   }
 
@@ -190,6 +201,23 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
 parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   depends <- find_dependencies(rhs)
 
+  special_rhs <- c("parameter", "interpolate", "data")
+  err <- intersect(special_rhs, depends$functions)
+  if (length(err) > 0) {
+    odin_parse_error(
+      "'{err[[1]]}()' must be the only call on the rhs if used",
+      "E1041", src, call)
+  }
+
+  special_lhs <- c("initial", "update", "deriv", "output", "config")
+  err <- intersect(special_lhs, c(depends$functions, depends$variables))
+  if (length(err) > 0) {
+    odin_parse_error(
+      paste("Special function '{err[[1]]}' is not allowed on the rhs",
+            "of an expression"),
+      "E1042", src, call)
+  }
+
   ## TODO: we're going to check usage in a couple of places, but this
   ## is the first pass.
   rhs <- parse_expr_usage(rhs, src, call)
@@ -222,22 +250,47 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
       "Array extent cannot be determined by time",
       "E1040", src, call)
   }
+  ## See parse_expr_check_lhs_index, which has similar restrictions
+  allowed <- c("+", "-", "(", "length", "nrow", "ncol")
+  err <- setdiff(depends$functions, allowed)
+  if (length(err) > 0) {
+    odin_parse_error(
+      "Invalid function{?s} used on rhs of 'dim()': {squote(err)}",
+      "E1043", src, call)
+  }
   list(type = "dim",
        value = value,
        depends = depends)
 }
 
 
-parse_expr_check_lhs_name <- function(lhs, src, call) {
+parse_expr_check_lhs_name <- function(lhs, context, src, call) {
   ## There are lots of checks we should add here, but fundamentally
   ## it's a case of making sure that we have been given a symbol and
   ## that symbol is not anything reserved, nor does it start with
   ## anything reserved.  Add these in later, see
   ## "ir_parse_expr_check_lhs_name" for details.
   if (!rlang::is_symbol(lhs)) {
-    odin_parse_error("Expected a symbol on the lhs", "E1005", src, call)
+    odin_parse_error("Expected a symbol {context}", "E1005", src, call)
   }
   name <- deparse1(lhs)
+
+  if (name %in% RESERVED) {
+    err_in <- c(if (name %in% RESERVED_ODIN) "odin",
+                if (name %in% RESERVED_CPP) "C++",
+                if (name %in% RESERVED_JS) "JavaScript")
+    odin_parse_error(
+      c("Can't assign to reserved name '{name}'",
+        i = "'{name}' is a reserved word in {err_in}"),
+      "E1004", src, call)
+  }
+  if (grepl(RESERVED_ODIN_PREFIX_RE, name)) {
+    prefix <- sub(RESERVED_ODIN_PREFIX_RE, "\\1", name)
+    odin_parse_error(
+      "Invalid name '{name}' starts with reserved prefix '{prefix}'",
+      "E1047", src, call)
+  }
+
   name
 }
 
@@ -441,6 +494,12 @@ parse_expr_print <- function(expr, src, call) {
 parse_expr_usage <- function(expr, src, call) {
   if (is.recursive(expr)) {
     fn <- expr[[1]]
+    if (!is.symbol(fn)) {
+      odin_parse_error(
+        c("Unsupported expression used as function '{deparse1(fn)}()'",
+          i = "Functions must be symbols, not numbers or other expressions"),
+        "E1044", src, call)
+    }
     fn_str <- as.character(fn)
     ignore <- "["
     if (fn_str == "sum") {
@@ -451,6 +510,12 @@ parse_expr_usage <- function(expr, src, call) {
       parse_expr_check_call(expr, src, call)
       args <- lapply(expr[-1], parse_expr_usage, src, call)
       expr <- as.call(c(list(fn), args))
+    } else if (fn_str %in% c("function", "while", "repeat", "for")) {
+      ## Slightly better message than below, as these are not really
+      ## functions
+      odin_parse_error(
+        "Can't use '{fn_str}' within odin code",
+        "E1045", src, call)
     } else if (!(fn_str %in% ignore)) {
       odin_parse_error(
         "Unsupported function '{fn_str}'",
@@ -480,10 +545,17 @@ parse_expr_check_call <- function(expr, usage, src, call) {
     }
     if (length(usage) == 1) {
       if (n_args != usage) {
-        odin_parse_error(
-          paste("Invalid call to '{fn}': incorrect number of arguments",
-                "(expected {usage} but received {n_args})"),
-          "E1030", src, call)
+        if (fn == "if" && n_args == 2) {
+          odin_parse_error(
+            "All 'if' statements must have an 'else' clause",
+            "E1046", src, call)
+
+        } else {
+          odin_parse_error(
+            paste("Invalid call to '{fn}': incorrect number of arguments",
+                  "(expected {usage} but received {n_args})"),
+            "E1030", src, call)
+        }
       }
     } else if (n_args < usage[[1]] || n_args > usage[[2]]) {
       collapse <- if (diff(usage) == 1) " or " else " to "

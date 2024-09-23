@@ -11,6 +11,26 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+# General syntax
+
+`odin` is a "[Domain Specific Language](https://en.wikipedia.org/wiki/Domain-specific_language)"; a mini-language that solves a specific problem; in this case representing systems of difference or differential equations.  It is syntactically R (i.e., it can be parsed with R's parser) but it is not itself R.  Only a subset of expressions and syntax are supported.
+
+Every line in `odin` code must be an **assignment** or a **relationship** (there are some minor exceptions below).
+
+An assignment looks like
+
+```r
+a <- expression
+```
+
+while a relationship looks like
+
+```r
+b ~ Distribution(...)
+```
+
+where `b` will be an entry from data (introduced by `data()`), `Distribution` will be a monty distribution function (see below), and `...` will be arguments to this function, which might come from data or from model variables.  See `vignette("fitting")` for a high-level introduction to this interface.
+
 `odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data comes from `monty`.
 
 # Basic operations
@@ -190,27 +210,6 @@ ax_tmp[, ] <- a[i, j] * x[j]
 ax[] <- sum(a[, i])
 ```
 
-# Interpolation
-
-You can create variables that interpolate against time.  This is useful in a few contexts, for example:
-
-* A piecewise constant function that represents the level of some external factor
-* A smooth function that represents an environmental input
-
-Currently all interpolation functions are *scalar valued* meaning that at each time a single output is produced.
-
-The usage is:
-
-```r
-interpolate(time, value, mode)
-```
-
-* `time` is a vector representing time values
-* `value` is a vector representing the series you would like to interpolate, the same length as `time`
-* `mode` is a string, one of `constant`, `linear` or `spline`
-
-Once complete we will show usage of interpolating functions in their own vignette.
-
 # Distribution functions
 
 We support distribution functions in two places:
@@ -280,3 +279,77 @@ x[] <- a
 ```
 
 `x` will be a vector where every element is the same, the result of a *single* draw from a standard normal.
+
+# Special functions
+
+There are some special odin functions that may appear on the right hand side and which must be the only function used in the expression.
+
+## Parameters
+
+The function `parameter()` introduces a "parameter"; something that you will initialise your system with, or update after initialisation.  This is the primary mechanism for controlling how systems behave.  The `parameter` function accepts arguments:
+
+* `default`: The first argument, typically unnamed, holds the default value if none is provided at initialisation
+* `constant`: Logical, indicating if the parameter cannot be changed after being initially set.  This must be `TRUE` for things leading into array extents
+* `differentiate`: Logical, indicating if the likelihood (from comparison to data) should be differentiated with respect to this parameter.
+* `type`: The data type for the variable, as a string.  Must be one of `real` (the default), `integer` or `logical`.
+
+For example:
+
+```r
+a <- parameter()
+```
+
+Or:
+
+```
+n <- parameter(12, constant = TRUE, type = "integer")
+```
+
+There are some interactions among the `differentiate` argument combined with `constant` or `type`:
+
+* If a parameter is differentiable (`differentiate = TRUE`) it may not be constant!
+* If **any** parameter is differentiable, the default value for `constant` is `TRUE`, and all non-constant parameters must be differentiable.  Otherwise the default value for `constant` is `FALSE`
+* Only parameters with `type = "real"` can be used with `differentiate = TRUE`
+
+## Data
+
+If your model compares to data (i.e., it uses `~`) then it needs data.  These are specified similarly to `parameter()`, though at present no arguments are supported.
+
+```r
+d <- data()
+```
+
+Unlike `parameter()`, you will have a series of data elements, each corresponding to an observation at a different point in time in a time series.  See `vignettes("fitting")` for more details.
+
+## Interpolation
+
+You can create variables that interpolate against time.  This is useful in a few contexts, for example:
+
+* A piecewise constant function that represents the level of some external factor
+* A smooth function that represents an environmental input
+
+Currently all interpolation functions are *scalar valued* meaning that at each time a single output is produced.
+
+The usage is:
+
+```r
+interpolate(time, value, mode)
+```
+
+* `time` is a vector representing time values
+* `value` is a vector representing the series you would like to interpolate, the same length as `time`
+* `mode` is a string, one of `constant`, `linear` or `spline`
+
+Once complete we will show usage of interpolating functions in their own vignette.
+
+
+# Restricted names
+
+You cannot assign to a name that is reserved in:
+
+* [C++](https://en.cppreference.com/w/cpp/keyword) - includes useful words such as `new` and `switch`
+* [C](http://en.cppreference.com/w/c/keyword) - largely a subset of C++'s words, but also excludes `restrict`
+* [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words) - includes useful words such as `default` and `export`
+* A few words restricted by odin itself: `time`, `dt`, `parameter`, `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`, `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`, `shared`, `internal`.  We may reduce this list in future.
+
+In addition, odin restricts a few prefixes; a name cannot start with `odin_`, `interpolate_`, `delay_` or `adjoint_`.

@@ -101,6 +101,16 @@ initial(a, b) <- 1
 initial(x = a) <- 1
 ```
 
+# `E1004`
+
+Assignment to reserved words (in odin, C, C++ or JavaScript) is not allowed.  An example statement that would trigger this:
+
+```
+new <- 2 * old
+```
+
+This is an error because [`new` is a keyword in C++](https://en.cppreference.com/w/cpp/language/new).  The list of forbidden keywords can be found in `vignette("functions"`) (Section: "Restricted names").
+
 # `E1005`
 
 Invalid target on lhs of assignment.
@@ -116,16 +126,34 @@ The code above is valid R (as in, it can be parsed) but it is nonsensical.  At p
 This code is also reported if you have a spelling mistake, such as
 
 ```
-inital() <- 1
+inital(x) <- 1
 ```
 
-instead of `initial()`. It is also reported with this code, which contains two legacy errors.
+instead of `initial(x)`. It is also reported with this code, which contains two legacy errors.
 ```
 
 compare(d) <- Normal(0, 1)
 ```
 
 Firstly, there is an error you may have made in the previous version, in which the assignment `<-` should be the comparison symbol `~`. Furthermore, in this version, the `compare()` function is not required at all, and you should write `d ~ Normal(0, 1)`.
+
+If you assign into an array, then the array name must be a symbol, so this is invalid:
+
+```
+f(x)[] <- 1
+```
+
+as is this:
+
+```
+deriv(1[]) <- 1
+```
+
+Sometimes you will see this error if you have accidentally nested special functions
+
+```
+deriv(deriv(x)) <- 1
+```
 
 # `E1006`
 
@@ -518,6 +546,82 @@ Array extent cannot be determined by time.  This is really a special case of [E2
 dim(a) <- if (time > 10) 100 else 20
 ```
 
+# `E1041`
+
+Special functions on the right-hand-side of an expression must be the only expression there.  This applies to `parameter()`, `interpolate()` and `data()`; if these are used they must be the **only** expression on the right hand side.
+
+For example you cannot write:
+
+```
+x <- interpolate(at, ay) + interpolate(bt, by)
+```
+
+You might write this as:
+
+```
+a <- interpolate(at, ay)
+b <- interpolate(bt, by)
+x <- a + b
+```
+
+# `E1042`
+
+Invalid special function used on the right hand side.  Some odin functions can only be used on the lhs; these include `initial`, `update` and `deriv`.  So you cannot write this:
+
+```
+a <- x + deriv(y)
+```
+
+# `E1043`
+
+Invalid functions used in expression for `dim()`.  Currently `dim()` is quite limited in what it can accept (though slightly more relaxed than `odin1`).  You can use `+`, `-`, `(`, `length`, `nrow` and `ncol` but nothing else.  Let us know if you think you should be able to use more.
+
+# `E1044`
+
+Attempt to call something which is not the **name** of a function.  This might be
+
+```
+a <- 1(x)
+```
+
+where `1` is not a symbol, so this fails.  Other possible errors, which are valid R code but not valid odin code, might include:
+
+```
+a <- f(x)(y)
+```
+
+where `f(x)` might return a function in R, but this is not possible in odin.
+
+# `E1045`
+
+Attempt to use one of R's reserved words: `function`, `while`, `repeat`, `for`, etc.
+
+# `E1046`
+
+All `if` statements must have an `else` clause.  You cannot write:
+
+```
+a <- if (condition) 1
+```
+
+as this is really the same as (in R)
+
+```
+a <- if (condition) 1 else NULL
+```
+
+which would not be valid in odin because we can't assign a `NULL` value.  Always provide an `else` branch.
+
+# `E1047`
+
+Assignment to a name that starts with a restricted prefix.  Names cannot begin with `odin_`, `interpolate_`, `delay_` or `adjoint_`.
+
+An example that would trigger this:
+
+```
+delay_cases_days <- 10
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
@@ -674,3 +778,15 @@ a[2] <- b
 ```
 
 Because the assignment to `b` occurs within the block of assignments to `a[]`.  When we evaluate the expressions, all of the assignments to `a` will happen in one go (in the order written) and if you interleave them it gives the false idea of controlling the flow of equations more than you really can.
+
+# `E2014`
+
+An equation has a name that shadows a variable.  You may have written something like:
+
+```
+initial(a) <- 1
+update(a) <- a + 1
+a <- 2
+```
+
+which is invalid because `a` is both an ordinary equation and also part of the system state.

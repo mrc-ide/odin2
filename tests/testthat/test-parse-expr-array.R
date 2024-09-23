@@ -167,3 +167,26 @@ test_that("array dimensions cannot be determined by time", {
     parse_expr(quote(dim(a) <- 3 + a * time), NULL, NULL),
     "Array extent cannot be determined by time")
 })
+
+
+test_that("dim rhs must be simple", {
+  expect_error(
+    parse_expr(quote(dim(a) <- f(1)), NULL, NULL),
+    "Invalid function used on rhs of 'dim()': 'f'",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(dim(a) <- f(1 * a)), NULL, NULL),
+    "Invalid functions used on rhs of 'dim()': 'f' and '*'",
+    fixed = TRUE)
+})
+
+
+test_that("validate assignment into arrays", {
+  expect_error(
+    parse_expr(quote(1[] <- 1), NULL, NULL),
+    "Expected a symbol on the lhs of array assignment")
+  expect_error(
+    parse_expr(quote(deriv(1[]) <- 1), NULL, NULL),
+    "Expected a symbol within 'deriv()' on the lhs of array assignment",
+    fixed = TRUE)
+})
