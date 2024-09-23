@@ -556,7 +556,7 @@ x <- a + b
 
 # `E1042`
 
-Invalid special function used on the right hand side.  Some odin functions can only be used on the lhs; this include `initial`, `update` and `deriv`.  So you cannot write this:
+Invalid special function used on the right hand side.  Some odin functions can only be used on the lhs; these include `initial`, `update` and `deriv`.  So you cannot write this:
 
 ```
 a <- x + deriv(y)
