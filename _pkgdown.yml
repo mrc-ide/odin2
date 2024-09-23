@@ -21,7 +21,7 @@ articles:
   - title: Details
     navbar: Details
     contents:
+      - details
       - errors
       - functions
       - migrating
-      - syntax
