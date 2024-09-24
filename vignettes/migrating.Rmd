@@ -43,10 +43,8 @@ This list is incomplete, and we'll expand it as we work through the tests.  We'r
 
 Things we do plan on implementing:
 
-* Arrays (partial implementation is complete)
 * Debugging print statements (only recently introduced into odin)
 * Interpolation with array output
-* Transformation of output
 * Non-variable output from ODEs with `output()` (`mrc-5497`)
 * Delay differential equations, e.g. `y_lag <- delay(y, tau)` (`mrc-5434`)
 * Compile-time parameter substitution (`mrc-5575`)
