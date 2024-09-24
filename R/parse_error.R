@@ -22,13 +22,7 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
   ## yet...
   src <- cnd$src[order(viapply(cnd$src, function(x) x$index %||% 1L))]
 
-  if (is.null(src[[1]]$str)) {
-    context <- unlist(lapply(src, function(x) deparse1(x$value)))
-  } else {
-    line <- unlist(lapply(src, function(x) seq(x$start, x$end)))
-    src_str <- unlist(lapply(src, "[[", "str"))
-    context <- sprintf("%s| %s", cli_nbsp(format(line)), src_str)
-  }
+  context <- format_src(src)
 
   code <- cnd$code
   ## See https://cli.r-lib.org/reference/links.html#click-to-run-code
@@ -78,4 +72,16 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
 ##' @export
 odin_error_explain <- function(code, how = "pretty") {
   error_explain(errors, code, how)
+}
+
+
+format_src <- function(src) {
+  if (is.null(src[[1]]$str)) {
+    context <- unlist(lapply(src, function(x) deparse1(x$value)))
+  } else {
+    line <- unlist(lapply(src, function(x) seq(x$start, x$end)))
+    src_str <- unlist(lapply(src, "[[", "str"))
+    context <- sprintf("%s| %s", cli_nbsp(format(line)), src_str)
+  }
+  context
 }
