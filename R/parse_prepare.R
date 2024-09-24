@@ -64,7 +64,10 @@ parse_prepare_detect <- function(quo, input_type, call) {
     input_type <- match_value(input_type, c("file", "text", "expression"))
   }
 
-  if (is.language(expr)) {
+  input_is_expression <- rlang::is_call(expr, c("{", "quote")) ||
+    is.language(expr) && any(c("<-", "=") %in% all.names(expr))
+
+  if (input_is_expression) {
     if (!is.null(input_type) && input_type != "expression") {
       cli::cli_abort(
         c("Invalid input for odin; given expression but expected {input_type}",
@@ -73,7 +76,26 @@ parse_prepare_detect <- function(quo, input_type, call) {
         arg = "expr", call = call)
     }
     input_type <- "expression"
-  } else if (is.character(expr)) {
+  } else {
+    if (is.language(expr)) {
+      expr <- rlang::eval_tidy(expr, env = envir) # or just eval, who knows?
+    }
+
+    ## By this point we expect a string:
+    if (!is.character(expr)) {
+      if (is.null(input_type)) {
+        expected <- "a string, character vector or expression"
+      } else if (input_type == "expression") {
+        expected <- "an expression"
+      } else if (input_type == "file") {
+        expected <- "a string"
+      } else if (input_type == "text") {
+        expected <- "a string or character vector"
+      }
+      cli::cli_abort("Invalid input for odin; expected {expected}",
+                     arg = "expr", call = call)
+    }
+
     if (is.null(input_type)) {
       if (length(expr) != 1 || grepl("([\n;=]|<-)", expr)) {
         input_type <- "text"
@@ -104,18 +126,6 @@ parse_prepare_detect <- function(quo, input_type, call) {
                        arg = "expr", call = call)
       }
     }
-  } else {
-    if (is.null(input_type)) {
-      expected <- "a string, character vector or expression"
-    } else if (input_type == "expression") {
-      expected <- "an expression"
-    } else if (input_type == "file") {
-      expected <- "a string"
-    } else if (input_type == "text") {
-      expected <- "a string or character vector"
-    }
-    cli::cli_abort("Invalid input for odin; expected {expected}",
-                   arg = "expr", call = call)
   }
   list(type = input_type, value = expr)
 }
