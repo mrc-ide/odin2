@@ -157,3 +157,92 @@ test_that("can translate user(integer = TRUE)", {
     res$equations$a$src$value,
     quote(a <- parameter(type = "integer")))
 })
+
+
+test_that("translate use of 't' into 'time' on use", {
+  expect_warning(
+    res <- odin_parse({
+      deriv(x) <- t
+      initial(x) <- 0
+    }),
+    "Found 1 compatibility issue")
+  expect_identical(
+    res$phases$deriv$variables[[1]]$rhs$expr,
+    quote(time))
+})
+
+
+test_that("fix assignment to time", {
+  expect_warning(
+    d <- odin_parse({
+      update(x) <- x + sqrt(time) / a
+      initial(x) <- 0
+      time <- dt * step
+      a <- 10
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(names(d$equations), "a")
+})
+
+
+test_that("error on unfixable time assignment", {
+  err <- expect_error(
+    odin_parse({
+      update(x) <- x + sqrt(time)
+      initial(x) <- 0
+      time <- ((dt * step))
+    }),
+    "Don't assign to 'time'")
+})
+
+
+test_that("fix assignment to dt", {
+  expect_warning(
+    d <- odin_parse({
+      update(x) <- x + a * dt
+      initial(x) <- 0
+      dt <- parameter(0.5)
+      a <- 10
+    }),
+    "Found 1 compatibility issue")
+  expect_equal(names(d$equations), "a")
+})
+
+
+test_that("error on unfixable dt assignment", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + a * dt
+      initial(x) <- 0
+      dt <- 0.5
+      a <- 10
+    }),
+    "Don't assign to 'dt'")
+})
+
+
+test_that("fix use of 't' rather than 'time'", {
+  w <- expect_warning(
+    d <- odin_parse({
+      update(x) <- x + a * t
+      initial(x) <- 0
+      a <- 10
+    }),
+    "Found 1 compatibility issue")
+  expect_match(
+    conditionMessage(w),
+    "Use 'time' and not 't' to refer to time")
+  expect_equal(d$phases$update$variables[[1]]$src$value,
+               quote(update(x) <- x + a * time))
+})
+
+
+test_that("Fix use of 'step' in equations", {
+  expect_error(
+    odin_parse({
+      update(x) <- x + a * 2
+      initial(x) <- 0
+      a <- if (step %% 10 == 0) 0 else 1
+    }),
+    "Use of 'step' is no longer allowed")
+})

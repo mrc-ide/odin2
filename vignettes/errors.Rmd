@@ -622,6 +622,39 @@ An example that would trigger this:
 delay_cases_days <- 10
 ```
 
+# `E1048`
+
+Cannot assign to `time`.  Prior to odin2, this was allowed as `t` was the name for time in continuous-time models and discrete time models sometimes wrote:
+
+```
+time <- step * dt
+```
+
+We can migrate the above special case, but any other assignments to `time` are disallowed, and you will need to update your model.  See `vignette("migrating")` for more information.
+
+# `E1049`
+
+Cannot assign to `dt`.  Prior to odin2, this was how `dt` was controlled, but now you should control `dt` via `dust2::dust_system_create` and `dust2::dust_filter_create` etc.  Previously you might have written
+
+```
+dt <- parameter(0.5) # or really user() in old odin code
+```
+
+but this is no longer allowed.  We can migrate this special case, but other uses such as
+
+```
+dt <- 0.5
+```
+
+are disallowed and you will need to update your model.  See `vignette("migrating")` for more information.
+
+
+# `E1050`
+
+Cannot use `step` within discrete time models.  Prior to odin version 2, the `step` variable was automatically provided by odin to be the time basis for discrete time models; models started at step 0 and increased by one each time step.  We no longer support this, and instead models start at some real-valued (but integral) time and increment with a step size of `dt` (which must be of the form `1 / <integer>`).
+
+You will need to adapt your code to fix this error, and this may require features that we are still developing.  Please see `vignette("migrating")` for details.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

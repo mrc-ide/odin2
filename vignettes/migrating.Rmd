@@ -125,6 +125,46 @@ Previously, discrete time models used `step` to count steps forward as unsigned 
 
 We formalise this approach now having discrete time systems be explicitly in terms of the same time basis as ODE models (that is, some real valued time axis).  When you initialise a model you pass in `dt`, which must be an even divisor of 1 (so 0.5, 0.25, 0.2, etc).  We then take steps of this size.  The wrinkle is that (at least for now) the model will only return control back to you, or state back to you, at integer-valued times.  We may relax this in future to allow returning at any time value that is a multiple of `dt`.
 
+This will cause a few issues for using old code, which we cover below.
+
+### Assignments to `dt`
+
+You may have models that assign to `dt`, either directly or as a parameter.  You can no longer do this as `dt` will be provided by `dust` (see `dust2::dust_system_create()`).
+
+We can automatically remove these (with a warning) in some cases.
+
+### Assignments to `time`
+
+Conventionally, many models would write
+
+```r
+time <- step * dt
+```
+
+which is the linear transformation of time that dust2 now does.  We can remove these statements and your model should work as intended.
+
+### Use of `step`
+
+All other uses of `step` are problematic and will need manual fixing.  We will try and accumulate migration strategies here, so please let us know if you have had to do anything not listed.
+
+**Access "interpolated" values from a grid**: In `sircovid` we used `step` as an array index, in order to support time-varying inputs (e.g., vaccine allocation schedules, rates of contact).  This is no longer supported (at all) because `dt` is changed separately from the inputs.  Instead you should use odin's interpolation functions.
+
+**Periodic resetting**: You may have written:
+
+```
+a <- if (step %% freq == 0) b else c
+```
+
+to have some quantity that took different values every `freq` steps, where `freq` is usually `1/dt` or `m/dt` where `m` is an integer.  You should rewrite this to use `time`:
+
+```
+a <- if (time * dt / m == 0) b else c
+```
+
+## The name of the time variable in discrete time models has changed
+
+Previously, time was `t` but we have moved this to `time` to be a little more explicit.  We can automatically migrate your code in many cases, unless you have defined a variable `time` already.
+
 ## Random number function calls have changed
 
 Previously we used the same names as R's random-number-drawing functions, for example `rbinom` for drawing from a binomial distribution.  This has changed to use the distribution name instead.

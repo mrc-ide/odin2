@@ -1,23 +1,17 @@
 parse_compat <- function(exprs, action, call) {
-  ## Things we can translate:
-  ##
-  ## user() -> parameter()
-
-  ## rbinom() -> Binomial() [etc]
-
-  ## dt -> drop
-  ## step -> time
-  ## t -> time
-
-  ## We also need to cope with the situation where we have three
-  ## things to fix in a single expression.
   exprs <- lapply(exprs, parse_compat_fix_user, call)
   exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
   exprs <- lapply(exprs, parse_compat_fix_distribution, call)
   exprs <- lapply(exprs, parse_compat_fix_compare, call)
 
+  ## Bunch of time-related things; these are a bit harder, and can't
+  ## always be recovered from.
+  exprs <- lapply(exprs, parse_compat_fix_assign_time)
+  exprs <- lapply(exprs, parse_compat_fix_assign_dt)
+  exprs <- lapply(exprs, parse_compat_fix_use_t)
+  exprs <- lapply(exprs, parse_compat_fix_use_step)
+
   parse_compat_report(exprs, action, call)
-  exprs
 }
 
 
@@ -135,8 +129,16 @@ parse_compat_report <- function(exprs, action, call) {
         "with monty-stye calls (e.g., 'Normal()')"),
       compare = paste(
         "Remove redundant 'compare()' wrapper, because all expressions",
-        "using `~` are comparisons."
-      ))
+        "using `~` are comparisons."),
+      assign_time = paste(
+        "Don't assign 'time' as 'step * dt', as this is now done",
+        "automatically"),
+      assign_dt = paste(
+        "Don't assign 'dt', as this is provided on system creation"),
+      use_step =
+        "Don't use 'step', this no longer exists",
+      use_t =
+        "Use 'time' and not 't' to refer to time")
 
     type <- lapply(exprs[i], function(x) x$compat$type)
     err <- unlist0(type)
@@ -146,7 +148,15 @@ parse_compat_report <- function(exprs, action, call) {
       j <- which(i)[vlapply(type, function(x) t %in% x)]
       ## Getting line numbers here is really hard, so let's just not
       ## try for now and do this on deparsed expressions.
-      updated <- vcapply(exprs[j], function(x) deparse1(x$value))
+      updated <- vcapply(exprs[j], function(x) {
+        if (is.null(x$value)) {
+          "(delete this statement)"
+        } else {
+          deparse1(x$value)
+        }
+      })
+      ## TODO: this should prefer to use the actual source, not the
+      ## deparsed source, where possible.
       original <- vcapply(exprs[j], function(x) deparse1(x$compat$original))
       context_t <- set_names(
         c(rbind(original, updated, deparse.level = 0)),
@@ -162,6 +172,13 @@ parse_compat_report <- function(exprs, action, call) {
       cli::cli_warn(c(header, detail), call = call)
     }
   }
+
+  i <- vlapply(exprs, function(x) !is.null(x$compat) && is.null(x$value))
+  if (any(i)) {
+    exprs <- exprs[!i]
+  }
+
+  exprs
 }
 
 parse_compat_fix_compare <- function(expr, call) {
@@ -172,6 +189,90 @@ parse_compat_fix_compare <- function(expr, call) {
     original <- expr$value
     expr$value[[2]] <- expr$value[[2]][[2]]
     expr <- parse_add_compat(expr, "compare", original)
+  }
+  expr
+}
+
+
+parse_compat_fix_assign_time <- function(expr, call) {
+  is_set_time <- rlang::is_call(expr$value, c("<-", "=")) &&
+    identical(expr$value[[2]], quote(time))
+  if (is_set_time) {
+    rhs <- expr$value[[3]]
+    is_time_from_step <- rlang::is_call(rhs, "*") && (
+      (identical(rhs[[2]], quote(dt)) && identical(rhs[[3]], quote(step))) ||
+      (identical(rhs[[3]], quote(dt)) && identical(rhs[[3]], quote(step))))
+    if (is_time_from_step) {
+      original <- expr$value
+      expr$value <- NULL
+      expr <- parse_add_compat(expr, "assign_time", original)
+    } else {
+      odin_parse_error(
+        c("Don't assign to 'time'",
+          i = paste(
+            "Previously, in odin1, this was fine, but is now an error.",
+            "Some models have used {.code time <- step * dt} or similar",
+            "previously, but this is no longer necessary"),
+          x = paste(
+            "Your code contains an assignment to 'time' that we can't",
+            "automatically migrate"),
+          i = "Please see {.vignette migrating} for guidance"),
+        "E1048", expr, call)
+    }
+  }
+  expr
+}
+
+
+parse_compat_fix_assign_dt <- function(expr, call) {
+  is_set_dt <- rlang::is_call(expr$value, c("<-", "=")) &&
+    identical(expr$value[[2]], quote(dt))
+  if (is_set_dt) {
+    rhs <- expr$value[[3]]
+    if (rlang::is_call(rhs, "parameter")) {
+      original <- expr$value
+      expr$value <- NULL
+      expr <- parse_add_compat(expr, "assign_dt", original)
+    } else {
+      ## TODO: we can do better here once dust can cope with default
+      ## dt values *and* once we work out how setting those from odin
+      ## might look.  For now, this is not allowed.
+      odin_parse_error(
+        c("Don't assign to 'dt'",
+          i = "'dt' is now provided to {.help dust::dust_system_create}'",
+          x = paste(
+            "Your odin code contains an assignment to 'dt' that we can't",
+            "automatically migrate"),
+          i = "Please see {.vignette migrating} for guidance"),
+        "E1049", expr, call)
+    }
+  }
+  expr
+}
+
+
+parse_compat_fix_use_t <- function(expr, call) {
+  deps <- all.vars(expr$value)
+  if ("t" %in% deps) {
+    original <- expr$value
+    expr$value <- substitute_(expr$value, list(t = quote(time)))
+    expr <- parse_add_compat(expr, "use_t", original)
+  }
+  expr
+}
+
+
+parse_compat_fix_use_step <- function(expr, call) {
+  deps <- all.vars(expr$value)
+  if ("step" %in% deps) {
+    ## We could consider how accesses here look and point people in
+    ## the right direction, but the docs also do this.
+    odin_parse_error(
+      c("Use of 'step' is no longer allowed",
+        i = paste("Previously, discrete-time models used 'step' as a measure",
+                  "of time, but we have removed this in odin2"),
+        i = "Please see {.vignette migrating} for guidance"),
+      "E1050", expr, call)
   }
   expr
 }
