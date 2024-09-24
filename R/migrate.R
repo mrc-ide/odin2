@@ -45,7 +45,6 @@ odin_migrate <- function(path, dest) {
   if (any(is_error)) {
     cli::cli_alert_warning(
       "Skipped {sum(is_error)} statement{?s} that we could not migrate")
-    browser()
     msg <- vcapply(
       exprs[is_error],
       function(x) sprintf("[%s] %s", x$error$code, x$error$message))
