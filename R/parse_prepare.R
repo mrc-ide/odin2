@@ -65,7 +65,7 @@ parse_prepare_detect <- function(quo, input_type, call) {
   }
 
   input_is_expression <- rlang::is_call(expr, c("{", "quote")) ||
-    is.language(expr) && any(c("<-", "=") %in% all.names(expr))
+    (is.language(expr) && any(c("<-", "=") %in% all.names(expr)))
 
   if (input_is_expression) {
     if (!is.null(input_type) && input_type != "expression") {
