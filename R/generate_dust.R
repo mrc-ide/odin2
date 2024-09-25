@@ -567,11 +567,6 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     is_array <- name %in% dat$storage$arrays$name
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
-
-      ## Needs work doing some sort of static initialisation
-      ## TODO: move this into a parse error.
-      stopifnot(is.null(eq$rhs$args$default))
-
       if (isFALSE(options$shared_exists)) {
         dim <- sprintf("dim_%s", name)
         required <- "true"

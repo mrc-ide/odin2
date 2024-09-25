@@ -655,6 +655,22 @@ Cannot use `step` within discrete time models.  Prior to odin version 2, the `st
 
 You will need to adapt your code to fix this error, and this may require features that we are still developing.  Please see `vignette("migrating")` for details.
 
+# `E1099`
+
+Array parameters cannot have defaults.  If `a` is an array (of any rank), then this is an error:
+
+```r
+a <- parameter(1)
+```
+
+In future, we may allow this to allow filling an array with a value on initialisation.  However, if we did this we'd also like to support something like
+
+```r
+a <- parameter(c(1, 2, 3))
+```
+
+to have a default value of vector of 1:3; however this is quite hard to validate and generalises poorly to higher dimensions.  Your thoughts and use-cases are very welcome.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
