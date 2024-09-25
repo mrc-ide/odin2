@@ -890,7 +890,7 @@ test_that("can generate system with array from user", {
     c(method_args$build_shared,
       "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(2)};",
       "  std::vector<real_type> a(dim_a.size);",
-      '  dust2::r::read_real_vector(parameters, dim_a.size, a.data(), "a", true);',
+      '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
       "  const shared_state::dim_type dim{dim_a};",
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
@@ -899,7 +899,7 @@ test_that("can generate system with array from user", {
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
-      '  dust2::r::read_real_vector(parameters, shared.dim.a.size, shared.a.data(), "a", false);',
+      '  dust2::r::read_real_array(parameters, shared.dim.a, shared.a.data(), "a", false);',
       "}"))
 })
 
@@ -1146,7 +1146,7 @@ test_that("generate variable sized array from parameters", {
       "  const real_type n = 2;",
       "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(n)};",
       "  std::vector<real_type> a(dim_a.size);",
-      '  dust2::r::read_real_vector(parameters, dim_a.size, a.data(), "a", true);',
+      '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
       "  const shared_state::dim_type dim{dim_a};",
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
@@ -1155,7 +1155,7 @@ test_that("generate variable sized array from parameters", {
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
-      "  dust2::r::read_real_vector(parameters, shared.dim.a.size, shared.a.data(), \"a\", false);",
+      "  dust2::r::read_real_array(parameters, shared.dim.a, shared.a.data(), \"a\", false);",
       "}"))
   expect_equal(
     generate_dust_system_build_internal(dat),
@@ -1350,9 +1350,9 @@ test_that("can add interpolation", {
     "  const dust2::array::dimensions<1> dim_at{static_cast<size_t>(n)};",
     "  const dust2::array::dimensions<1> dim_ay{static_cast<size_t>(n)};",
     "  std::vector<real_type> at(dim_at.size);",
-    '  dust2::r::read_real_vector(parameters, dim_at.size, at.data(), "at", true);',
+    '  dust2::r::read_real_array(parameters, dim_at, at.data(), "at", true);',
     "  std::vector<real_type> ay(dim_ay.size);",
-    '  dust2::r::read_real_vector(parameters, dim_ay.size, ay.data(), "ay", true);',
+    '  dust2::r::read_real_array(parameters, dim_ay, ay.data(), "ay", true);',
     '  const real_type interpolate_y = dust2::interpolate::InterpolateConstant(at, ay, "at", "ay");',
     "  const shared_state::dim_type dim{dim_at, dim_ay};",
     "  shared_state::offset_type offset;",
@@ -1445,5 +1445,27 @@ test_that("can generate self-referential multi-part array", {
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
       "  return shared_state{dim, offset, n, a};",
+      "}"))
+})
+
+
+test_that("can accept multidimensional array as parameter", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + sum(a)
+    a <- parameter()
+    dim(a) <- c(3, 4, 5)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const dust2::array::dimensions<3> dim_a{static_cast<size_t>(3), static_cast<size_t>(4), static_cast<size_t>(5)};",
+      "  std::vector<real_type> a(dim_a.size);",
+      '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
+      "  const shared_state::dim_type dim{dim_a};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a};",
       "}"))
 })

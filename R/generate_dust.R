@@ -567,19 +567,22 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     is_array <- name %in% dat$storage$arrays$name
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
-      ## Needs work if more than 1d, some of which is in dust2;
-      ## dimensions here as an initialiser list
-      stopifnot(dat$storage$arrays$rank[[i]] == 1)
+
       ## Needs work doing some sort of static initialisation
+      ## TODO: move this into a parse error.
       stopifnot(is.null(eq$rhs$args$default))
-      len <- generate_dust_sexp(
-        call("OdinLength", eq$lhs$name),
-        dat$sexp_data, options)
-      required <- if (isFALSE(options$shared_exists)) "true" else "false"
+
+      if (isFALSE(options$shared_exists)) {
+        dim <- sprintf("dim_%s", name)
+        required <- "true"
+      } else {
+        dim <- sprintf("shared.dim.%s", name)
+        required <- "false"
+      }
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
       res <- sprintf(
-        'dust2::r::%s_vector(parameters, %s, %s.data(), "%s", %s);',
-        read, len, dest, name, required)
+        'dust2::r::%s_array(parameters, %s, %s.data(), "%s", %s);',
+        read, dim, dest, name, required)
     } else {
       lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
 
