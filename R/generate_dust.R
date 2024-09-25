@@ -375,8 +375,25 @@ generate_dust_system_compare_data <- function(dat) {
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
     eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
-    body$add(sprintf("ll += monty::density::%s(%s, true);",
+
+    ## TODO: when we refactor things, this probably belongs in the parse phase.
+    ##
+    ## This finds (recursively) all data used in the calculation, so
+    ## that we can skip the calculation if any of this is NA.
+    vars <- eq$rhs$depends$variables
+    nms_eqs <- intersect(vars, names(dat$equations))
+    vars <- union(
+      vars,
+      unlist0(lapply(dat$equations[names(dat$equations) %in% nms_eqs],
+                     function(eq) eq$rhs$depends$variables_recursive)))
+    nms_data <- intersect(vars, dat$data$name)
+
+    check_data <- sprintf("!std::isnan(%s)",
+                          vcapply(nms_data, generate_dust_sexp, dat$sexp_data))
+    body$add(sprintf("if (%s) {", paste(check_data, collapse = " && ")))
+    body$add(sprintf("  ll += monty::density::%s(%s, true);",
                      eq$rhs$density$cpp, paste(eq_args, collapse = ", ")))
+    body$add("}")
   }
 
   body$add("return ll;")
