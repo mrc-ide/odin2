@@ -182,3 +182,12 @@ dir_create <- function(path) {
 last <- function(x) {
   x[[length(x)]]
 }
+
+
+rank_description <- function(rank) {
+  switch(rank + 1L,
+         "scalar",
+         "vector",
+         "matrix",
+         sprintf("%d-dimensional array", rank))
+}

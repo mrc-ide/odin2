@@ -88,16 +88,58 @@ parse_system_overall <- function(exprs, call) {
     dims = I(dims),
     size = I(lapply(dims, expr_prod)))
 
+  ## This whole chunk probably moves into its own section at some
+  ## point.
   is_interpolate <- vlapply(exprs,
                             function(x) identical(x$rhs$type, "interpolate"))
   if (any(is_interpolate)) {
+    exprs[is_interpolate] <- lapply(exprs[is_interpolate], function(eq) {
+      nm_result <- eq$lhs$name_data
+      nm_time <- eq$rhs$expr$time
+      nm_value <- eq$rhs$expr$value
+
+      get_rank <- function(nm) {
+        if (is.na(i <- match(nm, arrays$name))) 0L else arrays$rank[[i]]
+      }
+      rank_result <- get_rank(nm_result)
+
+      if (get_rank(nm_time) != 1L) {
+        cli::cli_abort(
+          c(paste("Expected time argument '{nm_time}' to 'interpolate()' for",
+                  "{nm_result}' to be a vector"),
+            i = "{nm_time} was a {rank_description(get_rank(nm_time))}"),
+          "E2099", src, call)
+      }
+      rank_value_expected <- 1L + rank_result
+      if (get_rank(nm_value) != rank_value_expected) {
+        cli::cli_abort(
+          c(paste("Expected value argument '{nm_value}' to 'interpolate()' for",
+                  "{nm_result}' to be a",
+                  "{rank_description(rank_value_expected)}"),
+            i = "{nm_value} was a {rank_description(get_rank(nm_value))}"),
+          "E2099", src, call)
+      }
+
+      ## TODO: we could warn here about things that look incompatible,
+      ## but a lot of the time that's hard to tell, and particularly
+      ## so with arrays whose size is not known until they are given.
+
+      ## Finally, we save the rank back in, and the source of the rank
+      ## information.
+      eq$rhs$expr$rank <- rank_result
+      if (rank_result > 0) {
+        eq$rhs$expr$dim <- eq$lhs$name_data
+      }
+      eq
+    })
     interpolate_use <- lapply(
       exprs[is_interpolate],
       function(eq) {
         list(
           lhs = list(name = eq$lhs$name_data),
           rhs = list(type = "expression",
-                     expr = call("OdinInterpolateEval", eq$lhs$name),
+                     expr = call("OdinInterpolateEval",
+                                 eq$lhs$name, eq$lhs$name_data),
                      depends = list(functions = character(),
                                     variables = eq$lhs$name)),
           src = eq$src)
@@ -366,9 +408,12 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   type <- set_names(rep("real_type", length(location)), names(location))
   type[parameters$name] <- parameters$type
 
+  is_interpolate <- vlapply(equations, function(x) x$rhs$type == "interpolate")
+  type[is_interpolate] <- "interpolator"
+
   is_dim <- vlapply(equations[names(location)],
                     function(x) identical(x$special, "dim"))
-  type[is_dim] <- "size_t"
+  type[is_dim] <- "dimension"
 
   list(contents = contents,
        location = location,
@@ -436,6 +481,11 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
+
+  name_dim_equation <- set_names(
+    vcapply(exprs[is_dim], function(eq) eq$lhs$name),
+    dim_nms)
+
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
@@ -444,9 +494,19 @@ parse_system_arrays <- function(exprs, call) {
         "Array parameters cannot have defaults",
         "E1051", eq$src, call)
     }
-    name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
-    eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
+    eq$rhs$depends$variables <- union(eq$rhs$depends$variables,
+                                      name_dim_equation[[eq$lhs$name]])
     exprs[[i]] <- eq
+  }
+
+  is_interpolate <- vlapply(exprs, function(eq) eq$rhs$type == "interpolate")
+  for (i in which(is_interpolate)) {
+    eq <- exprs[[i]]
+    if (eq$lhs$name_data %in% dim_nms) {
+      eq$rhs$depends$variables <- union(
+        eq$rhs$depends$variables, name_dim_equation[[eq$lhs$name_data]])
+      exprs[[i]] <- eq
+    }
   }
 
   id <- sprintf("%s:%s", nms, vcapply(exprs, function(x) x$special %||% ""))
