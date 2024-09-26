@@ -436,9 +436,6 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
-  ## TODO: This can be moved into the original parse of the
-  ## expression, I think? We can revisit this later once the array
-  ## bits have settled perhaps.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
@@ -451,8 +448,6 @@ parse_system_arrays <- function(exprs, call) {
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
   }
-
-  browser()
 
   id <- sprintf("%s:%s", nms, vcapply(exprs, function(x) x$special %||% ""))
   if (anyDuplicated(id)) {
