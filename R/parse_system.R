@@ -408,8 +408,9 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   type <- set_names(rep("real_type", length(location)), names(location))
   type[parameters$name] <- parameters$type
 
-  is_interpolate <- vlapply(equations, function(x) x$rhs$type == "interpolate")
-  type[is_interpolate] <- "interpolator"
+  is_interpolate <- vlapply(equations[names(location)],
+                            function(x) identical(x$rhs$type, "interpolate"))
+  type[names(type) %in% names(which(is_interpolate))] <- "interpolator"
 
   is_dim <- vlapply(equations[names(location)],
                     function(x) identical(x$special, "dim"))

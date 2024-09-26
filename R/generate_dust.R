@@ -60,8 +60,25 @@ generate_dust_system_attributes <- function(dat) {
 generate_dust_system_shared_state <- function(dat) {
   nms <- dat$storage$contents$shared
   type <- dat$storage$type[nms]
+  type[["interpolate_a"]] <- "interpolator"
   is_array <- nms %in% dat$storage$arrays$name
   type[is_array] <- sprintf("std::vector<%s>", type[is_array])
+
+  is_interpolator <- type == "interpolator"
+  if (any(is_interpolator)) {
+    type[is_interpolator] <- vcapply(
+      dat$equations[names(which(is_interpolator))], function(eq) {
+        rank <- eq$rhs$expr$rank
+        mode <- eq$rhs$expr$mode
+        substr(mode, 1, 1) <- toupper(substr(mode, 1, 1))
+        if (rank == 0) {
+          sprintf("dust2::interpolate::Interpolate%s<real_type>", mode)
+        } else {
+          sprintf("dust2::interpolate::Interpolate%sArray<real_type, %d>",
+                  mode, rank)
+        }
+      })
+  }
 
   if (nrow(dat$storage$arrays) > 0) {
     dims <- c(

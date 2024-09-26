@@ -1344,6 +1344,24 @@ test_that("can add interpolation", {
       "}"))
 
   expect_equal(
+    generate_dust_system_shared_state(dat),
+    "struct shared_state {",
+    "  struct dim_type {",
+    "    dust2::array::dimensions<1> at;",
+    "    dust2::array::dimensions<1> ay;",
+    "  } dim;",
+    "  struct offset_type {",
+    "    struct {",
+    "      size_t x;",
+    "    } state;",
+    "  } offset;",
+    "  real_type n;",
+    "  std::vector<real_type> at;",
+    "  std::vector<real_type> ay;",
+    "  dust2::interpolate::InterpolateConstant<real_type> interpolate_y;",
+    "};")
+
+  expect_equal(
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
     "  const real_type n = 5;",
@@ -1486,6 +1504,26 @@ test_that("can interpolate arrays", {
   })
 
   dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> at;",
+      "    dust2::array::dimensions<2> ay;",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  real_type nt;",
+      "  real_type na;",
+      "  std::vector<real_type> at;",
+      "  std::vector<real_type> ay;",
+      "  dust2::interpolate::InterpolateConstantArray<real_type, 1> interpolate_a;",
+      "};"))
 
   expect_equal(
     generate_dust_system_build_shared(dat),

@@ -66,13 +66,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       src <- generate_dust_sexp(expr[[2]], dat, options)
       target <- expr[[3]]
       if (target %in% names(dat$rank)) {
-        target_str <- generate_dust_sexp(target, dat, options)
-        ## TODO: we could offer an overload in dust that would remove
-        ## the need for this; that would be nice.
-        if (dat$location[[target]] == "internal") {
-          target_str <- sprintf("%s.begin()", target_str)
-        }
-        return(sprintf("%s.eval(time, %s)", src, target_str))
+        return(sprintf("%s.eval(time, %s)", src,
+                       generate_dust_sexp(target, dat, options)))
       } else {
         return(sprintf("%s.eval(time)", src))
       }
