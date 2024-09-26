@@ -126,3 +126,50 @@ test_that("can generate simple model with array", {
   r <- monty::monty_rng$new(10, seed = 42)
   expect_equal(state, rbind(colSums(r$normal(3, 0, 1))))
 })
+
+
+test_that("can generate model with interpolation", {
+  gen <- odin({
+    initial(x) <- 0
+    update(x) <- a
+    initial(y[]) <- 0
+    update(y[]) <- b[i]
+    nb <- 3
+    nta <- 10
+    ntb <- 20
+
+    ta <- parameter()
+    tb <- parameter()
+    ya <- parameter()
+    yb <- parameter()
+
+    a <- interpolate(ta, ya, "linear")
+    b <- interpolate(tb, yb, "linear")
+
+    dim(ta) <- nta
+    dim(ya) <- nta
+    dim(tb) <- ntb
+    dim(yb) <- c(nb, ntb)
+    dim(b) <- nb
+    dim(y) <- nb
+  }, debug = TRUE, quiet = TRUE)
+
+  ta <- seq(0, length.out = 10, by = 2)
+  tb <- seq(0, length.out = 20)
+  ya <- runif(length(ta))
+  yb <- matrix(runif(3 * length(tb)), 3)
+  pars <- list(ta = ta, tb = tb, ya = ya, yb = yb)
+
+  sys <- dust2::dust_system_create(gen(), pars, 1, dt = 0.25)
+  t_out <- seq(0, 18, by = 0.25)
+  y <- dust2::dust_system_simulate(sys, t_out)
+
+  ## There is some drama here with being off-by-one due to when we
+  ## read and write interpolation values; this is expected but
+  ## confusing.
+  n <- length(t_out)
+  expect_equal(y[1, ], c(0, approx(ta, ya, t_out)$y[-n]))
+  expect_equal(y[2, ], c(0, approx(tb, yb[1, ], t_out)$y[-n]))
+  expect_equal(y[3, ], c(0, approx(tb, yb[2, ], t_out)$y[-n]))
+  expect_equal(y[4, ], c(0, approx(tb, yb[3, ], t_out)$y[-n]))
+})
