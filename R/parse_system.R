@@ -442,7 +442,7 @@ parse_system_arrays <- function(exprs, call) {
     if (eq$rhs$type == "parameter" && !is.null(eq$rhs$args$default)) {
       odin_parse_error(
         "Array parameters cannot have defaults",
-        "E1099", eq$src, call)
+        "E1051", eq$src, call)
     }
     name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)

@@ -655,7 +655,7 @@ Cannot use `step` within discrete time models.  Prior to odin version 2, the `st
 
 You will need to adapt your code to fix this error, and this may require features that we are still developing.  Please see `vignette("migrating")` for details.
 
-# `E1099`
+# `E1051`
 
 Array parameters cannot have defaults.  If `a` is an array (of any rank), then this is an error:
 
