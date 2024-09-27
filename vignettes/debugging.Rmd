@@ -11,6 +11,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
 Debugging odin models can be challenging because:
 
 * They're not composable - you end up with a fairly large set of equations that govern your system, and you can't easily split this into smaller testable units and compose them together.
@@ -18,6 +25,10 @@ Debugging odin models can be challenging because:
 * You can't (easily) interrupt the running of the program at any point and inspect it
 
 Here, we outline some strategies for debugging, and describe the new features that aim to make this easier.
+
+```{r}
+library(odin2)
+```
 
 # Using `print()`
 
@@ -112,3 +123,14 @@ This is an experimental interface, and it has not been exposed to much real-worl
 * The print statement only runs in your right-hand-side function (ODE models) or update function (discrete time models) and so it's possible that some variables that you refer to in your print statements won't exist in this function (e.g., transient quantities used only to compute some initial condition). We hope this is rare in real-use examples but welcome minimal examples that show where this causes problems (likely you will see a compiler error)
 * We print the result at the end of the rhs/update function; if you have a crash (or are writing off the end of memory) then this might not be what you want (e.g., the variables you see are the ones in the iteration prior to the crash, or after they have been overwritten by junk). We may support printing more eagerly, after all dependencies in the expression are satisfied, with an additional option to `print`
 * Be careful of using integer printing (e.g., `{x; d}`) for variables that are merely integer-like, or you will get unexpected junk output out.  You can however write `{as.integer(x); d}` which will do a conversion to integer and then print that
+
+# Show the generated code
+
+Sometimes just looking at the generated code can be helpful.  You can do this with `odin_show`:
+
+```{r}
+odin_show({
+  initial(x) <- 0
+  update(x) <- Normal(x, 1)
+})
+```
