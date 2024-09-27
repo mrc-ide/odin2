@@ -50,7 +50,8 @@ odin_migrate <- function(path, dest) {
       function(x) sprintf("[%s] %s", x$error$code, x$error$message))
     for (m in sort(msg)) {
       cli::cli_alert_danger(m)
-      for (line in format_src(exprs[is_error][msg == m])) {
+      src <- format_src(parse_error_src(exprs[is_error][msg == m]))
+      for (line in src) {
         cli::cli_text(line)
       }
     }

@@ -52,13 +52,14 @@ test_that("throw error with context", {
     class = "odin_parse_error")
   expect_equal(
     err$src,
-    list(list(value = quote(b <- parameter(invalid = TRUE)),
-              index = 3,
-              start = 3,
-              end = 3,
-              str = c("b<-parameter(invalid=TRUE)"))))
+    data_frame(index = 3L,
+               expr = I(list(quote(b <- parameter(invalid = TRUE)))),
+               start = 3L,
+               end = 3L,
+               str = "b<-parameter(invalid=TRUE)",
+               migrated = FALSE))
   expect_match(
-    conditionMessage(err),
+    cli::ansi_strip(conditionMessage(err)),
     "Context:\n3| b<-parameter(invalid=TRUE)",
     fixed = TRUE)
 })
@@ -75,8 +76,16 @@ test_that("throw error with context where source code unavailable", {
     "Invalid call to 'parameter()'",
     fixed = TRUE,
     class = "odin_parse_error")
+  expect_equal(
+    err$src,
+    data_frame(index = 3L,
+               expr = I(list(quote(b <- parameter(invalid = TRUE)))),
+               start = NA_integer_,
+               end = NA_integer_,
+               str = NA_character_,
+               migrated = FALSE))
   expect_match(
-    conditionMessage(err),
+    cli::ansi_strip(conditionMessage(err)),
     "Context:\nb <- parameter(invalid = TRUE)",
     fixed = TRUE)
 })

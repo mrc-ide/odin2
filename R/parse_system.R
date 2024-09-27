@@ -292,14 +292,14 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       required <- union(required, eqs[!is_time])
 
       if (phase %in% c("update", "deriv", "output")) {
-        check <- c(e, equations[eqs_time])
+        check <- c(e, unname(equations[eqs_time]))
         err <- lapply(check, function(eq) {
           intersect(data, eq$rhs$depends$variables)
         })
         is_err <- lengths(err) > 0
         if (any(is_err)) {
           data_err <- intersect(data, unlist0(err))
-          src <- lapply(check[is_err], "[[", "src")
+          src <- unname(lapply(check[is_err], "[[", "src"))
           odin_parse_error(
             c("Data may only be referenced from equations used in comparison",
               i = paste("You have referenced data {squote(data_err)} from",

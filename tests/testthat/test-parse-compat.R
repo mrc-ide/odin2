@@ -34,20 +34,22 @@ test_that("can control severity of reporting", {
 
 test_that("can translate simple user calls", {
   expect_equal(
-    parse_compat_fix_user(list(value = quote(a <- user()))),
+    parse_compat_fix_user(list(value = quote(a <- user()), index = 1L)),
     list(value = quote(a <- parameter()),
+         index = 1L,
          compat = list(type = "user", original = quote(a <- user()))))
   expect_equal(
-    parse_compat_fix_user(list(value = quote(a <- user(1)))),
+    parse_compat_fix_user(list(value = quote(a <- user(1)), index = 1L)),
     list(value = quote(a <- parameter(1)),
+         index = 1L,
          compat = list(type = "user", original = quote(a <- user(1)))))
   expect_error(
-    parse_compat_fix_user(list(value = quote(a <- user(min = 0)))),
+    parse_compat_fix_user(list(value = quote(a <- user(min = 0)), index = 1L)),
     "Can't yet translate 'user()' calls that use the 'min' argument",
     fixed = TRUE,
     class = "odin_parse_error")
   expect_error(
-    parse_compat_fix_user(list(value = quote(a <- user(max = 1)))),
+    parse_compat_fix_user(list(value = quote(a <- user(max = 1)), index = 1L)),
     "Can't yet translate 'user()' calls that use the 'max' argument",
     fixed = TRUE,
     class = "odin_parse_error")

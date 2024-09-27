@@ -75,7 +75,8 @@ test_that("Write what we can, even if there are errors", {
   expect_match(res$messages[[1]], "Migrating 1 statement")
   expect_match(res$messages[[2]], "Skipped 1 statement")
   expect_match(res$messages[[3]], "Use of 'step' is no longer allowed")
-  expect_match(res$messages[[4]], "update(x)<- a + step", fixed = TRUE)
+  expect_match(cli::ansi_strip(res$messages[[4]]),
+               "update(x)<- a + step", fixed = TRUE)
   expect_match(res$messages[[5]], "This statement has been preserved")
 })
 
