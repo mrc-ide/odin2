@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+source("helpers.R")
 ```
 
 This vignette discusses key differences with odin version 1 (`odin1` in this document).
@@ -250,3 +251,32 @@ gen <- odin2::odin({
 ```
 
 In this case, odin errors and tries to indicate where you have work to do (and directs you to this document!)
+
+For code saved into a file, you can use `odin_migrate` to migrate code from the old syntax to the new; this will preserve comments and formatting except for code that is rewritten so it should be fairly unintrusive.
+
+```{r, include = FALSE}
+path <- tempfile(fileext = ".R")
+writeLines(c(
+  "initial(x) <- 1",
+  "deriv(x) <- x + a / t",
+  "a <- user(2)"),
+  path)
+```
+
+For example, in `path` (a temporary file for this vignette) we have saved the code from above:
+
+```{r echo = FALSE, results = "asis"}
+r_output(readLines(path))
+```
+
+We can migrate this in-place with:
+
+```{r}
+odin_migrate(path, path)
+```
+
+and now the code contains:
+
+```{r echo = FALSE, results = "asis"}
+r_output(readLines(path))
+```
