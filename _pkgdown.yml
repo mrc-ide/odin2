@@ -13,6 +13,7 @@ reference:
       - odin_package
       - odin_show
       - odin_migrate
+      - odin_validate
 
 articles:
   - title: Basics

@@ -182,7 +182,14 @@ parse_compat_report <- function(exprs, action, call) {
     if (action == "error") {
       odin_parse_error(c(header, detail), "E1017", exprs[i], call)
     } else {
-      cli::cli_warn(c(header, detail), call = call)
+      data <- lapply(exprs[i], function(x) {
+        x$compat$description <- description[[x$compat$type]]
+        x
+      })
+      cli::cli_warn(c(header, detail),
+                    class = "odin_compatibility_problem",
+                    data = data,
+                    call = call)
     }
   }
 
