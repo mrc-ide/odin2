@@ -182,10 +182,26 @@ parse_compat_report <- function(exprs, action, call) {
     if (action == "error") {
       odin_parse_error(c(header, detail), "E1017", exprs[i], call)
     } else {
-      data <- lapply(exprs[i], function(x) {
-        x$compat$description <- description[[x$compat$type]]
-        x
-      })
+      err <- exprs[i]
+      type <- lapply(err, function(x) x$compat$type)
+      ## Small faff here in the case that multiple compatibility
+      ## issues are found on a single line:
+      if (any(lengths(type)) > 0) {
+        err <- Map(function(x, t) {
+          x$compat$type <- t
+          x
+        }, rep(err, lengths(type)), unlist(type))
+      }
+      type <- vcapply(err, function(x) x$compat$type)
+      data <- data_frame(
+        index = viapply(err, "[[", "index"),
+        type = type,
+        description = unname(description[type]),
+        original = I(lapply(err, function(x) x$compat$original)),
+        value = I(lapply(err, "[[", "value")),
+        start = viapply(err, function(x) x$start %||% NA_integer_),
+        end = viapply(err, function(x) x$end %||% NA_integer_),
+        str = vcapply(err, function(x) x$str %||% NA_character_))
       cli::cli_warn(c(header, detail),
                     class = "odin_compatibility_problem",
                     data = data,

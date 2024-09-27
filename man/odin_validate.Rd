@@ -33,13 +33,15 @@ A list with elements:
 format.
 \item \code{error}: Either \code{NULL} (if \code{success} is \code{TRUE}) or an error;
 see Details above for interpreting this value.
-\item \code{compatibility}: A \code{data.frame} of compatibility issues
+\item \code{compatibility}: A \code{data.frame} of compatibility issues.  This
+is formatted similarly to \code{src} within \code{error} (see above), but
+also includes \code{type} (a code for the compatibility issue),
+\code{description} (a human-readable description of the issue),
+\code{original} (the original expression) and \code{value} (the final
+expression).
 }
 
 The intention is that we won't throw generally from this function.
-However, we \emph{will} throw if your input cannot be found or
-classified.  Once we have something that is definitely odin code
-we won't throw.
 }
 \description{
 Validate odin code.  This is primarily intended for use within

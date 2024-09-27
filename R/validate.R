@@ -47,12 +47,14 @@
 ##'   format.
 ##' * `error`: Either `NULL` (if `success` is `TRUE`) or an error;
 ##'   see Details above for interpreting this value.
-##' * `compatibility`: A `data.frame` of compatibility issues
+##' * `compatibility`: A `data.frame` of compatibility issues.  This
+##'   is formatted similarly to `src` within `error` (see above), but
+##'   also includes `type` (a code for the compatibility issue),
+##'   `description` (a human-readable description of the issue),
+##'   `original` (the original expression) and `value` (the final
+##'   expression).
 ##'
 ##' The intention is that we won't throw generally from this function.
-##'   However, we *will* throw if your input cannot be found or
-##'   classified.  Once we have something that is definitely odin code
-##'   we won't throw.
 ##'
 ##' @export
 ##' @examples
@@ -92,7 +94,10 @@ odin_validate <- function(expr, input_type = NULL,
   success <- !inherits(res, "error")
   if (success) {
     error <- NULL
-    result <- validate_format_result(res)
+    result <- list(time = res$time,
+                   variables = data_frame(name = res$variables),
+                   parameters = res$parameters["name"],
+                   data = res$data["name"])
   } else {
     error <- res
     result <- NULL
@@ -101,34 +106,5 @@ odin_validate <- function(expr, input_type = NULL,
   list(success = success,
        error = error,
        result = result,
-       compatibility = validate_format_compatibility(env$compatibility))
-}
-
-
-validate_format_result <- function(dat) {
-  list(time = dat$time,
-       variables = data_frame(name = dat$variables),
-       parameters = dat$parameters["name"],
-       data = dat$data["name"])
-}
-
-
-validate_format_compatibility <- function(compat) {
-  if (is.null(compat)) {
-    return(NULL)
-  }
-  ret <- data_frame(
-    index = viapply(compat, "[[", "index"),
-    type = vcapply(compat, function(x) x$compat$type),
-    description = vcapply(compat, function(x) x$compat$description),
-    original = I(lapply(compat, function(x) x$compat$original)),
-    value = I(lapply(compat, "[[", "value")))
-
-  if (!is.null(compat[[1]]$str)) {
-    ret$src_start <- viapply(compat, "[[", "start")
-    ret$src_end <- viapply(compat, "[[", "end")
-    ret$src_value <- vcapply(compat, "[[", "str")
-  }
-
-  ret
+       compatibility = env$compatibility)
 }

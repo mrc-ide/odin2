@@ -28,8 +28,13 @@ test_that("can get error from odin code", {
   expect_null(res$compatibility)
   expect_s3_class(res$error, "odin_parse_error")
   expect_match(res$error$message, "Unknown variable used in odin code")
-  ## We'll tidy this up later.
-  expect_equal(res$error$src[[1]]$index, 2)
+  expect_equal(res$error$src,
+               data.frame(index = 2,
+                          expr = I(list(quote(update(x) <- a))),
+                          start = NA_integer_,
+                          end = NA_integer_,
+                          str = NA_character_,
+                          migrated = FALSE))
 })
 
 
@@ -57,6 +62,6 @@ test_that("can get migration warnings with original source", {
     tmp)
 
   res <- odin_validate(tmp)
-  expect_equal(res$compatibility$src_value,
+  expect_equal(res$compatibility$str,
                "a <-\n  user()")
 })
