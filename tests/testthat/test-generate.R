@@ -1345,21 +1345,21 @@ test_that("can add interpolation", {
 
   expect_equal(
     generate_dust_system_shared_state(dat),
-    "struct shared_state {",
-    "  struct dim_type {",
-    "    dust2::array::dimensions<1> at;",
-    "    dust2::array::dimensions<1> ay;",
-    "  } dim;",
-    "  struct offset_type {",
-    "    struct {",
-    "      size_t x;",
-    "    } state;",
-    "  } offset;",
-    "  real_type n;",
-    "  std::vector<real_type> at;",
-    "  std::vector<real_type> ay;",
-    "  dust2::interpolate::InterpolateConstant<real_type> interpolate_y;",
-    "};")
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> at;",
+      "    dust2::array::dimensions<1> ay;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  real_type n;",
+      "  std::vector<real_type> at;",
+      "  std::vector<real_type> ay;",
+      "  dust2::interpolate::InterpolateConstant<real_type> interpolate_y;",
+      "};"))
 
   expect_equal(
     generate_dust_system_build_shared(dat),
@@ -1555,7 +1555,7 @@ test_that("can interpolate arrays", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  shared.interpolate_a.eval(time, internal.a.begin());",
+      "  shared.interpolate_a.eval(time, internal.a);",
       "  state_next[0] = x + dust2::array::sum<real_type>(internal.a, shared.dim.a);",
       "}"))
 })
