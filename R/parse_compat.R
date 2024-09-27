@@ -1,15 +1,28 @@
-parse_compat <- function(exprs, action, call) {
-  exprs <- lapply(exprs, parse_compat_fix_user, call)
-  exprs <- lapply(exprs, parse_compat_fix_parameter_array, call)
-  exprs <- lapply(exprs, parse_compat_fix_distribution, call)
-  exprs <- lapply(exprs, parse_compat_fix_compare, call)
+parse_compat <- function(exprs, action, ignore_error, call) {
+  apply_fix <- function(exprs, f) {
+    if (ignore_error) {
+      lapply(exprs, function(expr) {
+        tryCatch(f(expr, call), odin_parse_error = function(err) {
+          expr$error <- err
+          expr
+        })
+      })
+    } else {
+      lapply(exprs, f, call)
+    }
+  }
+
+  exprs <- apply_fix(exprs, parse_compat_fix_user)
+  exprs <- apply_fix(exprs, parse_compat_fix_parameter_array)
+  exprs <- apply_fix(exprs, parse_compat_fix_distribution)
+  exprs <- apply_fix(exprs, parse_compat_fix_compare)
 
   ## Bunch of time-related things; these are a bit harder, and can't
   ## always be recovered from.
-  exprs <- lapply(exprs, parse_compat_fix_assign_time)
-  exprs <- lapply(exprs, parse_compat_fix_assign_dt)
-  exprs <- lapply(exprs, parse_compat_fix_use_t)
-  exprs <- lapply(exprs, parse_compat_fix_use_step)
+  exprs <- apply_fix(exprs, parse_compat_fix_assign_time)
+  exprs <- apply_fix(exprs, parse_compat_fix_assign_dt)
+  exprs <- apply_fix(exprs, parse_compat_fix_use_t)
+  exprs <- apply_fix(exprs, parse_compat_fix_use_step)
 
   parse_compat_report(exprs, action, call)
 }
