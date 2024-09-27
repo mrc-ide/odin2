@@ -595,7 +595,7 @@ parse_packing <- function(names, arrays, type) {
 }
 
 
-parse_print <- function(print, time_type, data, call) {
+parse_print <- function(print, time_type, variables, data, phases, call) {
   if (length(print) == 0) {
     return(NULL)
   }
@@ -611,5 +611,15 @@ parse_print <- function(print, time_type, data, call) {
     if (time_type == "discrete") "update" else "deriv"
   })
 
-  split(print, phase)
+  deps <- lapply(print, function(x) x$depends$variables)
+
+  ret <- list()
+  for (p in phase) {
+    i <- phase == p
+    unpack <- setdiff(intersect(unlist0(deps[i]), variables),
+                      phases[[p]]$unpack)
+    ret[[p]] <- list(unpack = unpack, equations = print[i])
+  }
+
+  ret
 }
