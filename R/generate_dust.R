@@ -724,8 +724,15 @@ generate_dust_print <- function(eq, dat) {
     generate_dust_sexp(p$expr, dat$sexp_data)
   })
 
-  sprintf('Rprintf("[%%f] %s\\n", time, %s);',
-          fmt, paste(args, collapse = ", "))
+  str <- sprintf('Rprintf("[%%f] %s\\n", time, %s);',
+                 fmt, paste(args, collapse = ", "))
+  if (!is.null(eq$when)) {
+    when <- generate_dust_sexp(eq$when, dat$sexp_data)
+    str <- c(sprintf("if (%s) {", when),
+             sprintf("  %s", str),
+             "}")
+  }
+  str
 }
 
 

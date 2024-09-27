@@ -77,13 +77,16 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
     n <- length(args)
 
+    binary_inplace <- c(
+      "+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">=", "&&", "||")
+
     if (fn == "(") {
       ret <- sprintf("(%s)", args[[1]])
     } else if (n == 1 && fn == "-") {
       ret <- sprintf("-%s", args[[1]])
     } else if (n == 1 && fn == "+") {
       ret <- args[[1]]
-    } else if (n == 2 && fn %in% c("+", "-", "*", "/", "==")) {
+    } else if (n == 2 && fn %in% binary_inplace) {
       ## Some care might be needed for division in some cases.
       ret <- sprintf("%s %s %s", args[[1]], fn, args[[2]])
     } else if (fn == "%%") {
