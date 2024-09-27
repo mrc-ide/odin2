@@ -301,6 +301,13 @@ generate_dust_system_update <- function(dat) {
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
   }
+
+  if (!is.null(dat$print$update)) {
+    for (eq in dat$print$update) {
+      body$add(generate_dust_print(eq, dat))
+    }
+  }
+
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
 
@@ -323,6 +330,7 @@ generate_dust_system_rhs <- function(dat) {
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_deriv", dat))
   }
+
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
 }
 
@@ -685,6 +693,28 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
                            from,
                            offset[is_array])
   ret
+}
+
+
+generate_dust_print <- function(eq, dat) {
+  format <- vcapply(eq$inputs, function(p) {
+    if (!is.null(p$format)) {
+      p$format
+    } else if (rlang::is_call(p$expr, "as.integer")) {
+      "d"
+    } else if (!is.name(p$expr)) {
+      "f"
+    } else {
+      nm <- as.character(p$expr)
+      if (dat$storage$type[[nm]] %in% c("bool", "int")) "d" else "f"
+    }
+  })
+  args <- vcapply(eq$inputs, function(p) {
+    generate_dust_sexp(p$expr, dat$sexp_data)
+  })
+
+  sprintf('Rprintf("[%f] %s\\n", t, %s);',
+          format, paste(args, collapse = ", "))
 }
 
 

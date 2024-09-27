@@ -22,6 +22,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
     system$data, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
                                  system$variables, call)
+  print <- parse_print(system$exprs$print, system$time, system$data, call)
 
   ret <- list(time = system$time,
               class = "odin",
@@ -31,6 +32,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               phases = phases,
               storage = storage,
               zero_every = zero_every,
+              print = print,
               data = system$data)
 
   parse_check_usage(exprs, ret, call)

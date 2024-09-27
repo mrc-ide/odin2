@@ -476,3 +476,12 @@ test_that("Don't allow vectors to have defaults", {
     }),
     "Array parameters cannot have defaults")
 })
+
+
+test_that("can add print statements", {
+  odin_parse({
+    initial(x) <- 1
+    update(x) <- 1
+    print(x)
+  })
+})

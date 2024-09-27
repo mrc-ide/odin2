@@ -15,6 +15,7 @@ BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
     dust2 (>= 0.1.9),
+    glue,
     monty,
     rlang
 Suggests:

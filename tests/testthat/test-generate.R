@@ -1567,11 +1567,9 @@ test_that("can generate user-sized arrays", {
     update(x) <- x + sum(a)
     a <- parameter()
     dim(a) <- parameter(rank = 1)
-  })
 
-  dat <- generate_prepare(dat)
-
-  expect_equal(
+    dat <- generate_prepare(dat) 
+    expect_equal(   
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
       "  struct dim_type {",
@@ -1601,5 +1599,63 @@ test_that("can generate user-sized arrays", {
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
       '  dust2::r::read_real_array(parameters, shared.dim.a, shared.a.data(), "a", false);',
+      "}"))
+})
+      
+test_that("can generate debug", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x_next
+    x_next <- x * 2
+    print("x_next: {x_next}")
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type x_next = x * 2;",
+      "  state_next[0] = x_next;",
+      '  Rprintf("[%f] x_next: %f\\n", time, x_next);',
+      "}"))
+})
+
+
+test_that("can generate debug that requires additional unpack", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- time
+    print("x: {x}")
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = time;",
+      "  const auto x = state[0];",
+      '  Rprintf("[%f] x: %f\\n", time, x);',
+      "}"))
+})
+
+
+test_that("Generate conditional debug", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x_next
+    x_next <- x * 2
+    print("x_next: {x_next}", when = x > 10)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type x_next = x * 2;",
+      "  state_next[0] = x_next;",
+      "  if (x > 10) {",
+      '    Rprintf("[%f] x_next: %f\\n", time, x_next);',
+      "  }",
       "}"))
 })

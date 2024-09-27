@@ -8,6 +8,7 @@ parse_system_overall <- function(exprs, call) {
   is_data <- special == "data"
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
+  is_print <- special == "print"
   is_equation <- special %in% c("", "parameter", "dim") & !is_compare
 
   ## We take initial as the set of variables:
@@ -154,6 +155,7 @@ parse_system_overall <- function(exprs, call) {
                 output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
+                print = exprs[is_print],
                 data = exprs[is_data])
 
   nms <- vcapply(exprs$equations, function(x) x$lhs$name)
@@ -590,4 +592,24 @@ parse_packing <- function(names, arrays, type) {
   packing$offset <- I(offset)
 
   packing
+}
+
+
+parse_print <- function(print, time_type, data, call) {
+  if (length(print) == 0) {
+    return(NULL)
+  }
+
+  phase <- vcapply(print, function(eq) {
+    deps <- eq$depends$variables
+    if (any(data$name)) {
+      ## This is not actually enough - it's also all recursive deps
+      ## of data...
+      odin_parse_error("Can't yet reference data from 'print()'",
+                       "E0001", eq$src, call)
+    }
+    if (time_type == "discrete") "update" else "deriv"
+  })
+
+  split(print, phase)
 }

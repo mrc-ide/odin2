@@ -197,3 +197,14 @@ rank_description <- function(rank) {
          "matrix",
          sprintf("%d-dimensional array", rank))
 }
+
+
+glue_find_variables <- function(string) {
+  seen <- collector()
+  transformer <-  function(text, envir) {
+    seen$add(trimws(text))
+    text
+  }
+  glue::glue(string, .transformer = transformer)
+  seen$get()
+}
