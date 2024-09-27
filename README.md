@@ -26,7 +26,7 @@
 
 ## Roadmap
 
-The package is currently ready for use for adventurous users.  It will eventually become [`odin`](https://mrc-ide.github.io/odin) and replace that version on CRAN (i.e., it will simply become version 2.0.0 of `odin`, and `odin2` will cease to be a package name that you will see).  It exists separately for now to facilitate development and use alongside the original `odin`.
+The package is currently ready for use for adventurous users.  It will eventually become [`odin`](https://mrc-ide.github.io/odin) and replace that version on CRAN (i.e., it will simply become version 2.0.0 of `odin`, and `odin2` will cease to be a package name that you will see).  It also replaces [odin.dust](https://mrc-ide.github.io/odin.dust).  It exists separately for now to facilitate development and use alongside the original `odin`.
 
 See [this list](https://mrc-ide.github.io/odin2/articles/migrating.html#missing-features) of missing features from version 1 of odin before using.
 
