@@ -455,3 +455,15 @@ test_that("equations cannot shadow variables", {
     }),
     "Equations use names belonging to variables: 'x' and 'y'")
 })
+
+
+test_that("Don't allow vectors to have defaults", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- x + sum(a)
+      a <- parameter(1)
+      dim(a) <- 4
+    }),
+    "Array parameters cannot have defaults")
+})

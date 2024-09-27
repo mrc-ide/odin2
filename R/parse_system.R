@@ -436,12 +436,14 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
-  ## TODO: This can be moved into the original parse of the
-  ## expression, I think? We can revisit this later once the array
-  ## bits have settled perhaps.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
+    if (eq$rhs$type == "parameter" && !is.null(eq$rhs$args$default)) {
+      odin_parse_error(
+        "Array parameters cannot have defaults",
+        "E1051", eq$src, call)
+    }
     name_dim <- exprs[[which(is_dim)[[match(eq$lhs$name, dim_nms)]]]]$lhs$name
     eq$rhs$depends$variables <- union(eq$rhs$depends$variables, name_dim)
     exprs[[i]] <- eq
