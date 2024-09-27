@@ -8,11 +8,11 @@
 ##'
 ##' * `time`: The time mode of the model (a string of either
 ##'   "discrete" or "continuous")
-##' * `parameters`: A data.frame describing parameters.  Currently the
+##' * `parameters`: A `data.frame` describing parameters.  Currently the
 ##'   only column is `name`.
-##' * `variables`: A data.frame describing the model variables.
+##' * `variables`: A `data.frame` describing the model variables.
 ##'   Currently the only column is `name`.
-##' * `data`: A data.frame describing data used by the model (if it
+##' * `data`: A `data.frame` describing data used by the model (if it
 ##'   supports this).  Currently the only column is `name`.
 ##'
 ##' # Errors
@@ -23,8 +23,15 @@
 ##' * `message`: The headline error message
 ##' * `code`: The odin error code, as listed in `vignette("errors")`,
 ##'   and used by [odin_error_explain]
-##' * `src`: Source information about the error.  This is subject to
-##'   change (mrc-5804)
+##' * `src`: Source information about the error.  This is a
+##'   `data.frame` with columns `index` (the expression number),
+##'   `expr` (a list column with the expression), `start` (the
+##'   starting line; possibly `NA`), `end` (the finishing line;
+##'   possibly `NA`), `str` (the string containing the literal value
+##'   of the expression; possibly `NA`) and `migrated` (a logical,
+##'   indicating if the source has been automatically migrated from
+##'   odin1 code).  If any of `start`, `end` or `str` is `NA`, all
+##'   will be, for all rows.
 ##'
 ##' You can get the full rendered message using [conditionMessage()]
 ##' on the error object.
@@ -40,7 +47,7 @@
 ##'   format.
 ##' * `error`: Either `NULL` (if `success` is `TRUE`) or an error;
 ##'   see Details above for interpreting this value.
-##' * `compatibility`: A data.frame of compatibility issues
+##' * `compatibility`: A `data.frame` of compatibility issues
 ##'
 ##' The intention is that we won't throw generally from this function.
 ##'   However, we *will* throw if your input cannot be found or
