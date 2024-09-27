@@ -28,6 +28,7 @@ Here, we outline some strategies for debugging, and describe the new features th
 
 ```{r}
 library(odin2)
+library(dust2)
 ```
 
 # Using `print()`
@@ -38,12 +39,12 @@ Consider the simple model below, which illustrates the idea:
 
 ```{r}
 gen <- odin2::odin({
-  deriv(x) <- x
+  update(x) <- Normal(x, 1)
   initial(x) <- 1
   print("x: {x}")
 }, quiet = TRUE, debug = TRUE)
-mod <- gen$new()
-mod$run(c(0, 0.1))
+sys <- dust_system_create(gen(), list(), 1)
+dust_system_run_to_time(sys, 10)
 ```
 
 Here we've told odin that we want to watch the variable `x` and print its value at every evaluation (the third line of the model code. When we run the model it prints out the time in square brackets then the debug information following. Notice that we only requested the solution at times 0 and 0.1 but the debug information shows every point in time that the ODE solver evaluated this system of equations.
