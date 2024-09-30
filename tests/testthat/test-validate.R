@@ -65,3 +65,33 @@ test_that("can get migration warnings with original source", {
   expect_equal(res$compatibility$str,
                "a <-\n  user()")
 })
+
+
+test_that("return sensible output on parse failure", {
+  tmp <- withr::local_tempfile()
+  writeLines(
+    c("initial(x) <- 1",
+      "update(",
+      "a <- 2"),
+    tmp)
+  res <- odin_validate(tmp)
+  expect_false(res$success)
+  expect_s3_class(res$error, "simpleError")
+})
+
+
+test_that("cope with parse errors that span multiple lines", {
+  tmp <- withr::local_tempfile()
+  writeLines(
+    c("initial(x) <- 1",
+      "update(x) <- a",
+      "a <-",
+      "# A comment here, to make this harder",
+      "  parameter(some_arg = TRUE)"),
+    tmp)
+  res <- odin_validate(tmp)
+  expect_false(res$success)
+  expect_equal(nrow(res$error$src), 1)
+  expect_equal(res$error$src$start, 3)
+  expect_equal(res$error$src$end, 5)
+})
