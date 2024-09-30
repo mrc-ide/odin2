@@ -59,6 +59,12 @@ is_scalar_character <- function(x) {
 }
 
 
+is_scalar_size <- function(x) {
+  is.numeric(x) && length(x) == 1 && !is.na(x) && rlang::is_integerish(x) &&
+    x > 0
+}
+
+
 collector <- function(init = character(0)) {
   env <- new.env(parent = emptyenv())
   env$res <- init

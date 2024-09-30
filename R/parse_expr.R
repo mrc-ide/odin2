@@ -40,6 +40,12 @@ parse_expr_assignment <- function(expr, src, call) {
         "Calls to 'parameter()' must be assigned to a symbol",
         "E1014", src, call)
     }
+    if (!is.null(rhs$args$rank)) {
+      odin_parse_error(
+        paste("Invalid use of 'rank' argument in 'parameter()' call not",
+              "assigning to dimension"),
+        "E1999", src, call)
+    }
     special <- "parameter"
   } else if (rhs$type == "interpolate") {
     if (!is.null(special)) {
@@ -232,7 +238,15 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
 
 
 parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
-  if (rlang::is_call(rhs, "c")) {
+  is_user_sized <- rlang::is_call(rhs, "parameter")
+  if (is_user_sized) {
+    if (is.null(rhs$rank)) {
+      odin_parse_error(
+        "When using 'dim() <- parameter(...)', a 'rank' argument is required",
+        "E1999", src, call)
+    }
+    value <- vector("list", rhs$rank)
+  } else if (rlang::is_call(rhs, "c")) {
     value <- as.list(rhs[-1])
   } else {
     value <- list(rhs)
@@ -259,12 +273,14 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
       "E1043", src, call)
   }
   list(type = "dim",
+       is_user_sized = is_user_sized,
        value = value,
        depends = depends)
 }
 
 
 parse_expr_check_lhs_name <- function(lhs, context, src, call) {
+
   ## There are lots of checks we should add here, but fundamentally
   ## it's a case of making sure that we have been given a symbol and
   ## that symbol is not anything reserved, nor does it start with
@@ -297,7 +313,7 @@ parse_expr_check_lhs_name <- function(lhs, context, src, call) {
 
 parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   template <- function(default = NULL, constant = NULL, differentiate = FALSE,
-                       type = NULL) {
+                       type = NULL, rank = NULL) {
   }
   result <- match_call(rhs, template)
   if (!result$success) {
@@ -368,6 +384,14 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
       paste("Differentiable parameters must have 'type = \"real\"'",
             "not 'type = \"{args$type}\"'"),
       "E1032", src, call)
+  }
+
+  if (!is.null(args$rank)) {
+    if (!is_scalar_size(args$rank)) {
+      odin_parse_error(
+        "'rank' must be a scalar size, if given",
+        "E1999", src, call)
+    }
   }
 
   ## NOTE: this is assuming C++ types here, which is not great, but we

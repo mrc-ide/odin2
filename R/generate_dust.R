@@ -609,13 +609,22 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
-    dims <- vcapply(dat$storage$arrays$dims[[i]], generate_dust_sexp,
-                    dat$sexp_data, options)
-    dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims), collapse = ", ")
-    res <- sprintf("const dust2::array::dimensions<%d> %s{%s};",
-                   dat$storage$arrays$rank[[i]],
-                   eq$lhs$name,
-                   dims_str)
+    rank <- dat$storage$arrays$rank[[i]]
+    if (eq$rhs$is_user_sized) {
+      res <- sprintf('const auto %s = read_dimensions<%d>(parameters, "%s");',
+                     eq$lhs$name,
+                     rank,
+                     eq$lhs$name_data)
+    } else {
+      dims <- vcapply(dat$storage$arrays$dims[[i]], generate_dust_sexp,
+                      dat$sexp_data, options)
+      dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims),
+                        collapse = ", ")
+      res <- sprintf("const dust2::array::dimensions<%d> %s{%s};",
+                     rank,
+                     eq$lhs$name,
+                     dims_str)
+    }
   } else if (identical(eq$rhs$type, "interpolate")) {
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
     res <- sprintf("const auto %s = %s;", eq$lhs$name, rhs)
