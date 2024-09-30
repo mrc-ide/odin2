@@ -108,7 +108,7 @@ parse_system_overall <- function(exprs, call) {
           c(paste("Expected time argument '{nm_time}' to 'interpolate()' for",
                   "{nm_result}' to be a vector"),
             i = "{nm_time} was a {rank_description(get_rank(nm_time))}"),
-          "E2099", src, call)
+          "E2015", src, call)
       }
       rank_value_expected <- 1L + rank_result
       if (get_rank(nm_value) != rank_value_expected) {
@@ -117,7 +117,7 @@ parse_system_overall <- function(exprs, call) {
                   "{nm_result}' to be a",
                   "{rank_description(rank_value_expected)}"),
             i = "{nm_value} was a {rank_description(get_rank(nm_value))}"),
-          "E2099", src, call)
+          "E2015", src, call)
       }
 
       ## TODO: we could warn here about things that look incompatible,
