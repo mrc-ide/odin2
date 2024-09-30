@@ -8,3 +8,9 @@ test_that("can explain an error", {
     mockery::mock_args(mock_explain)[[1]],
     list(errors, "E1001", "pretty"))
 })
+
+
+test_that("cope with empty source on format", {
+  expect_equal(format_src(data_frame(expr = I(list()))),
+               "(source unavailable)")
+})
