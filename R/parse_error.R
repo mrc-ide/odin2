@@ -95,7 +95,9 @@ odin_error_explain <- function(code, how = "pretty") {
 
 
 format_src <- function(src) {
-  if (anyNA(src$str)) {
+  if (nrow(src) == 0) {
+    context <- "(source unavailable)"
+  } else if (anyNA(src$str)) {
     ## TODO: why not vcapply here? or deparse rather than deparse1 if
     ## using unlist?
     context <- unlist0(lapply(src$expr, deparse1))
