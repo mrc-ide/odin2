@@ -1,7 +1,7 @@
 test_that("can parse trivial print statement", {
   expect_equal(
     parse_expr(quote(print("{a}")), NULL, NULL),
-    list(type = "print",
+    list(special = "print",
          string = "{a}",
          inputs = list(list(expr = quote(a), format = NULL)),
          depends = list(functions = character(), variables = "a"),
@@ -10,16 +10,11 @@ test_that("can parse trivial print statement", {
 
 
 test_that("debug string requires at least one variable", {
-  expect_equal(
+  expect_error(
     parse_expr(quote(print("a string")), NULL, NULL),
-    list(type = "print",
-         string = "{a}",
-         inputs = list(list(expr = quote(a), format = NULL)),
-         depends = list(functions = character(), variables = "a"),
-         when = NULL))
+    "Invalid 'print()' expression does not reference any values",
+    fixed = TRUE)
 })
-
-
 
 
 test_that("require that the first argument to print() is a string", {
@@ -33,7 +28,7 @@ test_that("require that the first argument to print() is a string", {
 test_that("cope with malformed glue string", {
   expect_error(
     parse_expr(quote(print("a {string")), NULL, NULL),
-    "Failed to parse 'a {string' with glue")
+    "Failed to parse 'a {string' with 'glue'", fixed = TRUE)
 })
 
 

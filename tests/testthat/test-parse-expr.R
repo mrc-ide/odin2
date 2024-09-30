@@ -219,14 +219,6 @@ test_that("interpolate calls must be assigned to a symbol", {
 })
 
 
-test_that("print not yet supported", {
-  expect_error(
-    parse_expr(quote(print(x)), NULL, NULL),
-    "'print()' is not implemented yet",
-    fixed = TRUE)
-})
-
-
 test_that("delays not yet supported", {
   expect_error(
     parse_expr(quote(a <- delay(b, 1)), NULL, NULL),
