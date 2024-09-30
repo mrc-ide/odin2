@@ -245,7 +245,6 @@ generate_dust_system_initial <- function(dat) {
               "real_type*" = "state")
   } else {
     args <- c("real_type" = "time",
-              "real_type" = "dt",
               "const shared_state&" = "shared",
               "internal_state&" = "internal",
               "rng_state_type&" = "rng_state",
@@ -353,7 +352,6 @@ generate_dust_system_compare_data <- function(dat) {
     return(NULL)
   }
   args <- c("real_type" = "time",
-            "real_type" = "dt",
             "const real_type*" = "state",
             "const data_type&" = "data",
             "const shared_state&" = "shared",
@@ -443,7 +441,6 @@ generate_dust_system_adjoint_update <- function(dat) {
 
 generate_dust_system_adjoint_compare_data <- function(dat) {
   args <- c("real_type" = "time",
-            "real_type" = "dt",
             "const real_type*" = "state",
             "const real_type*" = "adjoint",
             "const data_type&" = "data",
@@ -474,7 +471,6 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
 
 generate_dust_system_adjoint_initial <- function(dat) {
   args <- c("real_type" = "time",
-            "real_type" = "dt",
             "const real_type*" = "state",
             "const real_type*" = "adjoint",
             "const shared_state&" = "shared",
