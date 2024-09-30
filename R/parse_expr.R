@@ -44,7 +44,7 @@ parse_expr_assignment <- function(expr, src, call) {
       odin_parse_error(
         paste("Invalid use of 'rank' argument in 'parameter()' call not",
               "assigning to dimension"),
-        "E1999", src, call)
+        "E1991", src, call)
     }
     special <- "parameter"
   } else if (rhs$type == "interpolate") {
@@ -243,7 +243,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     if (is.null(rhs$rank)) {
       odin_parse_error(
         "When using 'dim() <- parameter(...)', a 'rank' argument is required",
-        "E1999", src, call)
+        "E1992", src, call)
     }
     value <- vector("list", rhs$rank)
   } else if (rlang::is_call(rhs, "c")) {
@@ -390,7 +390,7 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
     if (!is_scalar_size(args$rank)) {
       odin_parse_error(
         "'rank' must be a scalar size, if given",
-        "E1999", src, call)
+        "E1993", src, call)
     }
   }
 
