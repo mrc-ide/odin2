@@ -248,3 +248,30 @@ test_that("Fix use of 'step' in equations", {
     }),
     "Use of 'step' is no longer allowed")
 })
+
+
+test_that("fix user-sized arrays", {
+  expect_warning(
+    res <- odin_parse({
+      a[, ] <- user()
+      dim(a) <- user()
+      update(x) <- x + sum(a)
+      initial(x) <- 0
+    }),
+    "Found 4 compatibility issues")
+  expect_equal(res$equations$dim_a$src$value,
+               quote(dim(a) <- parameter(rank = 2)))
+  expect_equal(res$storage$arrays$rank, 2)
+})
+
+
+test_that("error where we can't determine rank in migration", {
+  expect_error(
+    odin_parse({
+      dim(a) <- user()
+      update(x) <- x + sum(a)
+      initial(x) <- 0
+    }),
+    "Can't determine rank for 'dim() <- user()' call",
+    fixed = TRUE)
+})

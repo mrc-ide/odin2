@@ -702,6 +702,22 @@ with the value of the `rank` argument being a literal integer.  See `vignette("f
 
 Invalid value for `rank` argument to `parameter()`.  Where given it must be a positive size; literally an integer value of 1, 2, 3, ..., 8.  You cannot use a variable here.
 
+# `E1994`
+
+Failed to migrate expression of form
+
+```r
+dim(a) <- user()
+```
+
+because we never found an assignment like
+
+```
+a[] <- user()
+```
+
+where we could determine the rank.  This might be because you've removed the square brackets from the original, or the original assignment is simply missing.  If your code does compile with odin1 but you see this error code please let us know.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
