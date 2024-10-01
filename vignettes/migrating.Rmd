@@ -242,7 +242,7 @@ gen <- odin2::odin({
 }, quiet = TRUE, debug = TRUE)
 ```
 
-This model contains two issues that can be easily rewritten; the solution to this rewriting is printed to screen and the compilation would as if you had rewritten them.
+This model contains two issues that can be easily rewritten; the solution to this rewriting is printed to screen and the model is compiled as if you had rewritten them.
 
 Not everything can be rewritten, especially changes involving `step`:
 

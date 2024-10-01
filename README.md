@@ -11,15 +11,15 @@
 * The DSL is _declarative_ reflecting the mathematical nature of the equations.
 * It includes support for equations that involve vectors, matrices and higher dimensional arrays (up to 8!), including a high-level array indexing notation that removes the need for explicit looping.
 * Supports both discrete-time (possibly stochastic) models, as well as continuous-time ODE models.
-* Interpolation functions can be used to include time-varying quantities into the model (piecewise constant, linear and spline interpolation is supported
+* Interpolation functions can be used to include time-varying quantities into the model (piecewise constant, linear and spline interpolation is supported).
 * The equations are analysed before compilation so that parts that do not depend on time are not included in time-dependent calculations.
 * Supports user-supplied parameters for any part of the system.
-* Supports a large number of mathematical functions (see the [functions vignette](https://mrc-ide.github.io/odin2/articles/functions.html)) for a complete list.
+* Supports a large number of mathematical functions (see the [functions vignette](https://mrc-ide.github.io/odin2/articles/functions.html) for a complete list).
 
 ## Documentation
 
 * See [the introductory vignette](https://mrc-ide.github.io/odin2/articles/odin2.html) for a tutorial-style introduction to `odin2`
-* A [tutorial-style guide](https://mrc-ide.github.io/odin2/articles/fitting.html) to using `odin2` with `dust2` `monty` to fit models to data
+* A [tutorial-style guide](https://mrc-ide.github.io/odin2/articles/fitting.html) to using `odin2` with `dust2` and `monty` to fit models to data
 * A [reference-style guide](https://mrc-ide.github.io/odin2/articles/functions.html) to the syntax and supported functions
 * If you have used [`odin` version 1](https://mrc-ide.github.io/odin) before, see the [migration guide](https://mrc-ide.github.io/odin2/articles/migrating.html) to see what has changed.
 * Because `odin2` compiles to `dust2`, see [its documention](https://mrc-ide.github.io/dust2) and in particular the [list of functions that you can use](https://mrc-ide.github.io/dust2/reference/index.html)
