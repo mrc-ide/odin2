@@ -718,6 +718,45 @@ a[] <- user()
 
 where we could determine the rank.  This might be because you've removed the square brackets from the original, or the original assignment is simply missing.  If your code does compile with odin1 but you see this error code please let us know.
 
+# `E1052`
+
+Failed to parse call to `print()`.  If this error is thrown then we have failed to parse the arguments of your call to `print`.  The full prototype of `print()` is:
+
+```
+print(string, when = NULL)
+```
+
+We will fail to parse your call if:
+
+* You provide more than two arguments
+* You provide named arguments that do not match the two above (`string`, `when`)
+
+# `E1053`
+
+Invalid first (`strring`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimeters, and it must contain at least one template argument.
+
+If you see this error, it's likely you have failed to terminate a template, such as:
+
+```
+print("v: {value")
+```
+
+Here, we might have meant to write `"v: {value}"` (note the closing `}`), but because we did not terminate the template, `glue` failed to parse the string.
+
+# `E1054`
+
+Failed to parse template within print string.  Unlike [E1053](#e1053) this is an error **within** a template.  Typically this will be one of two issues:
+
+* The expression within `{}` is not valid R
+* The format specifier after `;` is not interpretable (see `vignette("debugging")` for details)
+
+Examples
+
+```
+print("x: {x + }") # invalid as `x +` is an incomplete expression
+print("x: {x; q}") # invalid as `q` is not an sprintf format
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

@@ -516,7 +516,7 @@ parse_expr_print <- function(expr, src, call) {
     odin_parse_error(
       "Failed to parse 'print()' statement",
       parent = m$error,
-      "E1099", src, call)
+      "E1052", src, call)
   }
 
   string <- m$value$string
@@ -536,14 +536,14 @@ parse_debug_string <- function(string, src, call) {
   if (!rlang::is_string(string)) {
     odin_parse_error(
       "Expected the first argument to 'print()' to be a string",
-      "E1099", src, call)
+      "E1053", src, call)
   }
 
   parts <- tryCatch(
     as.list(glue_find_variables(string)),
     error = function(e) {
       odin_parse_error("Failed to parse '{string}' with 'glue'",
-                       "E1099", src, call, parent = e)
+                       "E1053", src, call, parent = e)
     })
 
   if (length(parts) == 0) {
@@ -552,7 +552,7 @@ parse_debug_string <- function(string, src, call) {
       c("Invalid 'print()' expression does not reference any values",
         i = paste("You provided the string '{string}', which does not",
                   "contain any expressions within curly braces ({{...}})")),
-      "E1099", src, call)
+      "E1053", src, call)
   }
 
   lapply(parts, function(p) {
@@ -560,7 +560,7 @@ parse_debug_string <- function(string, src, call) {
       parse_debug_element(p), error = function(e) {
         odin_parse_error(
           "Failed to parse debug string '{string}': '{p}' is not valid",
-          "E1099", src, call, parent = e)
+          "E1054", src, call, parent = e)
       })
   })
 }
