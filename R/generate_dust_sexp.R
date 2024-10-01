@@ -48,14 +48,29 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_sexp_reduce(expr, dat, options))
     } else if (fn == "OdinInterpolateAlloc") {
       mode <- expr$mode
+      rank <- expr$rank
       substr(mode, 1, 1) <- toupper(substr(mode, 1, 1))
       time_var <- generate_dust_sexp(expr$time, dat, options)
       value_var <- generate_dust_sexp(expr$value, dat, options)
-      return(sprintf('dust2::interpolate::Interpolate%s(%s, %s, "%s", "%s")',
-                     mode, time_var, value_var, expr$time, expr$value))
+      if (rank == 0) {
+        return(sprintf('dust2::interpolate::Interpolate%s(%s, %s, "%s", "%s")',
+                       mode, time_var, value_var, expr$time, expr$value))
+      } else {
+        dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+        dim_var <- sprintf("%s%s", dim, expr$dim)
+        return(sprintf(
+          'dust2::interpolate::Interpolate%sArray<real_type, %d>(%s, %s, %s, "%s", "%s")',
+          mode, rank, time_var, value_var, dim_var, expr$time, expr$value))
+      }
     } else if (fn == "OdinInterpolateEval") {
-      return(sprintf("%s.eval(time)",
-                     generate_dust_sexp(expr[[2]], dat, options)))
+      src <- generate_dust_sexp(expr[[2]], dat, options)
+      target <- expr[[3]]
+      if (target %in% names(dat$rank)) {
+        return(sprintf("%s.eval(time, %s)", src,
+                       generate_dust_sexp(target, dat, options)))
+      } else {
+        return(sprintf("%s.eval(time)", src))
+      }
     }
 
     ## Below here is much simpler, really.

@@ -1344,6 +1344,24 @@ test_that("can add interpolation", {
       "}"))
 
   expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> at;",
+      "    dust2::array::dimensions<1> ay;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  real_type n;",
+      "  std::vector<real_type> at;",
+      "  std::vector<real_type> ay;",
+      "  dust2::interpolate::InterpolateConstant<real_type> interpolate_y;",
+      "};"))
+
+  expect_equal(
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
     "  const real_type n = 5;",
@@ -1353,7 +1371,7 @@ test_that("can add interpolation", {
     '  dust2::r::read_real_array(parameters, dim_at, at.data(), "at", true);',
     "  std::vector<real_type> ay(dim_ay.size);",
     '  dust2::r::read_real_array(parameters, dim_ay, ay.data(), "ay", true);',
-    '  const real_type interpolate_y = dust2::interpolate::InterpolateConstant(at, ay, "at", "ay");',
+    '  const auto interpolate_y = dust2::interpolate::InterpolateConstant(at, ay, "at", "ay");',
     "  const shared_state::dim_type dim{dim_at, dim_ay};",
     "  shared_state::offset_type offset;",
     "  offset.state.x = 0;",
@@ -1467,5 +1485,77 @@ test_that("can accept multidimensional array as parameter", {
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
       "  return shared_state{dim, offset, a};",
+      "}"))
+})
+
+
+test_that("can interpolate arrays", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + sum(a)
+    a <- interpolate(at, ay, "constant")
+    at <- parameter()
+    ay <- parameter()
+    nt <- 50
+    na <- 3
+    dim(at) <- nt
+    dim(ay) <- c(na, nt)
+    dim(a) <- na
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> at;",
+      "    dust2::array::dimensions<2> ay;",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  real_type nt;",
+      "  real_type na;",
+      "  std::vector<real_type> at;",
+      "  std::vector<real_type> ay;",
+      "  dust2::interpolate::InterpolateConstantArray<real_type, 1> interpolate_a;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  const real_type nt = 50;",
+      "  const real_type na = 3;",
+      "  const dust2::array::dimensions<1> dim_at{static_cast<size_t>(nt)};",
+      "  const dust2::array::dimensions<2> dim_ay{static_cast<size_t>(na), static_cast<size_t>(nt)};",
+      "  const dust2::array::dimensions<1> dim_a{static_cast<size_t>(na)};",
+      "  std::vector<real_type> at(dim_at.size);",
+      '  dust2::r::read_real_array(parameters, dim_at, at.data(), "at", true);',
+      "  std::vector<real_type> ay(dim_ay.size);",
+      '  dust2::r::read_real_array(parameters, dim_ay, ay.data(), "ay", true);',
+      '  const auto interpolate_a = dust2::interpolate::InterpolateConstantArray<real_type, 1>(at, ay, dim_a, "at", "ay");',
+      "  const shared_state::dim_type dim{dim_at, dim_ay, dim_a};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, nt, na, at, ay, interpolate_a};",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_build_internal(dat),
+    c(method_args$build_internal,
+      "  std::vector<real_type> a(shared.dim.a.size);",
+      "  return internal_state{a};",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  shared.interpolate_a.eval(time, internal.a);",
+      "  state_next[0] = x + dust2::array::sum<real_type>(internal.a, shared.dim.a);",
       "}"))
 })

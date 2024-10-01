@@ -839,3 +839,13 @@ a <- 2
 ```
 
 which is invalid because `a` is both an ordinary equation and also part of the system state.
+
+# `E2015`
+
+Invalid rank inputs to `interpolate()`.  The time input (first argument) must always be a vector (rank 1), being a sequence of times corresponding to the times of inputs to interpolate.  The value input (second argument) will have rank **one greater** than the output.  So:
+
+* if the output is a scalar, then the value must be a vector
+* if the output is a vector, the value must be a matrix
+* if the output is a matrix, the value must be a 3-dimensional array
+
+and so on.  This error is thrown where your inputs do not satisfy these tests.
