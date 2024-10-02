@@ -70,7 +70,7 @@ parse_expr_assignment <- function(expr, src, call) {
   index_used <- intersect(INDEX, rhs$depends$variables)
   if (length(index_used) > 0) {
     n <- length(lhs$array)
-    err <- intersect(index_used, INDEX[-seq_len(n)])
+    err <- if (n == 0) index_used else intersect(index_used, INDEX[-seq_len(n)])
     if (length(err) > 0) {
       v <- err[length(err)]
       i <- match(v, INDEX)
