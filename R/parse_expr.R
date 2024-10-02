@@ -525,6 +525,7 @@ parse_expr_print <- function(expr, src, call) {
     lapply(inputs, function(x) find_dependencies(x$expr)))
 
   list(special = "print",
+       rhs = list(type = "print"), # makes checking easier elsewhere
        string = string,
        inputs = inputs,
        depends = depends,
