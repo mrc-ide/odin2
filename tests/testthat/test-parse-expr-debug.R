@@ -2,6 +2,7 @@ test_that("can parse trivial print statement", {
   expect_equal(
     parse_expr(quote(print("{a}")), NULL, NULL),
     list(special = "print",
+         rhs = list(type = "print"),
          string = "{a}",
          inputs = list(list(expr = quote(a), format = NULL)),
          depends = list(functions = character(), variables = "a"),
