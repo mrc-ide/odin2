@@ -98,12 +98,8 @@ format_src <- function(src) {
   if (nrow(src) == 0) {
     context <- "(source unavailable)"
   } else if (anyNA(src$str)) {
-    ## TODO: why not vcapply here? or deparse rather than deparse1 if
-    ## using unlist?
-    context <- unlist0(lapply(src$expr, deparse1))
+    context <- vcapply(src$expr, deparse1)
   } else {
-    ## TODO: check we cope here with newlines and comments, especially
-    ## mixed.  We might need to get the original source back in?
     line <- unlist(Map(seq, src$start, src$end))
     src_str <- unlist(strsplit(src$str, "\n"))
     context <- cli_nbsp(sprintf("%s %s",
