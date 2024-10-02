@@ -1,18 +1,18 @@
 parse_compat <- function(exprs, action, ignore_error, call) {
-  apply_fix <- function(exprs, f) {
+  apply_fix <- function(exprs, f, ...) {
     if (ignore_error) {
       lapply(exprs, function(expr) {
-        tryCatch(f(expr, call), odin_parse_error = function(err) {
+        tryCatch(f(expr, ..., call), odin_parse_error = function(err) {
           expr$error <- err
           expr
         })
       })
     } else {
-      lapply(exprs, f, call)
+      lapply(exprs, f, ..., call)
     }
   }
 
-  exprs <- apply_fix(exprs, parse_compat_fix_user)
+  exprs <- apply_fix(exprs, parse_compat_fix_user, exprs)
   exprs <- apply_fix(exprs, parse_compat_fix_parameter_array)
   exprs <- apply_fix(exprs, parse_compat_fix_distribution)
   exprs <- apply_fix(exprs, parse_compat_fix_compare)
@@ -28,7 +28,7 @@ parse_compat <- function(exprs, action, ignore_error, call) {
 }
 
 
-parse_compat_fix_user <- function(expr, call) {
+parse_compat_fix_user <- function(expr, exprs, call) {
   is_user_assignment <-
     rlang::is_call(expr$value, c("<-", "=")) &&
     rlang::is_call(expr$value[[3]], "user")
@@ -60,8 +60,30 @@ parse_compat_fix_user <- function(expr, call) {
       type <- if (isTRUE(res$value$integer)) "integer" else "real"
       args <- c(args, list(type = type))
     }
+
+    lhs <- expr$value[[2]]
+    is_user_dim <- rlang::is_call(lhs, "dim") && is.name(lhs[[2]])
+    if (is_user_dim) {
+      i <- vlapply(exprs, function(x) {
+        rlang::is_call(x$value, c("<-", "=")) &&
+          rlang::is_call(x$value[[3]], "user") &&
+          rlang::is_call(x$value[[2]], "[") &&
+          identical(x$value[[2]][[2]], lhs[[2]])
+      })
+      if (sum(i) == 1) {
+        args$rank <- length(exprs[[which(i)]]$value[[2]]) - 2
+        type <- "user_dim"
+      } else {
+        odin_parse_error(
+          "Can't determine rank for 'dim() <- user()' call",
+          "E1994", expr, call = call)
+      }
+    }
+
     expr$value[[3]] <- as.call(args)
-    expr <- parse_add_compat(expr, "user", original)
+    expr <- parse_add_compat(expr,
+                             c("user", if (is_user_dim) "user_dim"),
+                             original)
   }
   expr
 }
@@ -135,6 +157,7 @@ parse_compat_report <- function(exprs, action, call) {
   if (action != "silent" && any(i)) {
     description <- c(
       user = "Replace calls to 'user()' with 'parameter()'",
+      user_dim = "Add a 'rank' argument to 'parameter()' assignment to 'dim()'",
       parameter_array =
         "Drop arrays from lhs of assignments from 'parameter()'",
       distribution = paste(

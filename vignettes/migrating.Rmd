@@ -122,6 +122,29 @@ dim(a) <- 10
 
 which makes it clearer that **all** of `a` is assigned by the parameter call.
 
+## Vector/matrix/array parameters whose size is determined by input require `rank` argument
+
+What a mouthful.  Previously you might have written
+
+```r
+a[, ] <- user()
+dim(a) <- user()
+```
+
+which means "`a` is a matrix whose dimensions are determined by the input we are given on initialisation".  Because of the previous change the first line changes to
+
+```r
+a <- parameter()
+```
+
+but that means that we no longer know that `a` has two dimensions.  That's ok because we've moved the responsibility for this into the `dim()` assignment line anyway (internally).  So for now you write
+
+```r
+dim(a) <- parameter(rank = 2)
+```
+
+which conveys the same intent.  We may make this slightly more friendly in future (see `vignette("functions")`).
+
 ## Discrete-time models have a more solid time basis
 
 Previously, discrete time models used `step` to count steps forward as unsigned integers, usually from zero.  Many models added a parameter (or constant) `dt` representing the timestep and then a variable `time` which represented the time as a real-valued number.  For example you might have `dt` of 0.25 and then your model stops at times `[0, 0.25, 0.5, 0.75, 1]` for steps `[0, 1, 2, 3, 4]`.

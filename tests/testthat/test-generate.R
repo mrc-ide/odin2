@@ -1559,3 +1559,47 @@ test_that("can interpolate arrays", {
       "  state_next[0] = x + dust2::array::sum<real_type>(internal.a, shared.dim.a);",
       "}"))
 })
+
+
+test_that("can generate user-sized arrays", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + sum(a)
+    a <- parameter()
+    dim(a) <- parameter(rank = 1)
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> a;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+      c(method_args$build_shared,
+        '  const auto dim_a = read_dimensions<1>(parameters, "a");',
+        "  std::vector<real_type> a(dim_a.size);",
+        '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
+        "  const shared_state::dim_type dim{dim_a};",
+        "  shared_state::offset_type offset;",
+        "  offset.state.x = 0;",
+        "  return shared_state{dim, offset, a};",
+        "}"))
+
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.a, shared.a.data(), "a", false);',
+      "}"))
+})

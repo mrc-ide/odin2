@@ -292,6 +292,7 @@ The function `parameter()` introduces a "parameter"; something that you will ini
 * `constant`: Logical, indicating if the parameter cannot be changed after being initially set.  This must be `TRUE` for things leading into array extents
 * `differentiate`: Logical, indicating if the likelihood (from comparison to data) should be differentiated with respect to this parameter.
 * `type`: The data type for the variable, as a string.  Must be one of `real` (the default), `integer` or `logical`.
+* `rank`: The number of dimensions of the parameter.  This is only used when assigning to `dim()` (see below)
 
 For example:
 
@@ -310,6 +311,15 @@ There are some interactions among the `differentiate` argument combined with `co
 * If a parameter is differentiable (`differentiate = TRUE`) it may not be constant!
 * If **any** parameter is differentiable, the default value for `constant` is `TRUE`, and all non-constant parameters must be differentiable.  Otherwise the default value for `constant` is `FALSE`
 * Only parameters with `type = "real"` can be used with `differentiate = TRUE`
+
+If your parameter has its dimensions determined by the size data you give it, you need to write it slightly specially:
+
+```
+a <- parameter()
+dim(a) <- parameter(rank = 2)
+```
+
+The `rank` argument here is required because otherwise we have no information on the number of dimensions that `a` has; here by saying `rank = 2` we specify that `a` is a matrix.  *We might change this interface in future, the implementation here fairly closely matches that in odin1.*
 
 ## Data
 

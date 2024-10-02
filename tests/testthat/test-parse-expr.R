@@ -424,3 +424,29 @@ test_that("Can't assign to names with reserved prefixes", {
   expect_error(parse_expr(quote(adjoint_x <- 1), NULL, NULL),
                "Invalid name 'adjoint_x' starts with reserved prefix 'adjoint'")
 })
+
+
+test_that("can parse user-sized arrays", {
+  res <- parse_expr(quote(dim(x) <- parameter(rank = 1)), NULL, NULL)
+  expect_equal(res$rhs$value, list(NULL))
+  expect_true(res$rhs$is_user_sized)
+  res <- parse_expr(quote(dim(x) <- parameter(rank = 3)), NULL, NULL)
+  expect_equal(res$rhs$value, list(NULL, NULL, NULL))
+  expect_true(res$rhs$is_user_sized)
+})
+
+
+test_that("require a rank argument if arrays are user sized", {
+  expect_error(
+    parse_expr(quote(dim(x) <- parameter()), NULL, NULL),
+    "When using 'dim() <- parameter(...)', a 'rank' argument is required",
+    fixed = TRUE)
+})
+
+
+test_that("require that rank argument is missing generally for parameters", {
+  expect_error(
+    parse_expr(quote(a <- parameter(rank = 4)), NULL, NULL),
+    "Invalid use of 'rank' argument in 'parameter()'",
+    fixed = TRUE)
+})
