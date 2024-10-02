@@ -59,6 +59,9 @@ test_that("can't use array access with higher rank than the lhs implies", {
   expect_error(
     parse_expr(quote(a[] <- x[j]), NULL, NULL),
     "Invalid index access used on rhs of equation: 'j'")
+  expect_error(
+    parse_expr(quote(a <- x + k), NULL, NULL),
+    "Invalid index access used on rhs of equation: 'k'")
 })
 
 
