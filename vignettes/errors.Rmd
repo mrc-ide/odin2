@@ -671,53 +671,6 @@ a <- parameter(c(1, 2, 3))
 
 to have a default value of vector of 1:3; however this is quite hard to validate and generalises poorly to higher dimensions.  Your thoughts and use-cases are very welcome.
 
-# `E1991`
-
-Invalid use of `rank` argument to `parameter()` call that does not assign to dimensions.  You might have written
-
-```
-a <- parameter(rank = 2)
-```
-
-but this is not the place to include the `rank` argument.  Instead, it should go onto the call with `dim(a)` on the left-hand-side.
-
-
-# `E1992`
-
-Missing `rank` argument to call to `parameter()` which assigns to `dim()`.  You may have written
-
-```
-dim(a) <- parameter()
-```
-
-but here we need to know what rank `a` is (is it a vector, matrix, etc).  You can fix this by writing
-
-```
-dim(a) <- parameter(rank = 2)
-```
-
-with the value of the `rank` argument being a literal integer.  See `vignette("functions")` for more information on this interface.
-
-# `E1993`
-
-Invalid value for `rank` argument to `parameter()`.  Where given it must be a positive size; literally an integer value of 1, 2, 3, ..., 8.  You cannot use a variable here.
-
-# `E1994`
-
-Failed to migrate expression of form
-
-```r
-dim(a) <- user()
-```
-
-because we never found an assignment like
-
-```
-a[] <- user()
-```
-
-where we could determine the rank.  This might be because you've removed the square brackets from the original, or the original assignment is simply missing.  If your code does compile with odin1 but you see this error code please let us know.
-
 # `E1052`
 
 Failed to parse call to `print()`.  If this error is thrown then we have failed to parse the arguments of your call to `print`.  The full prototype of `print()` is:
@@ -756,6 +709,53 @@ Examples
 print("x: {x + }") # invalid as `x +` is an incomplete expression
 print("x: {x; q}") # invalid as `q` is not an sprintf format
 ```
+
+# `E1055`
+
+Invalid use of `rank` argument to `parameter()` call that does not assign to dimensions.  You might have written
+
+```
+a <- parameter(rank = 2)
+```
+
+but this is not the place to include the `rank` argument.  Instead, it should go onto the call with `dim(a)` on the left-hand-side.
+
+
+# `E1056`
+
+Missing `rank` argument to call to `parameter()` which assigns to `dim()`.  You may have written
+
+```
+dim(a) <- parameter()
+```
+
+but here we need to know what rank `a` is (is it a vector, matrix, etc).  You can fix this by writing
+
+```
+dim(a) <- parameter(rank = 2)
+```
+
+with the value of the `rank` argument being a literal integer.  See `vignette("functions")` for more information on this interface.
+
+# `E1057`
+
+Invalid value for `rank` argument to `parameter()`.  Where given it must be a positive size; literally an integer value of 1, 2, 3, ..., 8.  You cannot use a variable here.
+
+# `E1058`
+
+Failed to migrate expression of form
+
+```r
+dim(a) <- user()
+```
+
+because we never found an assignment like
+
+```
+a[] <- user()
+```
+
+where we could determine the rank.  This might be because you've removed the square brackets from the original, or the original assignment is simply missing.  If your code does compile with odin1 but you see this error code please let us know.
 
 # `E2001`
 
