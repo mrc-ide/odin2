@@ -26,7 +26,7 @@
 ##'   dust functions (starting from [dust2::dust_system_create])
 ##'
 ##' @export
-odin <- function(expr, input_type = NULL, quiet = FALSE, workdir = NULL,
+odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
                  debug = FALSE, skip_cache = FALSE, compatibility = "warning") {
   call <- environment()
   dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
