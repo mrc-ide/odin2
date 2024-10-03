@@ -54,6 +54,20 @@ odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
 ##'   but the model lacks this part.
 ##'
 ##' @export
+##' @examples
+##' # Show generated code for the whole system
+##' odin_show({
+##'   initial(x) <- 1
+##'   update(x) <- a
+##'   a <- Normal(x, 1)
+##' })
+##'
+##' # Just the update method
+##' odin_show({
+##'   initial(x) <- 1
+##'   update(x) <- a
+##'   a <- Normal(x, 1)
+##' }, what = "update")
 odin_show <- function(expr, input_type = NULL, compatibility = "warning",
                       what = NULL) {
   call <- environment()
