@@ -301,6 +301,18 @@ generate_dust_system_update <- function(dat) {
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
   }
+
+  if (!is.null(dat$print$update)) {
+    if (length(dat$print$update$unpack) > 0) {
+      body$add(generate_dust_unpack(dat$print$update$unpack,
+                                    dat$storage$packing$state,
+                                    dat$sexp_data))
+    }
+    for (eq in dat$print$update$equations) {
+      body$add(generate_dust_print(eq, dat))
+    }
+  }
+
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
 
@@ -323,6 +335,7 @@ generate_dust_system_rhs <- function(dat) {
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_deriv", dat))
   }
+
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
 }
 
@@ -685,6 +698,41 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
                            from,
                            offset[is_array])
   ret
+}
+
+
+generate_dust_print <- function(eq, dat) {
+  format <- vcapply(eq$inputs, function(p) {
+    if (!is.null(p$format)) {
+      paste0("%", p$format)
+    } else if (rlang::is_call(p$expr, "as.integer")) {
+      "%d"
+    } else if (!is.name(p$expr)) {
+      "%f"
+    } else {
+      nm <- as.character(p$expr)
+      if (dat$storage$type[[nm]] %in% c("bool", "int")) "%d" else "%f"
+    }
+  })
+
+  n <- counter()
+  transformer <- function(text, envir) {
+    format[[n()]]
+  }
+  fmt <- glue::glue(eq$string, .transformer = transformer)
+  args <- vcapply(eq$inputs, function(p) {
+    generate_dust_sexp(p$expr, dat$sexp_data)
+  })
+
+  str <- sprintf('Rprintf("[%%f] %s\\n", time, %s);',
+                 fmt, paste(args, collapse = ", "))
+  if (!is.null(eq$when)) {
+    when <- generate_dust_sexp(eq$when, dat$sexp_data)
+    str <- c(sprintf("if (%s) {", when),
+             sprintf("  %s", str),
+             "}")
+  }
+  str
 }
 
 

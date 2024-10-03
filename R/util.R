@@ -70,7 +70,8 @@ collector <- function(init = character(0)) {
   env$res <- init
   list(
     add = function(x) env$res <- c(env$res, x),
-    get = function() env$res)
+    get = function() env$res,
+    length = function() length(env$res))
 }
 
 
@@ -196,4 +197,25 @@ rank_description <- function(rank) {
          "vector",
          "matrix",
          sprintf("%d-dimensional array", rank))
+}
+
+
+glue_find_variables <- function(string) {
+  seen <- collector()
+  transformer <-  function(text, envir) {
+    seen$add(trimws(text))
+    text
+  }
+  glue::glue(string, .transformer = transformer)
+  seen$get()
+}
+
+
+counter <- function() {
+  env <- new.env()
+  env$n <- 0L
+  function() {
+    env$n <- env$n + 1L
+    env$n
+  }
 }

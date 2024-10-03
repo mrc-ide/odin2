@@ -1570,7 +1570,6 @@ test_that("can generate user-sized arrays", {
   })
 
   dat <- generate_prepare(dat)
-
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
@@ -1587,19 +1586,77 @@ test_that("can generate user-sized arrays", {
 
   expect_equal(
     generate_dust_system_build_shared(dat),
-      c(method_args$build_shared,
-        '  const auto dim_a = read_dimensions<1>(parameters, "a");',
-        "  std::vector<real_type> a(dim_a.size);",
-        '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
-        "  const shared_state::dim_type dim{dim_a};",
-        "  shared_state::offset_type offset;",
-        "  offset.state.x = 0;",
-        "  return shared_state{dim, offset, a};",
-        "}"))
+    c(method_args$build_shared,
+      '  const auto dim_a = read_dimensions<1>(parameters, "a");',
+      "  std::vector<real_type> a(dim_a.size);",
+      '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
+      "  const shared_state::dim_type dim{dim_a};",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a};",
+      "}"))
 
   expect_equal(
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
       '  dust2::r::read_real_array(parameters, shared.dim.a, shared.a.data(), "a", false);',
+      "}"))
+})
+
+test_that("can generate debug", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x_next
+    x_next <- x * 2
+    print("x_next: {x_next}")
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type x_next = x * 2;",
+      "  state_next[0] = x_next;",
+      '  Rprintf("[%f] x_next: %f\\n", time, x_next);',
+      "}"))
+})
+
+
+test_that("can generate debug that requires additional unpack", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- time
+    print("x: {x}")
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = time;",
+      "  const auto x = state[0];",
+      '  Rprintf("[%f] x: %f\\n", time, x);',
+      "}"))
+})
+
+
+test_that("Generate conditional debug", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x_next
+    x_next <- x * 2
+    print("x_next: {x_next}", when = x > 10)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type x_next = x * 2;",
+      "  state_next[0] = x_next;",
+      "  if (x > 10) {",
+      '    Rprintf("[%f] x_next: %f\\n", time, x_next);',
+      "  }",
       "}"))
 })

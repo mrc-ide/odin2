@@ -76,7 +76,7 @@ parse_compat_fix_user <- function(expr, exprs, call) {
       } else {
         odin_parse_error(
           "Can't determine rank for 'dim() <- user()' call",
-          "E1994", expr, call = call)
+          "E1058", expr, call = call)
       }
     }
 

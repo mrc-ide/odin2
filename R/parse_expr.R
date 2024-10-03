@@ -44,7 +44,7 @@ parse_expr_assignment <- function(expr, src, call) {
       odin_parse_error(
         paste("Invalid use of 'rank' argument in 'parameter()' call not",
               "assigning to dimension"),
-        "E1991", src, call)
+        "E1055", src, call)
     }
     special <- "parameter"
   } else if (rhs$type == "interpolate") {
@@ -243,7 +243,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     if (is.null(rhs$rank)) {
       odin_parse_error(
         "When using 'dim() <- parameter(...)', a 'rank' argument is required",
-        "E1992", src, call)
+        "E1056", src, call)
     }
     value <- vector("list", rhs$rank)
   } else if (rlang::is_call(rhs, "c")) {
@@ -390,7 +390,7 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
     if (!is_scalar_size(args$rank)) {
       odin_parse_error(
         "'rank' must be a scalar size, if given",
-        "E1993", src, call)
+        "E1057", src, call)
     }
   }
 
@@ -507,8 +507,83 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
 
 
 parse_expr_print <- function(expr, src, call) {
-  odin_parse_error(
-    "'print()' is not implemented yet", "E0001", src, call)
+  ## TODO: we might add a 'where' argument in future which controls
+  ## which of the generated functions we call the print from.  At
+  ## present it will be in deriv/update only, matching odin1, or we'll
+  ## give it a phase like anything else?
+  m <- match_call(expr, function(string, when = NULL) NULL)
+  if (!m$success) {
+    odin_parse_error(
+      "Failed to parse 'print()' statement",
+      parent = m$error,
+      "E1052", src, call)
+  }
+
+  string <- m$value$string
+  inputs <- parse_debug_string(string, src, call)
+  depends <- join_dependencies(
+    lapply(inputs, function(x) find_dependencies(x$expr)))
+
+  list(special = "print",
+       rhs = list(type = "print"), # makes checking easier elsewhere
+       string = string,
+       inputs = inputs,
+       depends = depends,
+       when = m$value$when)
+}
+
+
+parse_debug_string <- function(string, src, call) {
+  if (!rlang::is_string(string)) {
+    odin_parse_error(
+      "Expected the first argument to 'print()' to be a string",
+      "E1053", src, call)
+  }
+
+  parts <- tryCatch(
+    as.list(glue_find_variables(string)),
+    error = function(e) {
+      odin_parse_error("Failed to parse '{string}' with 'glue'",
+                       "E1053", src, call, parent = e)
+    })
+
+  if (length(parts) == 0) {
+    ## This would make no sense, and is likely an error from the user.
+    odin_parse_error(
+      c("Invalid 'print()' expression does not reference any values",
+        i = paste("You provided the string '{string}', which does not",
+                  "contain any expressions within curly braces ({{...}})")),
+      "E1053", src, call)
+  }
+
+  lapply(parts, function(p) {
+    tryCatch(
+      parse_debug_element(p), error = function(e) {
+        odin_parse_error(
+          "Failed to parse debug string '{string}': '{p}' is not valid",
+          "E1054", src, call, parent = e)
+      })
+  })
+}
+
+
+parse_debug_element <- function(str) {
+  re <- "(.+)\\s*;\\s*(.+)"
+  has_format <- grepl(re, str)
+  if (has_format) {
+    format <- sub(re, "\\2", str)
+    ## Try applying the format in; we'll error here and be caught
+    ## above if this is not interpretable.
+    sprintf(paste0("%", format), 1)
+    value <- sub(re, "\\1", str)
+  } else {
+    format <- NULL
+    value <- str
+  }
+
+  expr <- parse(text = value)[[1]]
+
+  list(expr = expr, format = format)
 }
 
 

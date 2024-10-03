@@ -671,7 +671,46 @@ a <- parameter(c(1, 2, 3))
 
 to have a default value of vector of 1:3; however this is quite hard to validate and generalises poorly to higher dimensions.  Your thoughts and use-cases are very welcome.
 
-# `E1991`
+# `E1052`
+
+Failed to parse call to `print()`.  If this error is thrown then we have failed to parse the arguments of your call to `print`.  The full prototype of `print()` is:
+
+```
+print(string, when = NULL)
+```
+
+We will fail to parse your call if:
+
+* You provide more than two arguments
+* You provide named arguments that do not match the two above (`string`, `when`)
+
+# `E1053`
+
+Invalid first (`string`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimeters, and it must contain at least one template argument.
+
+If you see this error, it's likely you have failed to terminate a template, such as:
+
+```
+print("v: {value")
+```
+
+Here, we might have meant to write `"v: {value}"` (note the closing `}`), but because we did not terminate the template, `glue` failed to parse the string.
+
+# `E1054`
+
+Failed to parse template within print string.  Unlike [E1053](#e1053) this is an error **within** a template.  Typically this will be one of two issues:
+
+* The expression within `{}` is not valid R
+* The format specifier after `;` is not interpretable (see `vignette("debugging")` for details)
+
+Examples
+
+```
+print("x: {x + }") # invalid as `x +` is an incomplete expression
+print("x: {x; q}") # invalid as `q` is not an sprintf format
+```
+
+# `E1055`
 
 Invalid use of `rank` argument to `parameter()` call that does not assign to dimensions.  You might have written
 
@@ -682,7 +721,7 @@ a <- parameter(rank = 2)
 but this is not the place to include the `rank` argument.  Instead, it should go onto the call with `dim(a)` on the left-hand-side.
 
 
-# `E1992`
+# `E1056`
 
 Missing `rank` argument to call to `parameter()` which assigns to `dim()`.  You may have written
 
@@ -698,11 +737,11 @@ dim(a) <- parameter(rank = 2)
 
 with the value of the `rank` argument being a literal integer.  See `vignette("functions")` for more information on this interface.
 
-# `E1993`
+# `E1057`
 
 Invalid value for `rank` argument to `parameter()`.  Where given it must be a positive size; literally an integer value of 1, 2, 3, ..., 8.  You cannot use a variable here.
 
-# `E1994`
+# `E1058`
 
 Failed to migrate expression of form
 
