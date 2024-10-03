@@ -46,15 +46,29 @@ odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
 ##'
 ##' @inheritParams odin
 ##'
+##' @param what Optional string, being a single method to show.
+##'   Popular options are `update`, `rhs` and `compare_data`.
+##'
 ##' @return A character vector, with class `odin_code` that has a
-##'   pretty-print method defined.
+##'   pretty-print method defined.  Returns `NULL` if `what` was given
+##'   but the model lacks this part.
 ##'
 ##' @export
-odin_show <- function(expr, input_type = NULL, compatibility = "warning") {
+odin_show <- function(expr, input_type = NULL, compatibility = "warning",
+                      what = NULL) {
   call <- environment()
   dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
-  code <- generate_dust_system(dat)
-  class(code) <- "odin_code"
+  if (!is.null(what)) {
+    parts <- generate_dust_parts()
+    dat <- generate_prepare(dat)
+    code <- parts[[match_value(what, names(parts))]](dat)
+    attr(code, "what") <- what
+  } else {
+    code <- generate_dust_system(dat)
+  }
+  if (!is.null(code)) {
+    class(code) <- "odin_code"
+  }
   code
 }
 
@@ -63,7 +77,12 @@ odin_show <- function(expr, input_type = NULL, compatibility = "warning") {
 print.odin_code <- function(x, ...) {
   ## We can probably do more with this later, but this should already
   ## be enough:
-  cli::cli_h1("odin code:")
+  what <- attr(x, "what")
+  if (is.null(what)) {
+    cli::cli_h1("odin code:")
+  } else {
+    cli::cli_h1("odin code ({what}):")
+  }
   writeLines(x)
   invisible(x)
 }

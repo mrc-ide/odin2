@@ -15,3 +15,15 @@ test_that("can print odin_code", {
   expect_match(res$messages, "odin code:", all = FALSE)
   expect_equal(res$output, paste(code, collapse = "\n"))
 })
+
+
+test_that("can generate code", {
+  res <- odin_show({
+    initial(x) <- 1
+    update(x) <- x + 1
+  }, what = "update")
+  expect_s3_class(res, "odin_code")
+  expect_type(res, "character")
+  res <- evaluate_promise(print(res))
+  expect_match(res$messages, "odin code (update):", all = FALSE, fixed = TRUE)
+})
