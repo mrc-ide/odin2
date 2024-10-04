@@ -688,7 +688,7 @@ We will fail to parse your call if:
 
 # `E1053`
 
-Invalid first (`string`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimeters, and it must contain at least one template argument.
+Invalid first (`string`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimiters, and it must contain at least one template argument.
 
 If you see this error, it's likely you have failed to terminate a template, such as:
 

@@ -5,6 +5,7 @@ Poisson
 R's
 cdot
 codecov
+composable
 cpp
 dI
 dR
@@ -13,6 +14,7 @@ discretising
 dt
 etc
 frac
+inspectable
 io
 mathbf
 mathrm
@@ -25,8 +27,11 @@ odin
 odin's
 pMCMC
 parallelisable
+parseable
+rethrown
 sim
 stochasticity
 susceptibles
 unfilter
 unfilters
+unintrusive
