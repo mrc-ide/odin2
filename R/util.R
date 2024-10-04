@@ -186,6 +186,21 @@ dir_create <- function(path) {
 }
 
 
+near_match <- function(x, possibilities, threshold = 2, max_matches = 5) {
+  if (length(possibilities) == 0) {
+    return(character())
+  }
+  i <- tolower(x) == tolower(possibilities)
+  if (any(i)) {
+    possibilities[i]
+  } else {
+    d <- set_names(drop(utils::adist(x, possibilities, ignore.case = TRUE)),
+                   possibilities)
+    utils::head(names(sort(d[d <= threshold])), max_matches)
+  }
+}
+
+
 last <- function(x) {
   x[[length(x)]]
 }

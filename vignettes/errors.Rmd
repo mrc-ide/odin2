@@ -113,7 +113,7 @@ This is an error because [`new` is a keyword in C++](https://en.cppreference.com
 
 # `E1005`
 
-Invalid target on lhs of assignment.
+Invalid target on lhs of assignment.  There are quite a few ways of being an invalid assignment target, and at present they are all grouped within this error.    We may split these into different errors in future where particular types of error are both common and difficult to understand.
 
 Examples:
 
@@ -121,7 +121,7 @@ Examples:
 1 <- 10
 ```
 
-The code above is valid R (as in, it can be parsed) but it is nonsensical.  At present the lhs of an assignment must be a symbol (e.g., `a <- 1`).  In future versions we will support assignments into arrays (e.g., `a[] <- 1`) but this is not yet implemented.
+The code above is valid R (as in, it can be parsed) but it is nonsensical.  Generally, the lhs of an assignment must be a symbol (e.g., `a <- 1`).
 
 This code is also reported if you have a spelling mistake, such as
 
@@ -129,7 +129,9 @@ This code is also reported if you have a spelling mistake, such as
 inital(x) <- 1
 ```
 
-instead of `initial(x)`. It is also reported with this code, which contains two legacy errors.
+instead of `initial(x)`, though we will try and suggest the appropriate function if you have a near miss.
+
+It is also reported with this code, which contains two legacy errors.
 ```
 
 compare(d) <- Normal(0, 1)
@@ -686,7 +688,7 @@ We will fail to parse your call if:
 
 # `E1053`
 
-Invalid first (`string`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimeters, and it must contain at least one template argument.
+Invalid first (`string`) argument to `print()`.  This argument must be a string, it must be parseable by `glue::glue()` using curly-brace delimiters, and it must contain at least one template argument.
 
 If you see this error, it's likely you have failed to terminate a template, such as:
 

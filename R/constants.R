@@ -243,12 +243,12 @@ RESERVED_JS <- c(
   "with",
   "yield")
 
+SPECIAL_LHS <- c("initial", "update", "deriv", "dim", "config", "output")
+SPECIAL_RHS <- c("parameter", "data", "interpolate", "delay")
+
 RESERVED_ODIN <- c(
   "time", "dt", INDEX,
-  ## Special rhs
-  "parameter", "data", "interpolate", "delay",
-  ## Special lhs
-  "initial", "deriv", "update", "output", "dim", "config",
+  SPECIAL_LHS, SPECIAL_RHS,
   ## These ones are implementation details and could be relaxed:
   "state", "state_next", "state_deriv", "shared", "internal")
 

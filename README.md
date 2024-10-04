@@ -22,7 +22,7 @@
 * A [tutorial-style guide](https://mrc-ide.github.io/odin2/articles/fitting.html) to using `odin2` with `dust2` and `monty` to fit models to data
 * A [reference-style guide](https://mrc-ide.github.io/odin2/articles/functions.html) to the syntax and supported functions
 * If you have used [`odin` version 1](https://mrc-ide.github.io/odin) before, see the [migration guide](https://mrc-ide.github.io/odin2/articles/migrating.html) to see what has changed.
-* Because `odin2` compiles to `dust2`, see [its documention](https://mrc-ide.github.io/dust2) and in particular the [list of functions that you can use](https://mrc-ide.github.io/dust2/reference/index.html)
+* Because `odin2` compiles to `dust2`, see [its documentation](https://mrc-ide.github.io/dust2) and in particular the [list of functions that you can use](https://mrc-ide.github.io/dust2/reference/index.html)
 
 ## Roadmap
 
