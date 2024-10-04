@@ -16,6 +16,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+source("helpers.R")
+fast_and_quiet_dust()
 ```
 
 Debugging odin models can be challenging because:
@@ -42,7 +44,7 @@ gen <- odin2::odin({
   update(x) <- Normal(x, 1)
   initial(x) <- 1
   print("x: {x}")
-}, quiet = TRUE, debug = TRUE)
+})
 sys <- dust_system_create(gen(), list(), 1)
 dust_system_run_to_time(sys, 10)
 ```

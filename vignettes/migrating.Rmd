@@ -13,6 +13,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 source("helpers.R")
+fast_and_quiet_dust()
 ```
 
 This vignette discusses key differences with odin version 1.
@@ -261,7 +262,7 @@ gen <- odin2::odin({
   initial(x) <- 1
   deriv(x) <- x + a / t
   a <- user(2)
-}, quiet = TRUE, debug = TRUE)
+})
 ```
 
 This model contains two issues that can be easily rewritten; the solution to this rewriting is printed to screen and the model is compiled as if you had rewritten them.
@@ -273,7 +274,7 @@ gen <- odin2::odin({
   initial(x) <- 1
   update(x) <- x + a / step
   a <- user(2)
-}, quiet = TRUE, debug = TRUE)
+})
 ```
 
 In this case, odin errors and tries to indicate where you have work to do (and directs you to this document!)
