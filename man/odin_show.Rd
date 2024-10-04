@@ -4,7 +4,7 @@
 \alias{odin_show}
 \title{Show generated odin code}
 \usage{
-odin_show(expr, input_type = NULL, compatibility = "warning")
+odin_show(expr, input_type = NULL, compatibility = "warning", what = NULL)
 }
 \arguments{
 \item{expr}{Odin code as the path to a file (a string), a
@@ -24,11 +24,30 @@ silently rewrite code, but this is not recommended for general
 use as eventually the compatibility mode will be removed (this
 option is primarily intended for comparing output of odin1 and
 odin2 models against old code).}
+
+\item{what}{Optional string, being a single method to show.
+Popular options are \code{update}, \code{rhs} and \code{compare_data}.}
 }
 \value{
 A character vector, with class \code{odin_code} that has a
-pretty-print method defined.
+pretty-print method defined.  Returns \code{NULL} if \code{what} was given
+but the model lacks this part.
 }
 \description{
 Show generated code from compiling an odin model.
+}
+\examples{
+# Show generated code for the whole system
+odin_show({
+  initial(x) <- 1
+  update(x) <- a
+  a <- Normal(x, 1)
+})
+
+# Just the update method
+odin_show({
+  initial(x) <- 1
+  update(x) <- a
+  a <- Normal(x, 1)
+}, what = "update")
 }

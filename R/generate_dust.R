@@ -12,24 +12,33 @@ generate_dust_system <- function(dat) {
   }
   body$add("  using real_type = double;")
   body$add("  using rng_state_type = monty::random::generator<real_type>;")
-  body$add(sprintf("  %s", generate_dust_system_shared_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_internal_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_data_type(dat)))
-  body$add(sprintf("  %s", generate_dust_system_packing_state(dat)))
-  body$add(sprintf("  %s", generate_dust_system_packing_gradient(dat)))
-  body$add(sprintf("  %s", generate_dust_system_build_shared(dat)))
-  body$add(sprintf("  %s", generate_dust_system_build_internal(dat)))
-  body$add(sprintf("  %s", generate_dust_system_build_data(dat)))
-  body$add(sprintf("  %s", generate_dust_system_update_shared(dat)))
-  body$add(sprintf("  %s", generate_dust_system_update_internal(dat)))
-  body$add(sprintf("  %s", generate_dust_system_initial(dat)))
-  body$add(sprintf("  %s", generate_dust_system_update(dat)))
-  body$add(sprintf("  %s", generate_dust_system_rhs(dat)))
-  body$add(sprintf("  %s", generate_dust_system_zero_every(dat)))
-  body$add(sprintf("  %s", generate_dust_system_compare_data(dat)))
-  body$add(sprintf("  %s", generate_dust_system_adjoint(dat)))
+  parts <- generate_dust_parts()
+  for (nm in names(parts)) {
+    body$add(sprintf("  %s", parts[[nm]](dat)))
+  }
   body$add("};")
   body$get()
+}
+
+
+generate_dust_parts <- function() {
+  list(
+    shared_state = generate_dust_system_shared_state,
+    internal_state = generate_dust_system_internal_state,
+    data_type = generate_dust_system_data_type,
+    packing_state = generate_dust_system_packing_state,
+    packing_gradient = generate_dust_system_packing_gradient,
+    build_shared = generate_dust_system_build_shared,
+    build_internal = generate_dust_system_build_internal,
+    build_data = generate_dust_system_build_data,
+    update_shared = generate_dust_system_update_shared,
+    update_internal = generate_dust_system_update_internal,
+    initial = generate_dust_system_initial,
+    update = generate_dust_system_update,
+    rhs = generate_dust_system_rhs,
+    zero_every = generate_dust_system_zero_every,
+    compare_data = generate_dust_system_compare_data,
+    adjoint = generate_dust_system_adjoint)
 }
 
 
