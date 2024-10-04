@@ -153,25 +153,15 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     }
   }
 
-  if (rlang::is_call(lhs, "[")) {
-    if (is.null(special)) {
-      context <- "on the lhs of array assignment"
-    } else {
-      context <- sprintf("within '%s()' on the lhs of array assignment",
-                         special)
-    }
-    name <- parse_expr_check_lhs_name(lhs[[2]], context, src, call)
+  is_array <- rlang::is_call(lhs, "[")
+  if (is_array) {
+    name <- parse_expr_check_lhs_name(lhs[[2]], special, is_array, src, call)
     array <- Map(parse_expr_check_lhs_index,
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
                  MoreArgs = list(name = name, src = src, call = call))
   } else {
-    if (is.null(special)) {
-      context <- "on the lhs of assignment"
-    } else {
-      context <- sprintf("within '%s()' on the lhs of assignment", special)
-    }
-    name <- parse_expr_check_lhs_name(lhs, context, src, call)
+    name <- parse_expr_check_lhs_name(lhs, special, is_array, src, call)
     array <- NULL
   }
 
@@ -279,15 +269,62 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
 }
 
 
-parse_expr_check_lhs_name <- function(lhs, context, src, call) {
-
-  ## There are lots of checks we should add here, but fundamentally
-  ## it's a case of making sure that we have been given a symbol and
-  ## that symbol is not anything reserved, nor does it start with
-  ## anything reserved.  Add these in later, see
-  ## "ir_parse_expr_check_lhs_name" for details.
+parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
   if (!rlang::is_symbol(lhs)) {
-    odin_parse_error("Expected a symbol {context}", "E1005", src, call)
+    ## We will error, the only question is how.
+    if (is_array) {
+      if (is.null(special)) {
+        context <- "on the lhs of array assignment"
+      } else {
+        context <- sprintf("within '%s()' on the lhs of array assignment",
+                           special)
+      }
+    } else {
+      if (is.null(special)) {
+        context <- "on the lhs of assignment"
+      } else {
+        context <- sprintf("within '%s()' on the lhs of assignment", special)
+      }
+    }
+    lhs_str <- deparse1(lhs)
+
+    if (!rlang::is_call(lhs)) {
+      odin_parse_error("Invalid target '{lhs_str}' {context}",
+                       "E1005", src, call)
+    }
+
+    fn_str <- deparse1(lhs[[1]])
+
+    if (is.null(special)) {
+      if (is_array && rlang::is_call(lhs, SPECIAL_LHS) && length(lhs) >= 2) {
+        target <- deparse1(lhs[[2]])
+        hint <- paste("Did you mean '{fn_str}({target}[...])' rather than",
+                      "'{fn_str}({target})[...]'")
+        odin_parse_error(
+          c("Invalid array access outside of special function '{fn_str}()'",
+            i = hint),
+          "E1005", src, call)
+      }
+      fn_near <- near_match(fn_str, SPECIAL_LHS)
+      if (length(fn_near) == 1) {
+        hint <- c(i = "Did you mean '{fn_near}()'?")
+      } else {
+        hint <- NULL
+      }
+      odin_parse_error(
+        c("Invalid special function '{fn_str}()' {context}",
+          hint),
+        "E1005", src, call)
+    } else {
+      if (rlang::is_call(lhs, SPECIAL_LHS)) {
+        odin_parse_error(
+          "Invalid nested special lhs function '{fn_str}' within '{special}'",
+          "E1005", src, call)
+      } else {
+        odin_parse_error("Invalid target '{lhs_str}' {context}",
+                         "E1005", src, call)
+      }
+    }
   }
   name <- deparse1(lhs)
 

@@ -19,18 +19,23 @@ test_that("can parse simple expressions involving functions/variables", {
 test_that("require that assignment lhs is reasonable", {
   expect_error(
     parse_expr(quote(1 <- 1), NULL, NULL),
-    "Expected a symbol on the lhs of assignment")
+    "Invalid target '1' on the lhs of assignment")
   expect_error(
     parse_expr(quote(update(1) <- 1), NULL, NULL),
-    "Expected a symbol within 'update()' on the lhs of assignment",
+    "Invalid target '1' within 'update()' on the lhs of assignment",
     fixed = TRUE)
-  ## TODO: alternatively, error that f() is not a special function?
   expect_error(
     parse_expr(quote(f(1) <- 1), NULL, NULL),
-    "Expected a symbol on the lhs of assignment")
+    "Invalid special function 'f()' on the lhs of assignment",
+    fixed = TRUE)
   expect_error(
     parse_expr(quote(compare(x) <- Normal(0, 1)), NULL, NULL),
-    "Expected a symbol on the lhs of assignment")
+    "Invalid special function 'compare()' on the lhs of assignment",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(update(f(x)) <- 1), NULL, NULL),
+    "Invalid target 'f(x)' within 'update()' on the lhs of assignment",
+    fixed = TRUE)
 })
 
 
@@ -338,7 +343,11 @@ test_that("check that coersion functions use simple calls only", {
 test_that("give nice error if assigning to nonsense array", {
   expect_error(
     parse_expr(quote(1[2] <- 1), NULL, NULL),
-    "Expected a symbol on the lhs of array assignment")
+    "Invalid target '1' on the lhs of array assignment")
+  expect_error(
+    parse_expr(quote(update(1[2]) <- 1), NULL, NULL),
+    "Invalid target '1' within 'update()' on the lhs of array assignment",
+    fixed = TRUE)
 })
 
 
@@ -440,5 +449,44 @@ test_that("require that rank argument is missing generally for parameters", {
   expect_error(
     parse_expr(quote(a <- parameter(rank = 4)), NULL, NULL),
     "Invalid use of 'rank' argument in 'parameter()'",
+    fixed = TRUE)
+})
+
+
+test_that("helpful error message on misspelt special function", {
+  err <- expect_error(
+    parse_expr(quote(udate(x) <- 1), NULL, NULL),
+    "Invalid special function 'udate()' on the lhs of assignment",
+    fixed = TRUE)
+  expect_match(conditionMessage(err), "Did you mean 'update()'", fixed = TRUE)
+
+  err <- expect_error(
+    parse_expr(quote(udate(x[]) <- 1), NULL, NULL),
+    "Invalid special function 'udate()' on the lhs of assignment",
+    fixed = TRUE)
+  expect_match(conditionMessage(err), "Did you mean 'update()'", fixed = TRUE)
+})
+
+
+test_that("prevent incorrect order of array/special nesting", {
+  err <- expect_error(
+    parse_expr(quote(update(x)[] <- 1), NULL, NULL),
+    "Invalid array access outside of special function 'update()'",
+    fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    "Did you mean 'update(x[...])' rather than 'update(x)[...]'",
+    fixed = TRUE)
+})
+
+
+test_that("prevent nested special calls", {
+  expect_error(
+    parse_expr(quote(initial(initial(x)) <- 1), NULL, NULL),
+    "Invalid nested special lhs function 'initial' within 'initial'",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(initial(update(x)) <- 1), NULL, NULL),
+    "Invalid nested special lhs function 'update' within 'initial'",
     fixed = TRUE)
 })
