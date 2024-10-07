@@ -1733,6 +1733,11 @@ test_that("can generate debug code", {
   dat <- generate_prepare(dat)
 
   expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/debug.hpp>"))
+
+  expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
@@ -1741,9 +1746,69 @@ test_that("can generate debug code", {
       "  state_next[0] = b;",
       "  if (time > 2) {",
       "    auto odin_env = dust2::r::debug::create_env();",
+      '    dust2::r::debug::save(time, "time", odin_env);',
       '    dust2::r::debug::save(x, "x", odin_env);',
       '    dust2::r::debug::save(a, "a", odin_env);',
       '    dust2::r::debug::save(b, "b", odin_env);',
+      "    dust2::r::debug::browser(odin_env);",
+      "  }",
+      "}"))
+})
+
+
+test_that("can generate nontrivial debug", {
+  dat <- odin_parse({
+    p_IR <- 1 - exp(-gamma * dt)
+    N <- parameter(1000)
+    p_SI <- 1 - exp(-(beta * I / N * dt))
+    n_SI <- Binomial(S, p_SI)
+    n_IR <- Binomial(I, p_IR)
+    update(S) <- S - n_SI
+    update(I) <- I + n_SI - n_IR
+    update(R) <- R + n_IR
+    initial(S) <- N - I0
+    initial(I) <- I0
+    initial(R) <- 0
+    beta <- parameter(0.2)
+    gamma <- parameter(0.1)
+    I0 <- parameter(10)
+    debug(phase = "update", when = I < 10 && time > 20)
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/debug.hpp>"))
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto S = state[0];",
+      "  const auto I = state[1];",
+      "  const auto R = state[2];",
+      "  const real_type p_IR = 1 - monty::math::exp(-shared.gamma * dt);",
+      "  const real_type p_SI = 1 - monty::math::exp(-(shared.beta * I / shared.N * dt));",
+      "  const real_type n_SI = monty::random::binomial<real_type>(rng_state, S, p_SI);",
+      "  const real_type n_IR = monty::random::binomial<real_type>(rng_state, I, p_IR);",
+      "  state_next[0] = S - n_SI;",
+      "  state_next[1] = I + n_SI - n_IR;",
+      "  state_next[2] = R + n_IR;",
+      "  if (I < 10 && time > 20) {",
+      "    auto odin_env = dust2::r::debug::create_env();",
+      '    dust2::r::debug::save(time, "time", odin_env);',
+      '    dust2::r::debug::save(S, "S", odin_env);',
+      '    dust2::r::debug::save(I, "I", odin_env);',
+      '    dust2::r::debug::save(R, "R", odin_env);',
+      '    dust2::r::debug::save(shared.N, "N", odin_env);',
+      '    dust2::r::debug::save(shared.beta, "beta", odin_env);',
+      '    dust2::r::debug::save(shared.gamma, "gamma", odin_env);',
+      '    dust2::r::debug::save(shared.I0, "I0", odin_env);',
+      '    dust2::r::debug::save(p_IR, "p_IR", odin_env);',
+      '    dust2::r::debug::save(p_SI, "p_SI", odin_env);',
+      '    dust2::r::debug::save(n_SI, "n_SI", odin_env);',
+      '    dust2::r::debug::save(n_IR, "n_IR", odin_env);',
       "    dust2::r::debug::browser(odin_env);",
       "  }",
       "}"))

@@ -2,7 +2,7 @@ generate_dust_system <- function(dat) {
   dat <- generate_prepare(dat)
 
   body <- collector()
-  body$add("#include <dust2/common.hpp>")
+  body$add(generate_dust_system_includes(dat))
   body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
@@ -49,6 +49,12 @@ generate_prepare <- function(dat) {
                                      dat$storage$type,
                                      rank)
   dat
+}
+
+
+generate_dust_system_includes <- function(dat) {
+  c("#include <dust2/common.hpp>",
+    if (!is.null(dat$debug)) "#include <dust2/r/debug.hpp>")
 }
 
 
@@ -780,14 +786,14 @@ generate_dust_debug <- function(dat, phase) {
   } else {
     export <- names(dat$storage$location[dat$storage$location != "data"])
   }
-  for (v in export) {
+  for (v in c("time", export)) {
     body$add(generate_dust_debug_to_env(v, dat, env))
   }
   body$add(sprintf("dust2::r::debug::browser(%s);", env))
 
   body <- body$get()
   if (!is.null(dat$debug[[phase]]$when)) {
-    when <- generate_dust_sexp(dat$debug[[phase]]$when, dat, options)
+    when <- generate_dust_sexp(dat$debug[[phase]]$when, dat$sexp_data)
     body <- c(sprintf("if (%s) {", when),
               sprintf("  %s", body),
               "}")
@@ -797,9 +803,8 @@ generate_dust_debug <- function(dat, phase) {
 
 
 generate_dust_debug_to_env <- function(name, dat, env) {
-  options <- list()
+  data <- generate_dust_sexp(name, dat$sexp_data)
   if (name %in% dat$storage$arrays$name) {
-    data <- generate_dust_sexp(name, dat$sexp_data, options)
     location <- dat$storage$location[[name]]
     if (location %in% c("shared", "internal")) {
       data <- sprintf("%s.data()", data)
@@ -807,6 +812,6 @@ generate_dust_debug_to_env <- function(name, dat, env) {
     dim <- sprintf("shared.dim.%s", name)
     sprintf('dust2::r::debug::save(%s, %s, "%s", %s);', data, dim, name, env)
   } else {
-    sprintf('dust2::r::debug::save(%s, "%s", %s);', name, name, env)
+    sprintf('dust2::r::debug::save(%s, "%s", %s);', data, name, env)
   }
 }
