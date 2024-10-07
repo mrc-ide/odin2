@@ -14,7 +14,7 @@ URL: https://mrc-ide.github.io/odin2, https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
-    dust2 (>= 0.1.9),
+    dust2 (>= 0.1.13),
     glue,
     monty,
     rlang
@@ -29,7 +29,7 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Remotes:
-    mrc-ide/dust2,
+    mrc-ide/dust2@mrc-5727,
     mrc-ide/monty
 VignetteBuilder: knitr
 Language: en-GB
