@@ -222,15 +222,9 @@ Browse[1]> I / S
 If you press `c` or `n`, then odin the system will proceed to the next step and drop you back into the debugger.  You can exit with `Q` which will return you to the console with an error.  You can also run
 
 ```r
-dust_debug_enabled(FALSE)
+dust_debug_continue()
 ```
 
-and press `c` to continue to the end of your simulation.  You will need to manually reenable the debugger by running
-
-```r
-dust_debug_enabled(TRUE)
-```
-
-if you want to use the debugger again though.
+and then press `c` to continue to the end of your simulation.
 
 Changes that you make to variables within the debugger are *not* (currently) reflected back into the model.  We'd be very happy to discuss this sort of workflow if it seems useful.
