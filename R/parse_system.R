@@ -9,7 +9,7 @@ parse_system_overall <- function(exprs, call) {
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
   is_print <- special == "print"
-  is_debug <- special == "debug"
+  is_browser <- special == "browser"
   is_equation <- special %in% c("", "parameter", "dim") & !is_compare
 
   ## We take initial as the set of variables:
@@ -157,7 +157,7 @@ parse_system_overall <- function(exprs, call) {
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
                 print = exprs[is_print],
-                debug = exprs[is_debug],
+                browser = exprs[is_browser],
                 data = exprs[is_data])
 
   nms <- vcapply(exprs$equations, function(x) x$lhs$name)
@@ -642,29 +642,27 @@ parse_print <- function(print, time_type, variables, data, phases, call) {
 }
 
 
-## TODO: consider renaming to 'browser' from 'debug', and possibly in
-## the dust PR too?
-parse_debug <- function(debug, time_type, variables, data, phases, call) {
-  if (length(debug) == 0) {
+parse_browser <- function(browser, time_type, variables, data, phases, call) {
+  if (length(browser) == 0) {
     return(NULL)
   }
 
-  phase <- vcapply(debug, "[[", "phase")
+  phase <- vcapply(browser, "[[", "phase")
   if (anyDuplicated(phase)) {
     stop("duplicated phase")
   }
 
-  names(debug) <- phase
+  names(browser) <- phase
   ret <- list()
 
   for (p in phase) {
     if (is.null(phases[[p]])) {
-      stop("can't debug in this phase, it does not occur")
+      stop("can't browser in this phase, it does not occur")
     }
 
     unpack <- setdiff(variables, phases[[p]]$unpack)
     ret[[p]] <- list(phase = p,
-                     when = debug[[p]]$when,
+                     when = browser[[p]]$when,
                      unpack = unpack)
   }
 

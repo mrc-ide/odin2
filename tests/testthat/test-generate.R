@@ -1603,7 +1603,7 @@ test_that("can generate user-sized arrays", {
       "}"))
 })
 
-test_that("can generate debug", {
+test_that("can generate print strings", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- x_next
@@ -1624,7 +1624,7 @@ test_that("can generate debug", {
 })
 
 
-test_that("can generate debug that requires additional unpack", {
+test_that("can generate print that requires additional unpack", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- time
@@ -1641,7 +1641,7 @@ test_that("can generate debug that requires additional unpack", {
 })
 
 
-test_that("Generate conditional debug", {
+test_that("Generate conditional print", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- x_next
@@ -1722,13 +1722,13 @@ test_that("cast array size to int when compared to integers", {
 })
     
 
-test_that("can generate debug code", {
+test_that("can generate browser code", {
   dat <- odin_parse({
     initial(x) <- 0
     update(x) <- b
     a <- x * 2
     b <- a / x
-    debug(phase = "update", when = time > 2)
+    browser(phase = "update", when = time > 2)
   })
   dat <- generate_prepare(dat)
 
@@ -1745,12 +1745,12 @@ test_that("can generate debug code", {
       "  const real_type b = a / x;",
       "  state_next[0] = b;",
       "  if (time > 2) {",
-      "    auto odin_env = dust2::r::debug::create_env();",
-      '    dust2::r::debug::save(time, "time", odin_env);',
-      '    dust2::r::debug::save(x, "x", odin_env);',
-      '    dust2::r::debug::save(a, "a", odin_env);',
-      '    dust2::r::debug::save(b, "b", odin_env);',
-      "    dust2::r::debug::browser(odin_env);",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
+      '    dust2::r::browser::save(a, "a", odin_env);',
+      '    dust2::r::browser::save(b, "b", odin_env);',
+      "    dust2::r::browser::enter(odin_env);",
       "  }",
       "}"))
 })
@@ -1796,20 +1796,20 @@ test_that("can generate nontrivial debug", {
       "  state_next[1] = I + n_SI - n_IR;",
       "  state_next[2] = R + n_IR;",
       "  if (I < 10 && time > 20) {",
-      "    auto odin_env = dust2::r::debug::create_env();",
-      '    dust2::r::debug::save(time, "time", odin_env);',
-      '    dust2::r::debug::save(S, "S", odin_env);',
-      '    dust2::r::debug::save(I, "I", odin_env);',
-      '    dust2::r::debug::save(R, "R", odin_env);',
-      '    dust2::r::debug::save(shared.N, "N", odin_env);',
-      '    dust2::r::debug::save(shared.beta, "beta", odin_env);',
-      '    dust2::r::debug::save(shared.gamma, "gamma", odin_env);',
-      '    dust2::r::debug::save(shared.I0, "I0", odin_env);',
-      '    dust2::r::debug::save(p_IR, "p_IR", odin_env);',
-      '    dust2::r::debug::save(p_SI, "p_SI", odin_env);',
-      '    dust2::r::debug::save(n_SI, "n_SI", odin_env);',
-      '    dust2::r::debug::save(n_IR, "n_IR", odin_env);',
-      "    dust2::r::debug::browser(odin_env);",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(S, "S", odin_env);',
+      '    dust2::r::browser::save(I, "I", odin_env);',
+      '    dust2::r::browser::save(R, "R", odin_env);',
+      '    dust2::r::browser::save(shared.N, "N", odin_env);',
+      '    dust2::r::browser::save(shared.beta, "beta", odin_env);',
+      '    dust2::r::browser::save(shared.gamma, "gamma", odin_env);',
+      '    dust2::r::browser::save(shared.I0, "I0", odin_env);',
+      '    dust2::r::browser::save(p_IR, "p_IR", odin_env);',
+      '    dust2::r::browser::save(p_SI, "p_SI", odin_env);',
+      '    dust2::r::browser::save(n_SI, "n_SI", odin_env);',
+      '    dust2::r::browser::save(n_IR, "n_IR", odin_env);',
+      "    dust2::r::browser::enter(odin_env);",
       "  }",
       "}"))
 })

@@ -54,7 +54,7 @@ generate_prepare <- function(dat) {
 
 generate_dust_system_includes <- function(dat) {
   c("#include <dust2/common.hpp>",
-    if (!is.null(dat$debug)) "#include <dust2/r/debug.hpp>")
+    if (!is.null(dat$browser)) "#include <dust2/r/browser.hpp>")
 }
 
 
@@ -319,7 +319,7 @@ generate_dust_system_update <- function(dat) {
   }
 
   body$add(generate_dust_print(dat, "update"))
-  body$add(generate_dust_debug(dat, "update"))
+  body$add(generate_dust_browser(dat, "update"))
 
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
@@ -771,29 +771,29 @@ generate_dust_print <- function(dat, phase) {
 }
 
 
-generate_dust_debug <- function(dat, phase) {
-  if (is.null(dat$debug[[phase]])) {
+generate_dust_browser <- function(dat, phase) {
+  if (is.null(dat$browser[[phase]])) {
     return()
   }
   body <- collector()
-  body$add(generate_dust_unpack(dat$debug[[phase]]$unpack,
+  body$add(generate_dust_unpack(dat$browser[[phase]]$unpack,
                                 dat$storage$packing$state,
                                 dat$sexp_data))
   env <- "odin_env"
-  body$add(sprintf("auto %s = dust2::r::debug::create_env();", env))
+  body$add(sprintf("auto %s = dust2::r::browser::create();", env))
   if (phase == "compare") {
     export <- names(dat$storage$location)
   } else {
     export <- names(dat$storage$location[dat$storage$location != "data"])
   }
   for (v in c("time", export)) {
-    body$add(generate_dust_debug_to_env(v, dat, env))
+    body$add(generate_dust_browser_to_env(v, dat, env))
   }
-  body$add(sprintf("dust2::r::debug::browser(%s);", env))
+  body$add(sprintf("dust2::r::browser::enter(%s);", env))
 
   body <- body$get()
-  if (!is.null(dat$debug[[phase]]$when)) {
-    when <- generate_dust_sexp(dat$debug[[phase]]$when, dat$sexp_data)
+  if (!is.null(dat$browser[[phase]]$when)) {
+    when <- generate_dust_sexp(dat$browser[[phase]]$when, dat$sexp_data)
     body <- c(sprintf("if (%s) {", when),
               sprintf("  %s", body),
               "}")
@@ -802,7 +802,7 @@ generate_dust_debug <- function(dat, phase) {
 }
 
 
-generate_dust_debug_to_env <- function(name, dat, env) {
+generate_dust_browser_to_env <- function(name, dat, env) {
   data <- generate_dust_sexp(name, dat$sexp_data)
   if (name %in% dat$storage$arrays$name) {
     location <- dat$storage$location[[name]]
@@ -810,8 +810,8 @@ generate_dust_debug_to_env <- function(name, dat, env) {
       data <- sprintf("%s.data()", data)
     }
     dim <- sprintf("shared.dim.%s", name)
-    sprintf('dust2::r::debug::save(%s, %s, "%s", %s);', data, dim, name, env)
+    sprintf('dust2::r::browser::save(%s, %s, "%s", %s);', data, dim, name, env)
   } else {
-    sprintf('dust2::r::debug::save(%s, "%s", %s);', data, name, env)
+    sprintf('dust2::r::browser::save(%s, "%s", %s);', data, name, env)
   }
 }
