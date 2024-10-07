@@ -24,8 +24,8 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
                                  system$variables, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,
                        system$data, phases, call)
-  debug <- parse_debug(system$exprs$debug, system$time, system$variables,
-                       system$data, phases, call)
+  browser <- parse_browser(system$exprs$browser, system$time, system$variables,
+                           system$data, phases, call)
 
   ret <- list(time = system$time,
               class = "odin",
@@ -36,7 +36,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               storage = storage,
               zero_every = zero_every,
               print = print,
-              debug = debug,
+              browser = browser,
               data = system$data)
 
   parse_check_usage(ret, call)
