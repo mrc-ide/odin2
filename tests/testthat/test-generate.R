@@ -1720,3 +1720,31 @@ test_that("cast array size to int when compared to integers", {
       "  state_next[0] = internal.a[0] + b;",
       "}"))
 })
+    
+
+test_that("can generate debug code", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- b
+    a <- x * 2
+    b <- a / x
+    debug(phase = "update", when = time > 2)
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type a = x * 2;",
+      "  const real_type b = a / x;",
+      "  state_next[0] = b;",
+      "  if (time > 2) {",
+      "    auto odin_env = dust2::r::debug::create_env();",
+      '    dust2::r::debug::save(x, "x", odin_env);',
+      '    dust2::r::debug::save(a, "a", odin_env);',
+      '    dust2::r::debug::save(b, "b", odin_env);',
+      "    dust2::r::debug::browser(odin_env);",
+      "  }",
+      "}"))
+})

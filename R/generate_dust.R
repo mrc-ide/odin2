@@ -312,16 +312,8 @@ generate_dust_system_update <- function(dat) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
   }
 
-  if (!is.null(dat$print$update)) {
-    if (length(dat$print$update$unpack) > 0) {
-      body$add(generate_dust_unpack(dat$print$update$unpack,
-                                    dat$storage$packing$state,
-                                    dat$sexp_data))
-    }
-    for (eq in dat$print$update$equations) {
-      body$add(generate_dust_print(eq, dat))
-    }
-  }
+  body$add(generate_dust_print(dat, "update"))
+  body$add(generate_dust_debug(dat, "update"))
 
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
@@ -691,6 +683,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
 
 
 generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
+  if (length(names) == 0) {
+    return(NULL)
+  }
   i <- match(names, packing$name)
   is_scalar <- lengths(packing$dims[i]) == 0
   is_array <- !is_scalar
@@ -753,4 +748,65 @@ get_phase_equations <- function(phase, dat, adjoint = FALSE) {
     nms <- dat$phases[[phase]]$equations
   }
   dat$equations[names(dat$equations) %in% nms]
+}
+
+
+generate_dust_print <- function(dat, phase) {
+  if (!is.null(dat$print[[phase]])) {
+    body <- collector()
+    body$add(generate_dust_unpack(dat$print[[phase]]$unpack,
+                                  dat$storage$packing$state,
+                                  dat$sexp_data))
+    for (eq in dat$print[[phase]]$equations) {
+      body$add(generate_dust_print(eq, dat))
+    }
+    body$get()
+  }
+}
+
+
+generate_dust_debug <- function(dat, phase) {
+  if (is.null(dat$debug[[phase]])) {
+    return()
+  }
+  body <- collector()
+  body$add(generate_dust_unpack(dat$debug[[phase]]$unpack,
+                                dat$storage$packing$state,
+                                dat$sexp_data))
+  env <- "odin_env"
+  body$add(sprintf("auto %s = dust2::r::debug::create_env();", env))
+  if (phase == "compare") {
+    export <- names(dat$storage$location)
+  } else {
+    export <- names(dat$storage$location[dat$storage$location != "data"])
+  }
+  for (v in export) {
+    body$add(generate_dust_debug_to_env(v, dat, env))
+  }
+  body$add(sprintf("dust2::r::debug::browser(%s);", env))
+
+  body <- body$get()
+  if (!is.null(dat$debug[[phase]]$when)) {
+    when <- generate_dust_sexp(dat$debug[[phase]]$when, dat, options)
+    body <- c(sprintf("if (%s) {", when),
+              sprintf("  %s", body),
+              "}")
+  }
+  body
+}
+
+
+generate_dust_debug_to_env <- function(name, dat, env) {
+  options <- list()
+  if (name %in% dat$storage$arrays$name) {
+    data <- generate_dust_sexp(name, dat$sexp_data, options)
+    location <- dat$storage$location[[name]]
+    if (location %in% c("shared", "internal")) {
+      data <- sprintf("%s.data()", data)
+    }
+    dim <- sprintf("shared.dim.%s", name)
+    sprintf('dust2::r::debug::save(%s, %s, "%s", %s);', data, dim, name, env)
+  } else {
+    sprintf('dust2::r::debug::save(%s, "%s", %s);', name, name, env)
+  }
 }

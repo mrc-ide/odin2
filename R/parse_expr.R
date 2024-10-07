@@ -5,6 +5,8 @@ parse_expr <- function(expr, src, call) {
     parse_expr_compare(expr, src, call)
   } else if (rlang::is_call(expr, "print")) {
     parse_expr_print(expr, src, call)
+  } else if (rlang::is_call(expr, "debug")) {
+    parse_expr_debug(expr, src, call)
   } else {
     odin_parse_error(
       c("Unclassifiable expression",
@@ -621,6 +623,24 @@ parse_debug_element <- function(str) {
   expr <- parse(text = value)[[1]]
 
   list(expr = expr, format = format)
+}
+
+
+parse_expr_debug <- function(expr, src, call) {
+  fn <- function(phase = NULL, when = NULL) NULL
+  m <- match_call(expr, fn)
+  if (!m$success) {
+    odin_parse_error(conditionMessage(m$error), "E1099", src, call)
+  }
+  phase <- m$value$phase
+  when <- m$value$when
+  depends <- find_dependencies(m$value$when)
+  list(type = "debug",
+       special = "debug",
+       rhs = list(type = "debug"), # makes checking easier elsewhere
+       phase = phase,
+       when = when,
+       depends = depends)
 }
 
 
