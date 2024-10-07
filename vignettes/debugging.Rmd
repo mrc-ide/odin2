@@ -149,12 +149,14 @@ odin_show({
 
 # Use the interactive debugger
 
-This is new and very experimental, you can ask odin to drop you into a debugger (implemented on top of R's `browser()` to explore the values of your variables at some point within a model run.  To do this, add a call to `debug()` somewhere within your odin code and recompile.
+This is new and very experimental, you can ask odin to drop you into a debugger (implemented on top of R's `browser()` to explore the values of your variables at some point within a model run.  To do this, add a call to `browser()` somewhere within your odin code and recompile.
 
-The `debug` argument accepts arguments
+The `browser` function in odin  accepts arguments
 
 * `phase`: the system phase where the debugger should be inserted; this will typically be `update` or `deriv`
 * `when`: optionally a condition that should be satisfied for the debugger to be triggered.  You will typically want to set this or it will be called at every step
+
+Note that these are not the same as R's `browser()`!
 
 For example, to debug the simple SIR model from `vignette("odin")` we might write:
 
@@ -175,11 +177,11 @@ gen <- odin({
   gamma <- parameter(0.1)
   I0 <- parameter(10)
 
-  debug(phase = "update", when = I < 10 && time > 20)
+  browser(phase = "update", when = I < 10 && time > 20)
 })
 ```
 
-The location of the call to `debug()` does not matter; it will be activated at the **end** of the phase.  The condition here might be something we cook up to look at what happens as the number of individuals in the infected class starts tailing off at the end of the simulation.
+The location of the call to `browser()` does not matter; it will be activated at the **end** of the phase.  The condition here might be something we cook up to look at what happens as the number of individuals in the infected class starts tailing off at the end of the simulation.
 
 We create and initialise the system as normal:
 
@@ -192,7 +194,7 @@ However, when you run the sytem you will pause part way through evaluation:
 
 ```r
 dust_system_run_to_time(sys, 200)
-#> ℹ dust debug: see `?dust_debug()` for help
+#> ℹ dust debug: see `?dust_browser()` for help
 #> Called from: eval(substitute(expr), data, enclos = parent.frame())
 ```
 
@@ -222,7 +224,7 @@ Browse[1]> I / S
 If you press `c` or `n`, then odin the system will proceed to the next step and drop you back into the debugger.  You can exit with `Q` which will return you to the console with an error.  You can also run
 
 ```r
-dust_debug_continue()
+dust_browser_continue()
 ```
 
 and then press `c` to continue to the end of your simulation.
