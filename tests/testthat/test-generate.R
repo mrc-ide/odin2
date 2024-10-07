@@ -1735,7 +1735,7 @@ test_that("can generate browser code", {
   expect_equal(
     generate_dust_system_includes(dat),
     c("#include <dust2/common.hpp>",
-      "#include <dust2/r/debug.hpp>"))
+      "#include <dust2/r/browser.hpp>"))
 
   expect_equal(
     generate_dust_system_update(dat),
@@ -1772,7 +1772,7 @@ test_that("can generate nontrivial debug", {
     beta <- parameter(0.2)
     gamma <- parameter(0.1)
     I0 <- parameter(10)
-    debug(phase = "update", when = I < 10 && time > 20)
+    browser(phase = "update", when = I < 10 && time > 20)
   })
 
   dat <- generate_prepare(dat)
@@ -1780,7 +1780,7 @@ test_that("can generate nontrivial debug", {
   expect_equal(
     generate_dust_system_includes(dat),
     c("#include <dust2/common.hpp>",
-      "#include <dust2/r/debug.hpp>"))
+      "#include <dust2/r/browser.hpp>"))
 
   expect_equal(
     generate_dust_system_update(dat),

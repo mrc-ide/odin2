@@ -712,7 +712,7 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
 }
 
 
-generate_dust_print <- function(eq, dat) {
+generate_dust_print_statement <- function(eq, dat) {
   format <- vcapply(eq$inputs, function(p) {
     if (!is.null(p$format)) {
       paste0("%", p$format)
@@ -758,16 +758,18 @@ get_phase_equations <- function(phase, dat, adjoint = FALSE) {
 
 
 generate_dust_print <- function(dat, phase) {
-  if (!is.null(dat$print[[phase]])) {
-    body <- collector()
-    body$add(generate_dust_unpack(dat$print[[phase]]$unpack,
-                                  dat$storage$packing$state,
-                                  dat$sexp_data))
-    for (eq in dat$print[[phase]]$equations) {
-      body$add(generate_dust_print(eq, dat))
-    }
-    body$get()
+  if (is.null(dat$print[[phase]])) {
+    return(NULL)
   }
+
+  body <- collector()
+  body$add(generate_dust_unpack(dat$print[[phase]]$unpack,
+                                dat$storage$packing$state,
+                                dat$sexp_data))
+  for (eq in dat$print[[phase]]$equations) {
+    body$add(generate_dust_print_statement(eq, dat))
+  }
+  body$get()
 }
 
 
