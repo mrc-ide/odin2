@@ -59,6 +59,8 @@ FUNCTIONS <- list(
   nrow = 1,
   ncol = 1,
   sum = 1,
+  min = 1:2,
+  max = 1:2,
   as.logical = 1,
   as.integer = 1,
   as.numeric = 1,

@@ -132,6 +132,15 @@ test_that("can parse call sum over part of part of array", {
 })
 
 
+test_that("parse prod as a reduction", {
+  res <- parse_expr(quote(a <- prod(x)), NULL, NULL)
+  expect_equal(res$rhs$expr,
+               quote(OdinReduce("prod", "x", index = NULL)))
+  expect_equal(res$rhs$depends,
+               list(functions = "prod", variables = "x"))
+})
+
+
 test_that("can check that sum has the right number of arguments", {
   expect_error(
     parse_expr(quote(a <- sum(x, 1)), NULL, NULL),

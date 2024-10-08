@@ -490,3 +490,41 @@ test_that("prevent nested special calls", {
     "Invalid nested special lhs function 'update' within 'initial'",
     fixed = TRUE)
 })
+
+
+test_that("parse min as a reduction", {
+  res <- parse_expr(quote(a <- min(x)), NULL, NULL)
+  expect_equal(res$rhs$expr,
+               quote(OdinReduce("min", "x", index = NULL)))
+  expect_equal(res$rhs$depends,
+               list(functions = "min", variables = "x"))
+})
+
+
+test_that("parse min as a 2-arg function", {
+  res <- parse_expr(quote(a <- min(x, y)), NULL, NULL)
+  expect_equal(res$rhs$expr, quote(min(x, y)))
+  expect_equal(res$rhs$depends,
+               list(functions = "min", variables = c("x", "y")))
+
+  expect_error(
+    parse_expr(quote(a <- min(x, y, z)), NULL, NULL),
+    "Invalid call to 'min': incorrect number of arguments")
+})
+
+
+test_that("parse max as a reduction", {
+  res <- parse_expr(quote(a <- max(x)), NULL, NULL)
+  expect_equal(res$rhs$expr,
+               quote(OdinReduce("max", "x", index = NULL)))
+  expect_equal(res$rhs$depends,
+               list(functions = "max", variables = "x"))
+})
+
+
+test_that("parse max as a 2-arg function", {
+  res <- parse_expr(quote(a <- max(x, y)), NULL, NULL)
+  expect_equal(res$rhs$expr, quote(max(x, y)))
+  expect_equal(res$rhs$depends,
+               list(functions = "max", variables = c("x", "y")))
+})
