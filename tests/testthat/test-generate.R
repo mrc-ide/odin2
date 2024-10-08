@@ -1660,3 +1660,21 @@ test_that("Generate conditional debug", {
       "  }",
       "}"))
 })
+
+
+test_that("support min/max", {
+  dat <- odin_parse({
+    update(x) <- min(a) + max(b, c)
+    initial(x) <- 0
+    a[] <- i
+    dim(a) <- 10
+    b <- 20
+    c <- 30
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  state_next[0] = dust2::array::min<real_type>(shared.a, shared.dim.a) + std::max(shared.b, shared.c);",
+      "}"))
+})
