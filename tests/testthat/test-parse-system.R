@@ -95,7 +95,7 @@ test_that("Determine time type from parse", {
 test_that("collect information about parameters from parse", {
   res <- odin_parse({
     initial(x) <- a
-    deriv(x) <- b
+    deriv(x) <- b + c
     a <- parameter(constant = TRUE)
     b <- parameter()
     c <- parameter(constant = FALSE)
@@ -111,7 +111,7 @@ test_that("collect information about parameters from parse", {
 test_that("parameters default to constant in face of differentiability", {
   res <- odin_parse({
     initial(x) <- a
-    deriv(x) <- b
+    deriv(x) <- b + c
     a <- parameter(constant = TRUE)
     b <- parameter()
     c <- parameter(differentiate = TRUE, constant = FALSE)
@@ -128,7 +128,7 @@ test_that("fail informatively if recursive depenency in equations", {
   err <- expect_error(
     odin_parse({
       initial(x) <- a
-      deriv(x) <- a
+      deriv(x) <- a + c
       a <- c + 1
       b <- a * 2
       c <- b / 2
@@ -171,4 +171,18 @@ test_that("unpack self-referential variables", {
     initial(a) <- 1
   })
   expect_equal(dat$phases$update$unpack, "a")
+})
+
+
+test_that("Error if equations unused", {
+  ## Also a regression test for partial prune (mrc-5798)
+  expect_error(
+    odin_parse({
+      initial(a) <- 0
+      update(a) <- 1
+      b <- x[1]
+      x[1] <- 1
+      dim(x) <- 1
+    }),
+    "Unused equations: 'x' and 'b'")
 })

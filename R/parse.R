@@ -36,21 +36,24 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               print = print,
               data = system$data)
 
-  parse_check_usage(exprs, ret, call)
+  parse_check_usage(ret, call)
   ret <- parse_adjoint(ret)
 
   ret
 }
 
 
-parse_check_usage <- function(exprs, dat, call) {
-  parse_check_usage_find_unknown(exprs, dat, call)
+parse_check_usage <- function(dat, call) {
+  parse_check_usage_find_unknown(dat, call)
+  parse_check_usage_find_unused(dat, call)
 }
 
 
-parse_check_usage_find_unknown <- function(exprs, dat, call) {
+parse_check_usage_find_unknown <- function(dat, call) {
   implicit <- c("time", if (dat$time == "discrete") "dt")
-  known <- c(unlist(dat$storage$contents, FALSE, FALSE), implicit)
+  known <- c(unlist(dat$storage$contents, FALSE, FALSE),
+             implicit,
+             dat$storage$unused)
   eqs <- c(dat$phases$update$variables,
            dat$phases$deriv$variables,
            dat$phases$output$variables,
@@ -80,4 +83,21 @@ parse_check_usage_find_unknown <- function(exprs, dat, call) {
       "Unknown variable{?s} used in odin code: {squote(err_nms)}",
       "E2006", src, call)
   }
+}
+
+
+parse_check_usage_find_unused <- function(dat, call) {
+  unused <- dat$storage$unused
+  if (length(unused) == 0) {
+    return()
+  }
+
+  ## Later, we'll offer other options than error!
+  eqs <- dat$equations
+  src <- unname(lapply(eqs[names(eqs) %in% unused], "[[", "src"))
+  ## Drop 'dim_' etc here from the message as it's confusing
+  unused <- grep("^(dim|interpolate)_", unused, value = TRUE, invert = TRUE)
+  odin_parse_error(
+    "Unused equation{?s}: {squote(unused)}",
+    "E2016", src, call)
 }

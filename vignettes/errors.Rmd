@@ -937,3 +937,17 @@ Invalid rank inputs to `interpolate()`.  The time input (first argument) must al
 * if the output is a matrix, the value must be a 3-dimensional array
 
 and so on.  This error is thrown where your inputs do not satisfy these tests.
+
+# `E2016`
+
+Your system contains unused equations.  This is currently always an error (in odin1 this could be converted to a warning, message or ignored), and we may allow downgrading this error in a future version.
+
+Code that would generate this error:
+
+```
+update(x) <- x + 1
+initial(x) <- x
+a <- 1
+```
+
+Here, `a` is unused.  Perhaps it was meant to be an initial condition, or the amount that `x` is incremented, but at present it does nothing.

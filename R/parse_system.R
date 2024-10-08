@@ -385,13 +385,16 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
 
 parse_storage <- function(equations, phases, variables, arrays, parameters,
                           data, call) {
+  used <- unique(unlist0(lapply(phases, "[[", "equations")))
+  unused <- setdiff(names(equations), used)
+
   dim <- names(which(
-    vlapply(equations, function(x) identical(x$special, "dim"))))
+    vlapply(equations[used], function(x) identical(x$special, "dim"))))
   shared <- setdiff(
-    intersect(names(equations), phases$build_shared$equations),
+    intersect(used, phases$build_shared$equations),
     dim)
-  stack <- setdiff(names(equations), c(shared, dim, arrays$name))
-  internal <- intersect(phases$update$equations, arrays$name)
+  stack <- setdiff(used, c(shared, dim, arrays$name))
+  internal <- setdiff(intersect(used, arrays$name), shared)
 
   packing <- list(state = parse_packing(variables, arrays, "state"))
 
@@ -403,6 +406,7 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
     data = data$name,
     output = character(),
     stack = stack)
+
   location <- set_names(rep(names(contents), lengths(contents)),
                         unlist(contents, FALSE, TRUE))
   location[location == "variables"] <- "state"
@@ -413,15 +417,13 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   is_interpolate <- vlapply(equations[names(location)],
                             function(x) identical(x$rhs$type, "interpolate"))
   type[names(type) %in% names(which(is_interpolate))] <- "interpolator"
-
-  is_dim <- vlapply(equations[names(location)],
-                    function(x) identical(x$special, "dim"))
-  type[is_dim] <- "dimension"
+  type[dim] <- "dimension"
 
   list(contents = contents,
        location = location,
        arrays = arrays,
        type = type,
+       unused = unused,
        packing = packing)
 }
 
