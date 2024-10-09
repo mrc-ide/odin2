@@ -636,7 +636,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
     rank <- dat$storage$arrays$rank[[i]]
     if (eq$rhs$is_user_sized) {
-      res <- sprintf('const auto %s = read_dimensions<%d>(parameters, "%s");',
+      res <- sprintf('const auto %s = dust2::r::read_dimensions<%d>(parameters, "%s");',
                      eq$lhs$name,
                      rank,
                      eq$lhs$name_data)

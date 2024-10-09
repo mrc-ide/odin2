@@ -1587,7 +1587,7 @@ test_that("can generate user-sized arrays", {
   expect_equal(
     generate_dust_system_build_shared(dat),
     c(method_args$build_shared,
-      '  const auto dim_a = read_dimensions<1>(parameters, "a");',
+      '  const auto dim_a = dust2::r::read_dimensions<1>(parameters, "a");',
       "  std::vector<real_type> a(dim_a.size);",
       '  dust2::r::read_real_array(parameters, dim_a, a.data(), "a", true);',
       "  const shared_state::dim_type dim{dim_a};",
