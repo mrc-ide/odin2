@@ -201,9 +201,9 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   dim <- paste0(
     if (isFALSE(options$shared_exists)) "dim_" else "shared.dim.",
     target)
-  stopifnot(fn == "sum")
+  stopifnot(fn %in% c("sum", "prod", "min", "max"))
   if (is.null(index)) {
-    sprintf("dust2::array::sum<real_type>(%s, %s)", target_str, dim)
+    sprintf("dust2::array::%s<real_type>(%s, %s)", fn, target_str, dim)
   } else {
     index_str <- paste(vcapply(index, function(el) {
       if (el$type == "single") {
@@ -217,7 +217,7 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
               generate_dust_sexp(from, dat, options),
               generate_dust_sexp(to, dat, options))
     }), collapse = ", ")
-    sprintf("dust2::array::sum<real_type>(%s, %s, %s)",
-            target_str, dim, index_str)
+    sprintf("dust2::array::%s<real_type>(%s, %s, %s)",
+            fn, target_str, dim, index_str)
   }
 }

@@ -635,7 +635,9 @@ parse_expr_usage <- function(expr, src, call) {
     }
     fn_str <- as.character(fn)
     ignore <- "["
-    if (fn_str == "sum") {
+    is_reduction <- fn_str %in% c("sum", "prod") ||
+      (fn_str %in% c("min", "max") && length(expr) == 2)
+    if (is_reduction) {
       expr <- parse_expr_usage_rewrite_reduce(expr, src, call)
     } else if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
