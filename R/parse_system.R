@@ -657,7 +657,14 @@ parse_browser <- function(browser, time_type, variables, data, phases, call) {
 
   for (p in phase) {
     if (is.null(phases[[p]])) {
-      stop("can't browser in this phase, it does not occur")
+      valid <- intersect(names(phases)[!vlapply(phases, is.null)],
+                         PHASES_BROWSER)
+      src <- browser[[p]]$src
+      odin_parse_error(
+        c(paste("Cannot use 'browser()' with phase '{p}', as it does",
+                "not exist in your system"),
+          i = "Valid choices are: {squote(valid)}"),
+        "E2017", src, call)
     }
 
     unpack <- setdiff(variables, phases[[p]]$unpack)

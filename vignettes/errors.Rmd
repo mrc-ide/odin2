@@ -965,3 +965,13 @@ a <- 1
 ```
 
 Here, `a` is unused.  Perhaps it was meant to be an initial condition, or the amount that `x` is incremented, but at present it does nothing.
+
+# `E2017`
+
+Attempt to browse a phase that does not exist.  You have a call like
+
+```
+browser("update")
+```
+
+in a system of ODEs which does not have an update phase.  The error will indicate which phases are valid.

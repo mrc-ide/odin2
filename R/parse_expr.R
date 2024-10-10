@@ -568,7 +568,8 @@ parse_expr_print <- function(expr, src, call) {
        string = string,
        inputs = inputs,
        depends = depends,
-       when = m$value$when)
+       when = m$value$when,
+       src = src)
 }
 
 
@@ -639,7 +640,7 @@ parse_expr_browser <- function(expr, src, call) {
   when <- m$value$when
 
   tryCatch(
-    match_value(phase, c("update", "deriv")),
+    match_value(phase, PHASES_BROWSER),
     error = function(e) {
       odin_parse_error(
         "Invalid value for 'phase' argument to 'browser()'",
@@ -652,7 +653,8 @@ parse_expr_browser <- function(expr, src, call) {
        rhs = list(type = "browser"), # makes checking easier elsewhere
        phase = phase,
        when = when,
-       depends = depends)
+       depends = depends,
+       src = src)
 }
 
 
