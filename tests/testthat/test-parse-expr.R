@@ -550,13 +550,13 @@ test_that("can parse conditional call to browser()", {
 
 test_that("error for invalid call to browser", {
   expect_error(
-    parse_expr(quote(browser("deriv", time > 4, TRUE)), NULL, NULL)
+    parse_expr(quote(browser("deriv", time > 4, TRUE)), NULL, NULL),
     "Failed to parse 'browser()' statement")
 })
 
 
 test_that("error for invalid value for phase in browser call", {
   expect_error(
-    parse_expr(quote(browser("other", time > 4)), NULL, NULL)
+    parse_expr(quote(browser("other", time > 4)), NULL, NULL),
     "Invalid value for 'phase' argument to 'browser()'")
 })
