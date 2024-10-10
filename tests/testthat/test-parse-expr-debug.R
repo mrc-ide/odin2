@@ -6,7 +6,8 @@ test_that("can parse trivial print statement", {
          string = "{a}",
          inputs = list(list(expr = quote(a), format = NULL)),
          depends = list(functions = character(), variables = "a"),
-         when = NULL))
+         when = NULL,
+         src = NULL))
 })
 
 
