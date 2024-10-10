@@ -16,7 +16,7 @@ test_that("can compile model with debug enabled", {
       gamma <- parameter(0.1)
       I0 <- parameter(10)
 
-      debug(phase = "update", when = I < 10 && time > 20)
+      browser(phase = "update", when = I < 10 && time > 20)
     }, debug = TRUE, quiet = TRUE)
   )
 })
