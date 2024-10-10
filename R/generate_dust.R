@@ -791,7 +791,7 @@ generate_dust_browser <- function(dat, phase) {
   for (v in c("time", export)) {
     body$add(generate_dust_browser_to_env(v, dat, env))
   }
-  body$add(sprintf("dust2::r::browser::enter(%s);", env))
+  body$add(sprintf('dust2::r::browser::enter(%s, "%s", time);', env, phase))
 
   body <- body$get()
   if (!is.null(dat$browser[[phase]]$when)) {

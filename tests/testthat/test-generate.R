@@ -1750,7 +1750,7 @@ test_that("can generate browser code", {
       '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::save(a, "a", odin_env);',
       '    dust2::r::browser::save(b, "b", odin_env);',
-      "    dust2::r::browser::enter(odin_env);",
+      '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
 })
@@ -1809,7 +1809,7 @@ test_that("can generate nontrivial debug", {
       '    dust2::r::browser::save(p_SI, "p_SI", odin_env);',
       '    dust2::r::browser::save(n_SI, "n_SI", odin_env);',
       '    dust2::r::browser::save(n_IR, "n_IR", odin_env);',
-      "    dust2::r::browser::enter(odin_env);",
+      '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
 })
