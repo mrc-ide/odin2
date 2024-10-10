@@ -194,7 +194,7 @@ However, when you run the sytem you will pause part way through evaluation:
 
 ```r
 dust_system_run_to_time(sys, 200)
-#> ℹ dust debug: see `?dust_browser()` for help
+#> ℹ dust browser ('update'; time = 117): see `?dust_browser()` for help
 #> Called from: eval(substitute(expr), data, enclos = parent.frame())
 ```
 
