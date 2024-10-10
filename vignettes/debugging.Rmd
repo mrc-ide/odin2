@@ -137,3 +137,96 @@ odin_show({
   update(x) <- Normal(x, 1)
 })
 ```
+
+To show just a particular method (usually `update` or `rhs`), use the `what` argument, for example:
+
+```{r}
+odin_show({
+  initial(x) <- 0
+  update(x) <- Normal(x, 1)
+}, what = "update")
+```
+
+# Use the interactive debugger
+
+This is new and very experimental, you can ask odin to drop you into a debugger (implemented on top of R's `browser()` to explore the values of your variables at some point within a model run.  To do this, add a call to `browser()` somewhere within your odin code and recompile.
+
+The `browser` function in odin  accepts arguments
+
+* `phase`: the system phase where the debugger should be inserted; this will typically be `update` or `deriv`
+* `when`: optionally a condition that should be satisfied for the debugger to be triggered.  You will typically want to set this or it will be called at every step
+
+Note that these are not the same as R's `browser()`!
+
+For example, to debug the simple SIR model from `vignette("odin")` we might write:
+
+```{r}
+gen <- odin({
+  p_IR <- 1 - exp(-gamma * dt)
+  N <- parameter(1000)
+  p_SI <- 1 - exp(-(beta * I / N * dt))
+  n_SI <- Binomial(S, p_SI)
+  n_IR <- Binomial(I, p_IR)
+  update(S) <- S - n_SI
+  update(I) <- I + n_SI - n_IR
+  update(R) <- R + n_IR
+  initial(S) <- N - I0
+  initial(I) <- I0
+  initial(R) <- 0
+  beta <- parameter(0.2)
+  gamma <- parameter(0.1)
+  I0 <- parameter(10)
+
+  browser(phase = "update", when = I < 10 && time > 20)
+})
+```
+
+The location of the call to `browser()` does not matter; it will be activated at the **end** of the phase.  The condition here might be something we cook up to look at what happens as the number of individuals in the infected class starts tailing off at the end of the simulation.
+
+We create and initialise the system as normal:
+
+```{r}
+sys <- dust_system_create(gen(), list())
+dust_system_set_state_initial(sys)
+```
+
+However, when you run the sytem you will pause part way through evaluation:
+
+```r
+dust_system_run_to_time(sys, 200)
+#> ℹ dust browser ('update'; time = 117): see `?dust_browser()` for help
+#> Called from: eval(substitute(expr), data, enclos = parent.frame())
+```
+
+and the prompt has changed to `Browse[1]>` (unfortunately we can't change this easily)
+
+Here, you can see the things that odin and dust know about:
+
+```r
+Browse[1]> ls()
+ [1] "beta"  "gamma" "I"     "I0"    "N"     "n_IR"  "n_SI"  "p_IR"  "p_SI"
+[10] "R"     "S"     "time"
+```
+
+and you can inspect values or perform calculations:
+
+```r
+Browse[1]> N
+[1] 1000
+Browse[1]> I
+[1] 9
+Browse[1]> S
+[1] 178
+Browse[1]> I / S
+[1] 0.0505618
+```
+
+If you press `c` or `n`, then odin the system will proceed to the next step and drop you back into the debugger.  You can exit with `Q` which will return you to the console with an error.  You can also run
+
+```r
+dust_browser_continue()
+```
+
+and then press `c` to continue to the end of your simulation.
+
+Changes that you make to variables within the debugger are *not* (currently) reflected back into the model.  We'd be very happy to discuss this sort of workflow if it seems useful.

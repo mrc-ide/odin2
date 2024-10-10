@@ -476,3 +476,15 @@ test_that("Don't allow vectors to have defaults", {
     }),
     "Array parameters cannot have defaults")
 })
+
+
+test_that("cannot use browser in nonexistant phase", {
+  expect_error(
+    odin_parse({
+      deriv(a) <- 1
+      initial(a) <- 0
+      browser("update")
+    }),
+    "Cannot use 'browser()' with phase 'update', as it does not exist",
+    fixed = TRUE)
+})

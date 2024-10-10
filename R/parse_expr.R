@@ -5,6 +5,8 @@ parse_expr <- function(expr, src, call) {
     parse_expr_compare(expr, src, call)
   } else if (rlang::is_call(expr, "print")) {
     parse_expr_print(expr, src, call)
+  } else if (rlang::is_call(expr, "browser")) {
+    parse_expr_browser(expr, src, call)
   } else {
     odin_parse_error(
       c("Unclassifiable expression",
@@ -557,7 +559,7 @@ parse_expr_print <- function(expr, src, call) {
   }
 
   string <- m$value$string
-  inputs <- parse_debug_string(string, src, call)
+  inputs <- parse_print_string(string, src, call)
   depends <- join_dependencies(
     lapply(inputs, function(x) find_dependencies(x$expr)))
 
@@ -566,11 +568,12 @@ parse_expr_print <- function(expr, src, call) {
        string = string,
        inputs = inputs,
        depends = depends,
-       when = m$value$when)
+       when = m$value$when,
+       src = src)
 }
 
 
-parse_debug_string <- function(string, src, call) {
+parse_print_string <- function(string, src, call) {
   if (!rlang::is_string(string)) {
     odin_parse_error(
       "Expected the first argument to 'print()' to be a string",
@@ -595,16 +598,16 @@ parse_debug_string <- function(string, src, call) {
 
   lapply(parts, function(p) {
     tryCatch(
-      parse_debug_element(p), error = function(e) {
+      parse_print_element(p), error = function(e) {
         odin_parse_error(
-          "Failed to parse debug string '{string}': '{p}' is not valid",
+          "Failed to parse print string '{string}': '{p}' is not valid",
           "E1054", src, call, parent = e)
       })
   })
 }
 
 
-parse_debug_element <- function(str) {
+parse_print_element <- function(str) {
   re <- "(.+)\\s*;\\s*(.+)"
   has_format <- grepl(re, str)
   if (has_format) {
@@ -621,6 +624,37 @@ parse_debug_element <- function(str) {
   expr <- parse(text = value)[[1]]
 
   list(expr = expr, format = format)
+}
+
+
+parse_expr_browser <- function(expr, src, call) {
+  fn <- function(phase, when = NULL) NULL
+  m <- match_call(expr, fn)
+  if (!m$success) {
+    odin_parse_error(
+      "Failed to parse 'browser()' call",
+      "E1059", src, call, parent = m$error)
+  }
+
+  phase <- m$value$phase
+  when <- m$value$when
+
+  tryCatch(
+    match_value(phase, PHASES_BROWSER),
+    error = function(e) {
+      odin_parse_error(
+        "Invalid value for 'phase' argument to 'browser()'",
+        "E1060", src, call, parent = e)
+    })
+
+  depends <- find_dependencies(m$value$when)
+  list(type = "browser",
+       special = "browser",
+       rhs = list(type = "browser"), # makes checking easier elsewhere
+       phase = phase,
+       when = when,
+       depends = depends,
+       src = src)
 }
 
 
