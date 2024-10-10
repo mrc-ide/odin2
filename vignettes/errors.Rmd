@@ -759,6 +759,20 @@ a[] <- user()
 
 where we could determine the rank.  This might be because you've removed the square brackets from the original, or the original assignment is simply missing.  If your code does compile with odin1 but you see this error code please let us know.
 
+# `E1059`
+
+Failed to parse call to `browser()`.  Note that while this shares ideas and a core implementation with R's `browser()`, the call in odin code is different and must have the form
+
+```r
+browser(phase, when)
+```
+
+where `phase` is the phase to evaluate the browser (one of `update` or `deriv` for now) and `when` is an expression describing the conditions to evaluate the `browser` call.
+
+# `E1060`
+
+Invalid `phase` argument for call to `browser()`.  Currently this must be one of `update` or `deriv`, but we may expand this in future.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
