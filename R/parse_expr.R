@@ -627,13 +627,25 @@ parse_print_element <- function(str) {
 
 
 parse_expr_browser <- function(expr, src, call) {
-  fn <- function(phase = NULL, when = NULL) NULL
+  fn <- function(phase, when = NULL) NULL
   m <- match_call(expr, fn)
   if (!m$success) {
-    odin_parse_error(conditionMessage(m$error), "E1099", src, call)
+    odin_parse_error(
+      "Failed to parse 'browser()' call",
+      "E1059", src, call, parent = m$error)
   }
+
   phase <- m$value$phase
   when <- m$value$when
+
+  tryCatch(
+    match_value(phase, c("update", "deriv")),
+    error = function(e) {
+      odin_parse_error(
+        "Invalid value for 'phase' argument to 'browser()'",
+        "E1060", src, call, parent = e)
+    })
+
   depends <- find_dependencies(m$value$when)
   list(type = "browser",
        special = "browser",
