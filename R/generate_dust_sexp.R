@@ -74,55 +74,75 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     }
 
     ## Below here is much simpler, really.
-    args <- vcapply(expr[-1], generate_dust_sexp, dat, options)
-    n <- length(args)
+    args_value <- as.list(expr[-1])
+    args_str <- vcapply(args_value, generate_dust_sexp, dat, options)
+    n <- length(args_value)
 
-    binary_inplace <- c(
-      "+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">=", "&&", "||")
+    binary_compare <- c("==", "!=", "<", ">", "<=", ">=")
+    binary_inplace <- c("+", "-", "*", "/", "&&", "||", binary_compare)
 
     if (fn == "(") {
-      ret <- sprintf("(%s)", args[[1]])
+      ret <- sprintf("(%s)", args_str[[1]])
     } else if (n == 1 && fn == "-") {
-      ret <- sprintf("-%s", args[[1]])
+      ret <- sprintf("-%s", args_str[[1]])
     } else if (n == 1 && fn == "+") {
-      ret <- args[[1]]
+      ret <- args_str[[1]]
     } else if (n == 2 && fn %in% binary_inplace) {
       ## Some care might be needed for division in some cases.
-      ret <- sprintf("%s %s %s", args[[1]], fn, args[[2]])
+      if (fn %in% binary_inplace) {
+        ## Stop a == x causing warnings where 'a' is an int and 'x' is
+        ## size_t; this happens for x in INDEX and would happen if
+        ## used on a dimension too.
+        is_int <- vlapply(args_value, function(x) {
+          is.name(x) &&
+            as.character(x) %in% names(dat$type) &&
+            dat$type[[as.character(x)]] == "int"
+        })
+        if (any(is_int) && !all(is_int)) {
+          i <- which(!is_int)
+          cast_to_int <- args_str[[i]] %in% INDEX ||
+            rlang::is_call(args_value[[i]], c("length", "OdinDim"))
+          if (cast_to_int) {
+            args_str[[i]] <- sprintf("static_cast<int>(%s)", args_str[[i]])
+          }
+        }
+      }
+      ret <- sprintf("%s %s %s", args_str[[1]], fn, args_str[[2]])
     } else if (fn == "%%") {
       ## TODO: we'll use our usual fmodr thing here once we get that
       ## into monty's math library, but for now this is ok.
-      ret <- sprintf("std::fmod(%s, %s)", args[[1]], args[[2]])
+      ret <- sprintf("std::fmod(%s, %s)", args_str[[1]], args_str[[2]])
     } else if (fn %in% names(FUNCTIONS_MONTY_MATH)) {
       ret <- sprintf("monty::math::%s(%s)",
                      FUNCTIONS_MONTY_MATH[[fn]],
-                     paste(args, collapse = ", "))
+                     paste(args_str, collapse = ", "))
     } else if (fn == "as.numeric") {
-      ret <- sprintf("static_cast<real_type>(%s)", args[[1]])
+      ret <- sprintf("static_cast<real_type>(%s)", args_str[[1]])
     } else if (fn == "as.integer") {
-      ret <- sprintf("static_cast<int>(%s)", args[[1]])
+      ret <- sprintf("static_cast<int>(%s)", args_str[[1]])
     } else if (fn %in% c("min", "max")) {
-      is_integer_like <- grepl("^[0-9]$", args)
+      is_integer_like <- grepl("^[0-9]$", args_str)
       if (any(is_integer_like) && !all(is_integer_like)) {
-        args[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
-                                         args[is_integer_like])
+        args_str[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
+                                             args_str[is_integer_like])
       }
-      ret <- sprintf("std::%s(%s)", fn, paste(args, collapse = ", "))
+      ret <- sprintf("std::%s(%s)", fn, paste(args_str, collapse = ", "))
     } else if (fn == "if") {
       ## NOTE: The ternary operator has very low precendence, so we
       ## will agressively parenthesise it.  This is strictly not
       ## needed when this expression is the only element of `expr` but
       ## that's hard to detect so we'll tolerate a few additional
       ## parens for now.
-      ret <- sprintf("(%s ? %s : %s)", args[[1L]], args[[2L]], args[[3L]])
+      ret <- sprintf("(%s ? %s : %s)",
+                     args_str[[1L]], args_str[[2L]], args_str[[3L]])
     } else if (is_stochastic_call) {
       ret <- sprintf("monty::random::%s<real_type>(rng_state, %s)",
-                     fn, paste(args, collapse = ", "))
+                     fn, paste(args_str, collapse = ", "))
     } else if (fn %in% c("as.logical", "as.integer", "as.numeric")) {
       type_to <- c(as.logical = "bool",
                    as.integer = "int",
                    as.numeric = "real_type")[[fn]]
-      ret <- sprintf("static_cast<%s>(%s)", type_to, args[[1]])
+      ret <- sprintf("static_cast<%s>(%s)", type_to, args_str[[1]])
     } else {
       ## TODO: we should catch this during parse; erroring here is a
       ## bug as we don't offer context.
@@ -165,8 +185,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## now all we need is information on where things are to be found (the
 ## location) but we'll need to cope with variable packing, array
 ## lengths and types soon.
-generate_dust_dat <- function(location, packing, rank) {
-  list(location = location, packing = packing, rank = rank)
+generate_dust_dat <- function(location, packing, type, rank) {
+  list(location = location, packing = packing, type = type, rank = rank)
 }
 
 

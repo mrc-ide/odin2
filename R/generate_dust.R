@@ -46,6 +46,7 @@ generate_prepare <- function(dat) {
   rank <- set_names(dat$storage$arrays$rank, dat$storage$arrays$name)
   dat$sexp_data <- generate_dust_dat(dat$storage$location,
                                      dat$storage$packing,
+                                     dat$storage$type,
                                      rank)
   dat
 }
