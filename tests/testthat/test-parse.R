@@ -429,6 +429,19 @@ test_that("only arrays can be duplicated", {
 })
 
 
+test_that("don't confuse compare statements for arrays (mrc-5866)", {
+  dat <- odin_parse({
+    a ~ Normal(0, 1)
+    b ~ Normal(0, 1)
+    update(x) <- 1
+    initial(x) <- 1
+    a <- data()
+    b <- data()
+  })
+  expect_length(dat$phases$compare$compare, 2)
+})
+
+
 test_that("multline array equations must be contiguous", {
   expect_error(
     odin_parse({

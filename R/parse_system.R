@@ -514,7 +514,15 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
-  id <- sprintf("%s:%s", nms, vcapply(exprs, function(x) x$special %||% ""))
+  id <- sprintf("%s:%s", vcapply(exprs, function(x) x$special %||% ""), nms)
+  ## TODO: Fix this properly in mrc-5867
+  is_compare <- vlapply(exprs, function(x) identical(x$rhs$type, "compare"))
+  if (any(is_compare)) {
+    id[is_compare] <- paste0(
+      "compare:",
+      vcapply(exprs[is_compare], function(x) as.character(x$rhs$args[[1]])))
+  }
+
   if (anyDuplicated(id)) {
     for (i in unique(id[duplicated(id)])) {
       parse_system_arrays_check_duplicated(id == i, exprs, call)
