@@ -214,9 +214,10 @@ parse_system_depends <- function(equations, variables, call) {
   for (i in seq_along(deps)) {
     nm <- names(deps)[[i]]
     vars <- deps[[i]]
-    deps_recursive[[nm]] <- union(
+    deps_recursive[[nm]] <- unique(c( # union, but for 3 args...
+      deps_recursive[[nm]],
       vars,
-      unlist(deps_recursive[vars], FALSE, FALSE))
+      unlist(deps_recursive[vars], FALSE, FALSE)))
   }
 
   for (nm in names(deps_recursive)) {

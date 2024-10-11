@@ -200,3 +200,18 @@ test_that("detect dependencies correctly across multline arrays", {
   expect_equal(dat$phases$update$equations, "a")
   expect_equal(dat$phases$build_shared$equations, c("b", "dim_a"))
 })
+
+
+test_that("detect dependencies correctly across multline arrays", {
+  dat <- odin_parse({
+    a[] <- c
+    a[1] <- b * time
+    b <- parameter()
+    c <- parameter()
+    initial(x) <- 0
+    update(x) <- sum(a)
+    dim(a) <- 3
+  })
+  expect_equal(dat$phases$update$equations, "a")
+  expect_equal(dat$phases$build_shared$equations, c("b", "c", "dim_a"))
+})
