@@ -48,7 +48,7 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     special <- "parameter"
   } else if (rhs$type == "interpolate") {
-    if (!is.null(special)) {
+    if (!is.null(special) || !is.null(lhs$array)) {
       odin_parse_error(
         "Calls to 'interpolate()' must be assigned to a symbol",
         "E1037", src, call)

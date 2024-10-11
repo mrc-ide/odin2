@@ -275,3 +275,22 @@ test_that("error where we can't determine rank in migration", {
     "Can't determine rank for 'dim() <- user()' call",
     fixed = TRUE)
 })
+
+
+test_that("disallow parsing interpolation to slice", {
+  w <- expect_warning(
+    odin_parse({
+      a <- parameter()
+      dim(a) <- 10
+      b <- parameter()
+      dim(b) <- c(3, 10)
+      v[] <- interpolate(a, b, "constant")
+      update(x) <- sum(v)
+      initial(x) <- 0
+      dim(v) <- 3
+    }),
+    "Found 1 compatibility issue")
+  expect_match(conditionMessage(w),
+               "Drop arrays from lhs of assignments from 'interpolate()'",
+               fixed = TRUE)
+})

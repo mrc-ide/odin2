@@ -16,6 +16,7 @@ parse_compat <- function(exprs, action, ignore_error, call) {
   exprs <- apply_fix(exprs, parse_compat_fix_parameter_array)
   exprs <- apply_fix(exprs, parse_compat_fix_distribution)
   exprs <- apply_fix(exprs, parse_compat_fix_compare)
+  exprs <- apply_fix(exprs, parse_compat_fix_interpolate_assign)
 
   ## Bunch of time-related things; these are a bit harder, and can't
   ## always be recovered from.
@@ -166,6 +167,8 @@ parse_compat_report <- function(exprs, action, call) {
       compare = paste(
         "Remove redundant 'compare()' wrapper, because all expressions",
         "using `~` are comparisons."),
+      interpolate_assign =
+        "Drop arrays from lhs of assignments from 'interpolate()'",
       assign_time = paste(
         "Don't assign 'time' as 'step * dt', as this is now done",
         "automatically"),
@@ -248,6 +251,21 @@ parse_compat_fix_compare <- function(expr, call) {
     original <- expr$value
     expr$value[[2]] <- expr$value[[2]][[2]]
     expr <- parse_add_compat(expr, "compare", original)
+  }
+  expr
+}
+
+
+parse_compat_fix_interpolate_assign <- function(expr, call) {
+  is_interpolate_assign_array <-
+    rlang::is_call(expr$value, "<-") &&
+    rlang::is_call(expr$value[[3]], "interpolate") &&
+    rlang::is_call(expr$value[[2]], "[") &&
+    all(vlapply(expr$value[[2]][-(1:2)], rlang::is_missing))
+  if (is_interpolate_assign_array) {
+    original <- expr$value
+    expr$value[[2]] <- expr$value[[2]][[2]]
+    expr <- parse_add_compat(expr, "interpolate_assign", original)
   }
   expr
 }

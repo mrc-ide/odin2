@@ -105,20 +105,20 @@ parse_system_overall <- function(exprs, call) {
       rank_result <- get_rank(nm_result)
 
       if (get_rank(nm_time) != 1L) {
-        cli::cli_abort(
+        odin_parse_error(
           c(paste("Expected time argument '{nm_time}' to 'interpolate()' for",
-                  "{nm_result}' to be a vector"),
+                  "'{nm_result}' to be a vector"),
             i = "{nm_time} was a {rank_description(get_rank(nm_time))}"),
-          "E2015", src, call)
+          "E2015", eq$src, call)
       }
       rank_value_expected <- 1L + rank_result
       if (get_rank(nm_value) != rank_value_expected) {
-        cli::cli_abort(
+        odin_parse_error(
           c(paste("Expected value argument '{nm_value}' to 'interpolate()' for",
-                  "{nm_result}' to be a",
+                  "'{nm_result}' to be a",
                   "{rank_description(rank_value_expected)}"),
             i = "{nm_value} was a {rank_description(get_rank(nm_value))}"),
-          "E2015", src, call)
+          "E2015", eq$src, call)
       }
 
       ## TODO: we could warn here about things that look incompatible,
