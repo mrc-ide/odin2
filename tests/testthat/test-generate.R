@@ -1675,7 +1675,7 @@ test_that("support min/max", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[0] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + std::max(shared.b, shared.c);",
+      "  state_next[0] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + monty::math::max(shared.b, shared.c);",
       "}"))
 })
 
