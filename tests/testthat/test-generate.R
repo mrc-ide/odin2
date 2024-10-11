@@ -1678,3 +1678,45 @@ test_that("support min/max", {
       "  state_next[0] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + std::max(shared.b, shared.c);",
       "}"))
 })
+
+
+test_that("cast index variables to int when compared to integers", {
+  dat <- odin_parse({
+    n <- parameter(type = "integer")
+    a[] <- if (i == n) 0 else time
+    dim(a) <- 3
+    update(x) <- a[n]
+    initial(x) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = (static_cast<int>(i) == shared.n ? 0 : time);",
+      "  }",
+      "  state_next[0] = internal.a[shared.n - 1];",
+      "}"))
+})
+
+
+test_that("cast array size to int when compared to integers", {
+  dat <- odin_parse({
+    n <- parameter(type = "integer")
+    a[] <- time
+    b <- if (length(a) == n) 0 else 1
+    dim(a) <- 3
+    update(x) <- a[1] + b
+    initial(x) <- 0
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = time;",
+      "  }",
+      "  const real_type b = (static_cast<int>(shared.dim.a.size) == shared.n ? 0 : 1);",
+      "  state_next[0] = internal.a[0] + b;",
+      "}"))
+})
