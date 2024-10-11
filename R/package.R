@@ -90,7 +90,7 @@ odin_package <- function(path, quiet = FALSE, compatibility = "warning") {
   ## name for the generated C++ code; we'll make this configurable
   ## once we support a general approach for config/options.
   for (i in seq_along(dat)) {
-    dat[[i]]$class <- base[[i]]
+    dat[[i]]$class <- gsub("-", "_", base[[i]], fixed = TRUE)
   }
   ## We still fail quite a lot during generation, so let's do that all
   ## at once too:

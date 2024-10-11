@@ -62,3 +62,24 @@ test_that("can generate trivial package, quietly", {
   res <- evaluate_promise(odin_package(path, quiet = TRUE))
   expect_equal(res$messages, character())
 })
+
+
+test_that("clean hyphens from class names", {
+  path <- withr::local_tempdir()
+  test_pkg_setup(path)
+  writeLines(c("initial(x) <- 0",
+               "update(x) <- 0"),
+             file.path(path, "inst/odin/a-b-c.R"))
+  res <- evaluate_promise(odin_package(path, quiet = TRUE))
+  expect_equal(res$messages, character())
+
+  expect_true(file.exists(file.path(path, "src/a-b-c.cpp")))
+  cpp <- readLines(file.path(path, "src/a-b-c.cpp"))
+  expect_match(cpp, "class a_b_c {", fixed = TRUE, all = FALSE)
+  expect_match(cpp, "// [[dust2::class(a_b_c)]]", fixed = TRUE, all = FALSE)
+
+  expect_true(file.exists(file.path(path, "R/dust.R")))
+  r <- readLines(file.path(path, "R/dust.R"))
+  expect_match(r, "a_b_c <- function() {", fixed = TRUE, all = FALSE)
+  expect_match(r, 'dust_system_generator("a_b_c",', fixed = TRUE, all = FALSE)
+})
