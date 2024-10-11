@@ -1294,7 +1294,7 @@ test_that("can generate complete sums over arrays", {
       "  for (size_t i = 1; i <= shared.dim.y.size; ++i) {",
       "    internal.y[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[0] = dust2::array::sum<real_type>(internal.y, shared.dim.y);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y);",
       "}"))
 })
 
@@ -1317,7 +1317,7 @@ test_that("can generate partial sums over arrays", {
       "    }",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_next[i - 1 + 0] = dust2::array::sum<real_type>(internal.y, shared.dim.y, {i - 1, i - 1}, {0, shared.dim.y.dim[1] - 1});",
+      "    state_next[i - 1 + 0] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y, {i - 1, i - 1}, {0, shared.dim.y.dim[1] - 1});",
       "  }",
       "}"))
 })
@@ -1556,7 +1556,7 @@ test_that("can interpolate arrays", {
     c(method_args$update,
       "  const auto x = state[0];",
       "  shared.interpolate_a.eval(time, internal.a);",
-      "  state_next[0] = x + dust2::array::sum<real_type>(internal.a, shared.dim.a);",
+      "  state_next[0] = x + dust2::array::sum<real_type>(internal.a.data(), shared.dim.a);",
       "}"))
 })
 
@@ -1675,6 +1675,6 @@ test_that("support min/max", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[0] = dust2::array::min<real_type>(shared.a, shared.dim.a) + std::max(shared.b, shared.c);",
+      "  state_next[0] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + std::max(shared.b, shared.c);",
       "}"))
 })

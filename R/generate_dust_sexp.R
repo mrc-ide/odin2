@@ -197,6 +197,9 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   fn <- expr[[2]]
   target <- expr[[3]]
   target_str <- generate_dust_sexp(expr[[3]], dat, options)
+  if (dat$location[[target]] %in% c("internal", "shared")) {
+    target_str <- sprintf("%s.data()", target_str)
+  }
   index <- expr$index
   dim <- paste0(
     if (isFALSE(options$shared_exists)) "dim_" else "shared.dim.",
