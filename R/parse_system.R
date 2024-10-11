@@ -211,11 +211,15 @@ parse_system_depends <- function(equations, variables, call) {
     setdiff(eq$rhs$depends$variables, automatic)
   })
   deps_recursive <- list()
-  for (nm in names(deps)) {
-    vars <- deps[[nm]]
+  for (i in seq_along(deps)) {
+    nm <- names(deps)[[i]]
+    vars <- deps[[i]]
     deps_recursive[[nm]] <- union(
       vars,
       unlist(deps_recursive[vars], FALSE, FALSE))
+  }
+
+  for (nm in names(deps_recursive)) {
     for (i in which(names(equations) == nm)) {
       equations[[i]]$rhs$depends$variables_recursive <- deps_recursive[[nm]]
     }
