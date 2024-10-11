@@ -44,7 +44,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_sexp(
         call("OdinDim", as.character(expr[[2]]), if (fn == "nrow") 1 else 2),
         dat, options))
-    } else if (fn == "OdinReduce") {2
+    } else if (fn == "OdinReduce") {
       return(generate_dust_sexp_reduce(expr, dat, options))
     } else if (fn == "OdinInterpolateAlloc") {
       mode <- expr$mode
