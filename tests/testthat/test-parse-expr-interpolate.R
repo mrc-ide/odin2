@@ -48,3 +48,11 @@ test_that("parse interpolation call", {
     list(functions = character(),
          variables = c("a", "b")))
 })
+
+
+test_that("prevent use of assignment into slice for interpolate", {
+  expect_error(
+    parse_expr(quote(a[] <- interpolate(x, y, "constant")), NULL, NULL),
+    "Calls to 'interpolate()' must be assigned to a symbol",
+    fixed = TRUE)
+})

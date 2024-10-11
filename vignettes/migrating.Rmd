@@ -145,6 +145,20 @@ dim(a) <- parameter(rank = 2)
 
 which conveys the same intent.  We may make this slightly more friendly in future (see `vignette("functions")`).
 
+## Interpolate results assign without array indices
+
+Previously, if you had an `interpolate()` call that returned a vector (or higher-dimension array) you you had to write
+
+```r
+v[] <- interpolate(a, b, "constant")
+```
+
+but now you should drop the `[]`, as for the `parameter()` case above, as you are replacing *all* of `v` at once, writing:
+
+```r
+v <- interpolate(a, b, "constant")
+```
+
 ## Discrete-time models have a more solid time basis
 
 Previously, discrete time models used `step` to count steps forward as unsigned integers, usually from zero.  Many models added a parameter (or constant) `dt` representing the timestep and then a variable `time` which represented the time as a real-valued number.  For example you might have `dt` of 0.25 and then your model stops at times `[0, 0.25, 0.5, 0.75, 1]` for steps `[0, 1, 2, 3, 4]`.
