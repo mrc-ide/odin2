@@ -147,7 +147,7 @@ which conveys the same intent.  We may make this slightly more friendly in futur
 
 ## Interpolate results assign without array indices
 
-Previously, if you had an `interpolate()` call that returned a vector (or higher-dimension array) you you had to write
+Previously, if you had an `interpolate()` call that returned a vector (or higher-dimension array) you had to write
 
 ```r
 v[] <- interpolate(a, b, "constant")
