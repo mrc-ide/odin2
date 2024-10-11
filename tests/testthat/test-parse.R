@@ -489,3 +489,36 @@ test_that("Don't allow vectors to have defaults", {
     }),
     "Array parameters cannot have defaults")
 })
+
+
+
+
+test_that("check rank of interpolate assignment", {
+  expect_error(
+    odin_parse({
+      a <- parameter()
+      dim(a) <- 10
+      b <- parameter()
+      dim(b) <- c(3, 10)
+      v <- interpolate(a, b, "constant")
+      update(x) <- sum(v)
+      initial(x) <- 0
+    }),
+    "Expected value argument 'b' to 'interpolate()' for 'v' to be a vector",
+    fixed = TRUE)
+})
+
+
+test_that("check rank of interpolate time arg", {
+  expect_error(
+    odin_parse({
+      a <- parameter()
+      b <- parameter()
+      dim(b) <- 10
+      v <- interpolate(a, b, "constant")
+      update(x) <- sum(v)
+      initial(x) <- 0
+    }),
+    "Expected time argument 'a' to 'interpolate()' for 'v' to be a vector",
+    fixed = TRUE)
+})
