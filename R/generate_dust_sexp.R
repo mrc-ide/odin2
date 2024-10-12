@@ -113,6 +113,13 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## into monty's math library, but for now this is ok.
       ret <- sprintf("std::fmod(%s, %s)", args_str[[1]], args_str[[2]])
     } else if (fn %in% names(FUNCTIONS_MONTY_MATH)) {
+      if (fn %in% c("min", "max")) {
+        is_integer_like <- grepl("^[0-9]$", args_str)
+        if (any(is_integer_like) && !all(is_integer_like)) {
+          args_str[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
+                                               args_str[is_integer_like])
+        }
+      }
       ret <- sprintf("monty::math::%s(%s)",
                      FUNCTIONS_MONTY_MATH[[fn]],
                      paste(args_str, collapse = ", "))
@@ -120,13 +127,6 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ret <- sprintf("static_cast<real_type>(%s)", args_str[[1]])
     } else if (fn == "as.integer") {
       ret <- sprintf("static_cast<int>(%s)", args_str[[1]])
-    } else if (fn %in% c("min", "max")) {
-      is_integer_like <- grepl("^[0-9]$", args_str)
-      if (any(is_integer_like) && !all(is_integer_like)) {
-        args_str[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
-                                             args_str[is_integer_like])
-      }
-      ret <- sprintf("std::%s(%s)", fn, paste(args_str, collapse = ", "))
     } else if (fn == "if") {
       ## NOTE: The ternary operator has very low precendence, so we
       ## will agressively parenthesise it.  This is strictly not

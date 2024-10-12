@@ -8,6 +8,8 @@ FUNCTIONS_MONTY_MATH <-
   c("^" = "pow",
     "%%" = "fmod",
     "%/%" = "fintdiv",
+    min = "min",
+    max = "max",
     ceiling = "ceil",
     sign = "sign",
     floor = "floor",
