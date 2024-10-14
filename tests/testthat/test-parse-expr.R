@@ -528,3 +528,37 @@ test_that("parse max as a 2-arg function", {
   expect_equal(res$rhs$depends,
                list(functions = "max", variables = c("x", "y")))
 })
+
+
+test_that("can parse call to browser()", {
+  res <- parse_expr(quote(browser("update")), NULL, NULL)
+  expect_equal(res$type, "browser")
+  expect_equal(res$special, "browser")
+  expect_equal(res$phase, "update")
+  expect_null(res$when, NULL)
+})
+
+
+test_that("can parse conditional call to browser()", {
+  res <- parse_expr(quote(browser("deriv", time > 4)), NULL, NULL)
+  expect_equal(res$type, "browser")
+  expect_equal(res$special, "browser")
+  expect_equal(res$phase, "deriv")
+  expect_equal(res$when, quote(time > 4))
+})
+
+
+test_that("error for invalid call to browser", {
+  expect_error(
+    parse_expr(quote(browser("deriv", time > 4, TRUE)), NULL, NULL),
+    "Failed to parse 'browser()' call",
+    fixed = TRUE)
+})
+
+
+test_that("error for invalid value for phase in browser call", {
+  expect_error(
+    parse_expr(quote(browser("other", time > 4)), NULL, NULL),
+    "Invalid value for 'phase' argument to 'browser()'",
+    fixed = TRUE)
+})

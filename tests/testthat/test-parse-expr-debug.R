@@ -6,11 +6,12 @@ test_that("can parse trivial print statement", {
          string = "{a}",
          inputs = list(list(expr = quote(a), format = NULL)),
          depends = list(functions = character(), variables = "a"),
-         when = NULL))
+         when = NULL,
+         src = NULL))
 })
 
 
-test_that("debug string requires at least one variable", {
+test_that("print string requires at least one variable", {
   expect_error(
     parse_expr(quote(print("a string")), NULL, NULL),
     "Invalid 'print()' expression does not reference any values",
@@ -34,7 +35,7 @@ test_that("cope with malformed glue string", {
 
 
 
-test_that("debug string requires at least one variable", {
+test_that("print string requires at least one variable", {
   expect_error(
     parse_expr(quote(print("a string")), NULL, NULL),
     "Invalid 'print()' expression does not reference any values",
@@ -45,11 +46,11 @@ test_that("debug string requires at least one variable", {
 test_that("error if glue string component is malformed", {
   expect_error(
     parse_expr(quote(print("a {**}")), NULL, NULL),
-    "Failed to parse debug string 'a {**}': '**' is not valid",
+    "Failed to parse print string 'a {**}': '**' is not valid",
     fixed = TRUE)
   skip_on_cran() # probably platform dependent
   expect_error(
     parse_expr(quote(print("a {x; qqq}")), NULL, NULL),
-    "Failed to parse debug string 'a {x; qqq}': 'x; qqq' is not valid",
+    "Failed to parse print string 'a {x; qqq}': 'x; qqq' is not valid",
     fixed = TRUE)
 })

@@ -1603,7 +1603,7 @@ test_that("can generate user-sized arrays", {
       "}"))
 })
 
-test_that("can generate debug", {
+test_that("can generate print strings", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- x_next
@@ -1624,7 +1624,7 @@ test_that("can generate debug", {
 })
 
 
-test_that("can generate debug that requires additional unpack", {
+test_that("can generate print that requires additional unpack", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- time
@@ -1641,7 +1641,7 @@ test_that("can generate debug that requires additional unpack", {
 })
 
 
-test_that("Generate conditional debug", {
+test_that("Generate conditional print", {
   dat <- odin_parse({
     initial(x) <- 1
     update(x) <- x_next
@@ -1718,5 +1718,98 @@ test_that("cast array size to int when compared to integers", {
       "  }",
       "  const real_type b = (static_cast<int>(shared.dim.a.size) == shared.n ? 0 : 1);",
       "  state_next[0] = internal.a[0] + b;",
+      "}"))
+})
+    
+
+test_that("can generate browser code", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- b
+    a <- x * 2
+    b <- a / x
+    browser(phase = "update", when = time > 2)
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/browser.hpp>"))
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type a = x * 2;",
+      "  const real_type b = a / x;",
+      "  state_next[0] = b;",
+      "  if (time > 2) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
+      '    dust2::r::browser::save(a, "a", odin_env);',
+      '    dust2::r::browser::save(b, "b", odin_env);',
+      '    dust2::r::browser::enter(odin_env, "update", time);',
+      "  }",
+      "}"))
+})
+
+
+test_that("can generate nontrivial debug", {
+  dat <- odin_parse({
+    p_IR <- 1 - exp(-gamma * dt)
+    N <- parameter(1000)
+    p_SI <- 1 - exp(-(beta * I / N * dt))
+    n_SI <- Binomial(S, p_SI)
+    n_IR <- Binomial(I, p_IR)
+    update(S) <- S - n_SI
+    update(I) <- I + n_SI - n_IR
+    update(R) <- R + n_IR
+    initial(S) <- N - I0
+    initial(I) <- I0
+    initial(R) <- 0
+    beta <- parameter(0.2)
+    gamma <- parameter(0.1)
+    I0 <- parameter(10)
+    browser(phase = "update", when = I < 10 && time > 20)
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/browser.hpp>"))
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto S = state[0];",
+      "  const auto I = state[1];",
+      "  const auto R = state[2];",
+      "  const real_type p_IR = 1 - monty::math::exp(-shared.gamma * dt);",
+      "  const real_type p_SI = 1 - monty::math::exp(-(shared.beta * I / shared.N * dt));",
+      "  const real_type n_SI = monty::random::binomial<real_type>(rng_state, S, p_SI);",
+      "  const real_type n_IR = monty::random::binomial<real_type>(rng_state, I, p_IR);",
+      "  state_next[0] = S - n_SI;",
+      "  state_next[1] = I + n_SI - n_IR;",
+      "  state_next[2] = R + n_IR;",
+      "  if (I < 10 && time > 20) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(S, "S", odin_env);',
+      '    dust2::r::browser::save(I, "I", odin_env);',
+      '    dust2::r::browser::save(R, "R", odin_env);',
+      '    dust2::r::browser::save(shared.N, "N", odin_env);',
+      '    dust2::r::browser::save(shared.beta, "beta", odin_env);',
+      '    dust2::r::browser::save(shared.gamma, "gamma", odin_env);',
+      '    dust2::r::browser::save(shared.I0, "I0", odin_env);',
+      '    dust2::r::browser::save(p_IR, "p_IR", odin_env);',
+      '    dust2::r::browser::save(p_SI, "p_SI", odin_env);',
+      '    dust2::r::browser::save(n_SI, "n_SI", odin_env);',
+      '    dust2::r::browser::save(n_IR, "n_IR", odin_env);',
+      '    dust2::r::browser::enter(odin_env, "update", time);',
+      "  }",
       "}"))
 })

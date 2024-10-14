@@ -491,8 +491,6 @@ test_that("Don't allow vectors to have defaults", {
 })
 
 
-
-
 test_that("check rank of interpolate assignment", {
   expect_error(
     odin_parse({
@@ -520,5 +518,17 @@ test_that("check rank of interpolate time arg", {
       initial(x) <- 0
     }),
     "Expected time argument 'a' to 'interpolate()' for 'v' to be a vector",
+    fixed = TRUE)
+})
+
+
+test_that("cannot use browser in nonexistant phase", {
+  expect_error(
+    odin_parse({
+      deriv(a) <- 1
+      initial(a) <- 0
+      browser("update")
+    }),
+    "Cannot use 'browser()' with phase 'update', as it does not exist",
     fixed = TRUE)
 })

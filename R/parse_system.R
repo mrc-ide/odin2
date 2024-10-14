@@ -9,6 +9,7 @@ parse_system_overall <- function(exprs, call) {
   is_dim <- special == "dim"
   is_parameter <- special == "parameter"
   is_print <- special == "print"
+  is_browser <- special == "browser"
   is_equation <- special %in% c("", "parameter", "dim") & !is_compare
 
   ## We take initial as the set of variables:
@@ -156,6 +157,7 @@ parse_system_overall <- function(exprs, call) {
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
                 print = exprs[is_print],
+                browser = exprs[is_browser],
                 data = exprs[is_data])
 
   nms <- vcapply(exprs$equations, function(x) x$lhs$name)
@@ -634,6 +636,41 @@ parse_print <- function(print, time_type, variables, data, phases, call) {
     unpack <- setdiff(intersect(unlist0(deps[i]), variables),
                       phases[[p]]$unpack)
     ret[[p]] <- list(unpack = unpack, equations = print[i])
+  }
+
+  ret
+}
+
+
+parse_browser <- function(browser, time_type, variables, data, phases, call) {
+  if (length(browser) == 0) {
+    return(NULL)
+  }
+
+  phase <- vcapply(browser, "[[", "phase")
+  if (anyDuplicated(phase)) {
+    stop("duplicated phase")
+  }
+
+  names(browser) <- phase
+  ret <- list()
+
+  for (p in phase) {
+    if (is.null(phases[[p]])) {
+      valid <- intersect(names(phases)[!vlapply(phases, is.null)],
+                         PHASES_BROWSER)
+      src <- browser[[p]]$src
+      odin_parse_error(
+        c(paste("Cannot use 'browser()' with phase '{p}', as it does",
+                "not exist in your system"),
+          i = "Valid choices are: {squote(valid)}"),
+        "E2017", src, call)
+    }
+
+    unpack <- setdiff(variables, phases[[p]]$unpack)
+    ret[[p]] <- list(phase = p,
+                     when = browser[[p]]$when,
+                     unpack = unpack)
   }
 
   ret

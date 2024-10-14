@@ -2,7 +2,7 @@ generate_dust_system <- function(dat) {
   dat <- generate_prepare(dat)
 
   body <- collector()
-  body$add("#include <dust2/common.hpp>")
+  body$add(generate_dust_system_includes(dat))
   body$add(generate_dust_system_attributes(dat))
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
@@ -49,6 +49,12 @@ generate_prepare <- function(dat) {
                                      dat$storage$type,
                                      rank)
   dat
+}
+
+
+generate_dust_system_includes <- function(dat) {
+  c("#include <dust2/common.hpp>",
+    if (!is.null(dat$browser)) "#include <dust2/r/browser.hpp>")
 }
 
 
@@ -312,16 +318,8 @@ generate_dust_system_update <- function(dat) {
     body$add(generate_dust_assignment(eq, "state_next", dat))
   }
 
-  if (!is.null(dat$print$update)) {
-    if (length(dat$print$update$unpack) > 0) {
-      body$add(generate_dust_unpack(dat$print$update$unpack,
-                                    dat$storage$packing$state,
-                                    dat$sexp_data))
-    }
-    for (eq in dat$print$update$equations) {
-      body$add(generate_dust_print(eq, dat))
-    }
-  }
+  body$add(generate_dust_print(dat, "update"))
+  body$add(generate_dust_browser(dat, "update"))
 
   cpp_function("void", "update", args, body$get(), static = TRUE)
 }
@@ -691,6 +689,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
 
 
 generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
+  if (length(names) == 0) {
+    return(NULL)
+  }
   i <- match(names, packing$name)
   is_scalar <- lengths(packing$dims[i]) == 0
   is_array <- !is_scalar
@@ -711,7 +712,7 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
 }
 
 
-generate_dust_print <- function(eq, dat) {
+generate_dust_print_statement <- function(eq, dat) {
   format <- vcapply(eq$inputs, function(p) {
     if (!is.null(p$format)) {
       paste0("%", p$format)
@@ -753,4 +754,66 @@ get_phase_equations <- function(phase, dat, adjoint = FALSE) {
     nms <- dat$phases[[phase]]$equations
   }
   dat$equations[names(dat$equations) %in% nms]
+}
+
+
+generate_dust_print <- function(dat, phase) {
+  if (is.null(dat$print[[phase]])) {
+    return(NULL)
+  }
+
+  body <- collector()
+  body$add(generate_dust_unpack(dat$print[[phase]]$unpack,
+                                dat$storage$packing$state,
+                                dat$sexp_data))
+  for (eq in dat$print[[phase]]$equations) {
+    body$add(generate_dust_print_statement(eq, dat))
+  }
+  body$get()
+}
+
+
+generate_dust_browser <- function(dat, phase) {
+  if (is.null(dat$browser[[phase]])) {
+    return()
+  }
+  body <- collector()
+  body$add(generate_dust_unpack(dat$browser[[phase]]$unpack,
+                                dat$storage$packing$state,
+                                dat$sexp_data))
+  env <- "odin_env"
+  body$add(sprintf("auto %s = dust2::r::browser::create();", env))
+  if (phase == "compare") {
+    export <- names(dat$storage$location)
+  } else {
+    export <- names(dat$storage$location[dat$storage$location != "data"])
+  }
+  for (v in c("time", export)) {
+    body$add(generate_dust_browser_to_env(v, dat, env))
+  }
+  body$add(sprintf('dust2::r::browser::enter(%s, "%s", time);', env, phase))
+
+  body <- body$get()
+  if (!is.null(dat$browser[[phase]]$when)) {
+    when <- generate_dust_sexp(dat$browser[[phase]]$when, dat$sexp_data)
+    body <- c(sprintf("if (%s) {", when),
+              sprintf("  %s", body),
+              "}")
+  }
+  body
+}
+
+
+generate_dust_browser_to_env <- function(name, dat, env) {
+  data <- generate_dust_sexp(name, dat$sexp_data)
+  if (name %in% dat$storage$arrays$name) {
+    location <- dat$storage$location[[name]]
+    if (location %in% c("shared", "internal")) {
+      data <- sprintf("%s.data()", data)
+    }
+    dim <- sprintf("shared.dim.%s", name)
+    sprintf('dust2::r::browser::save(%s, %s, "%s", %s);', data, dim, name, env)
+  } else {
+    sprintf('dust2::r::browser::save(%s, "%s", %s);', data, name, env)
+  }
 }

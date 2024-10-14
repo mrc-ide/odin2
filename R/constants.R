@@ -262,3 +262,5 @@ RESERVED <- sort(unique(c(RESERVED_ODIN, RESERVED_CPP, RESERVED_JS)))
 RESERVED_ODIN_PREFIX <- c("odin", "interpolate", "delay", "adjoint")
 RESERVED_ODIN_PREFIX_RE <- sprintf("^(%s)_.*",
                                    paste(RESERVED_ODIN_PREFIX, collapse = "|"))
+
+PHASES_BROWSER <- c("update", "deriv")
