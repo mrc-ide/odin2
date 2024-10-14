@@ -227,7 +227,8 @@ generate_dust_system_build_data <- function(dat) {
   ## types, lengths, etc.
   eqs <- dat$phases$create_data$equations
   body <- collector()
-  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s");', data, data))
+  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s", NA_REAL);',
+                   data, data))
   body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
   args <- c("cpp11::list" = "data",
             "const shared_state&" = "shared")
