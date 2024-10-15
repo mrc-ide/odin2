@@ -107,6 +107,9 @@ test_that("can compile a discrete-time model that compares to data", {
 
   expect_equal(state, cmp$state)
   expect_equal(density, cmp$density)
+
+  d$incidence[] <- NA
+  expect_equal(dust2::dust_system_compare_data(sys, d), 0)
 })
 
 

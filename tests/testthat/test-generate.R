@@ -192,7 +192,7 @@ test_that("create simple build data function", {
   expect_equal(
     generate_dust_system_build_data(dat),
     c(method_args$build_data,
-      "  auto d = dust2::r::read_real(data, \"d\");",
+      "  auto d = dust2::r::read_real(data, \"d\", NA_REAL);",
       "  return data_type{d};",
       "}"))
 })
@@ -436,8 +436,8 @@ test_that("variables involving data are computed within compare", {
   expect_equal(
     generate_dust_system_build_data(dat),
     c(method_args$build_data,
-      '  auto d1 = dust2::r::read_real(data, "d1");',
-      '  auto d2 = dust2::r::read_real(data, "d2");',
+      '  auto d1 = dust2::r::read_real(data, "d1", NA_REAL);',
+      '  auto d2 = dust2::r::read_real(data, "d2", NA_REAL);',
       '  return data_type{d1, d2};',
       '}'))
   expect_equal(
