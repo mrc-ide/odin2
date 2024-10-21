@@ -80,6 +80,7 @@ test_that("clean hyphens from class names", {
 
   expect_true(file.exists(file.path(path, "R/dust.R")))
   r <- readLines(file.path(path, "R/dust.R"))
-  expect_match(r, "a_b_c <- function() {", fixed = TRUE, all = FALSE)
-  expect_match(r, 'dust_system_generator("a_b_c",', fixed = TRUE, all = FALSE)
+  expect_match(r, "function() get(\"a_b_c\"),", fixed = TRUE, all = FALSE)
+  expect_match(r, "a_b_c <- structure(", fixed = TRUE, all = FALSE)
+  expect_match(r, "name = \"a_b_c\",", fixed = TRUE, all = FALSE)
 })
