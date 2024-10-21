@@ -81,7 +81,7 @@ Be wary of strict equality with `==` or `!=` as numbers may be floating point nu
 sqrt(3)^2 == 3
 ```
 
-# Mathematical functions
+# Mathematical functions and constants
 
 * `%%` -- **Modulo**: Finds the remainder after division of one number by another (e.g., `123 %% 100` &rarr; `23`)
 * `%/%` -- **Integer divide**: Different to floating point division, effectively the full number of times one number divides into another (e.g., `20 %/% 7` &rarr; `2`)
@@ -109,7 +109,7 @@ sqrt(3)^2 == 3
 
 The exact behaviour for `%%` and `%/%` for floating point numbers and negative numbers is complicated - please see `?Arithmetic`.  The rules for operators in `odin` try to follow those in R as closely as possible.
 
-All the usual trig functions are also available:
+The constant `pi` can be used, along with all the usual trig functions:
 
 * `cos` -- **Cosine function**
 * `sin` -- **Sine function**
@@ -124,6 +124,7 @@ All the usual trig functions are also available:
 * `acosh` -- **Hyperbolic arc-cosine function**
 * `asinh` -- **Hyperbolic arc-sine function**
 * `atanh` -- **Hyperbolic arc-tangent function**
+
 
 # Arrays
 
@@ -360,6 +361,6 @@ You cannot assign to a name that is reserved in:
 * [C++](https://en.cppreference.com/w/cpp/keyword) - includes useful words such as `new` and `switch`
 * [C](http://en.cppreference.com/w/c/keyword) - largely a subset of C++'s words, but also excludes `restrict`
 * [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words) - includes useful words such as `default` and `export`
-* A few words restricted by odin itself: `time`, `dt`, `parameter`, `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`, `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`, `shared`, `internal`.  We may reduce this list in future.
+* A few words restricted by odin itself: `time`, `dt`, `parameter`, `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`, `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`, `shared`, `internal`, `pi`.  We may reduce this list in future.
 
 In addition, odin restricts a few prefixes; a name cannot start with `odin_`, `interpolate_`, `delay_` or `adjoint_`.
