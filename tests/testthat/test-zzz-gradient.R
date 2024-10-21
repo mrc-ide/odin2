@@ -24,7 +24,7 @@ test_that("can compute gradient", {
     cases_observed ~ Poisson(cases_inc)
   }, quiet = TRUE, debug = TRUE)
 
-  expect_mapequal(sir()$properties,
+  expect_mapequal(attr(sir, "properties"),
                   list(time_type = "discrete",
                        has_compare = TRUE,
                        has_adjoint = TRUE))

@@ -13,7 +13,7 @@ test_that("can compile a simple ode model", {
   }, debug = TRUE, quiet = TRUE)
 
   expect_s3_class(res(), "dust_system_generator")
-  expect_mapequal(res()$properties,
+  expect_mapequal(attr(res, "properties"),
                   list(time_type = "continuous",
                        has_compare = FALSE,
                        has_adjoint = FALSE))
@@ -78,7 +78,7 @@ test_that("can compile a discrete-time model that compares to data", {
   }, debug = TRUE, quiet = TRUE)
 
   expect_s3_class(res(), "dust_system_generator")
-  expect_mapequal(res()$properties,
+  expect_mapequal(attr(res, "properties"),
                   list(time_type = "discrete",
                        has_compare = TRUE,
                        has_adjoint = FALSE))
