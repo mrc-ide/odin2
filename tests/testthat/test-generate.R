@@ -1824,6 +1824,6 @@ test_that("can generate pi", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  state[0] = 3.14159265358979323846;",
+      sprintf("  state[0] = %s;", format(pi, digits = 22)),
       "}"))
 })
