@@ -1813,3 +1813,17 @@ test_that("can generate nontrivial debug", {
       "  }",
       "}"))
 })
+
+test_that("can generate pi", {
+  dat <- odin_parse({
+    initial(x) <- pi
+    a <- sin(180 / pi)
+    update(x) <- x + a
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_discrete,
+      "  state[0] = M_PI;",
+      "}"))
+})

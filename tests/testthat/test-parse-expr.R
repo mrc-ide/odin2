@@ -562,3 +562,33 @@ test_that("error for invalid value for phase in browser call", {
     "Invalid value for 'phase' argument to 'browser()'",
     fixed = TRUE)
 })
+
+test_that("Can parse expression involving pi on rhs", {
+  res <- parse_expr(quote(a <- sin(180 / pi)), NULL, NULL)
+  expect_true(res$rhs$depends$variables == "pi")
+})
+
+test_that("Can't parse with pi on lhs", {
+  expect_error(
+    parse_expr(quote(pi <- 3), NULL, NULL),
+    "Do not use `pi` on the left-hand-side of an expression",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(initial(pi) <- 1), NULL, NULL),
+    "Do not use `pi` on the left-hand-side of an expression",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(update(pi) <- 1), NULL, NULL),
+    "Do not use `pi` on the left-hand-side of an expression",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(dim(pi) <- c(2,2)), NULL, NULL),
+    "Do not use `pi` on the left-hand-side of an expression",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(pi ~ Normal(1, 1)), NULL, NULL),
+    "Do not use `pi` on the left-hand-side of an expression",
+    fixed = TRUE)
+})
+
+

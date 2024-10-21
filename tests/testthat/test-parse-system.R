@@ -215,3 +215,12 @@ test_that("detect dependencies correctly across multline arrays", {
   expect_equal(dat$phases$update$equations, "a")
   expect_equal(dat$phases$build_shared$equations, c("b", "c", "dim_a"))
 })
+
+test_that("System can use pi", {
+  dat <- odin_parse({
+    update(a) <- a + 1
+    initial(a) <- pi
+  })
+  expect_equal(dat$phases$update$unpack, "a")
+  expect_equal(dat$phases$initial$variables[[1]]$rhs$depends$variables, "pi")
+})

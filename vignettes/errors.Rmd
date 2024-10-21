@@ -773,6 +773,10 @@ where `phase` is the phase to evaluate the browser (one of `update` or `deriv` f
 
 Invalid `phase` argument for call to `browser()`.  Currently this must be one of `update` or `deriv`, but we may expand this in future.
 
+# `E1061`
+
+You can use the built-in constant `pi` on the right hand side of an expression, without setting it. You should not use it on the left-hand side of any expression.
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.

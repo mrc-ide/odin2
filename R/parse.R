@@ -54,8 +54,10 @@ parse_check_usage <- function(dat, call) {
 
 parse_check_usage_find_unknown <- function(dat, call) {
   implicit <- c("time", if (dat$time == "discrete") "dt")
+  built_in_constants <- "pi"
   known <- c(unlist(dat$storage$contents, FALSE, FALSE),
              implicit,
+             built_in_constants,
              dat$storage$unused)
   eqs <- c(dat$phases$update$variables,
            dat$phases$deriv$variables,
@@ -71,7 +73,6 @@ parse_check_usage_find_unknown <- function(dat, call) {
 
   err_nms <- unique(unlist(unknown))
   src <- lapply(eqs[err], "[[", "src")
-
   if (dat$time == "continuous" && "dt" %in% unknown) {
     uses_dt <- vlapply(err_nms, function(nms) "dt" %in% nms)
     odin_parse_error(
