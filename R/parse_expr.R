@@ -20,8 +20,11 @@ parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
   special <- lhs$special
   lhs$special <- NULL
-
-  if (identical(special, "dim")) {
+  if (lhs$name == "pi") {
+    odin_parse_error(
+      "Do not use `pi` on the left-hand-side of an expression",
+      "E1061", src, call)
+  } else if (identical(special, "dim")) {
     lhs$name_data <- lhs$name
     lhs$name <- paste0("dim_", lhs$name)
     rhs <- parse_expr_assignment_rhs_dim(expr[[3]], src, call)
@@ -505,7 +508,11 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
 parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
-
+  if (lhs == "pi") {
+    odin_parse_error(
+      "Do not use `pi` on the left-hand-side of an expression",
+      "E1061", src, call)  
+  }
   rhs$args <- c(lhs, rhs$args)
   rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))
   rhs$density$expr <- substitute_(
