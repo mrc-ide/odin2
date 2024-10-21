@@ -154,7 +154,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     if (name %in% c("time", "dt", INDEX)) {
       ret <- name
     } else if (name == "pi") {
-      ret <- format(pi, digits = 22)
+      ret <- "M_PI"
     } else {
       location <- dat$location[[name]]
       shared_exists <- !isFALSE(options$shared_exists)
