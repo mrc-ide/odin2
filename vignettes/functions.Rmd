@@ -125,7 +125,6 @@ The constant `pi` can be used, along with all the usual trig functions:
 * `asinh` -- **Hyperbolic arc-sine function**
 * `atanh` -- **Hyperbolic arc-tangent function**
 
-
 # Arrays
 
 Use of arrays implies a "`for`-loop" in the generated code.  For example, you might write a vectorised version of the [logistic map](https://en.wikipedia.org/wiki/Logistic_map) as:
