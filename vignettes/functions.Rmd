@@ -248,7 +248,10 @@ draw from a Gamma distribution with a shape of 2 and a **scale** of 10.
 
 The currently supported distributions are (alphabetically):
 
-* `Beta` -- the [Beta distribution](https://en.wikipedia.org/wiki/Beta_distribution) with parameters `a` and `b` (vs `rbeta`'s `shape1` and `shape2`)
+* `Beta` -- the [beta distribution](https://en.wikipedia.org/wiki/Beta_distribution) with parameters `a` and `b` (vs `rbeta`'s `shape1` and `shape2`)
+* `BetaBinomial` -- the [beta-binomial distribution](https://en.wikipedia.org/wiki/Beta-binomial_distribution) with two forms:
+  - `size`, `prob` (the mean probability of success), `rho` (dispersion parameter) (**default**)
+  - `size`, `a`, `b`
 * `Binomial` -- the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) with parameters `size` and `prob`
 * `Exponential` -- the [exponential distribution](https://en.wikipedia.org/wiki/Exponential_distribution) with two forms:
   - `rate` (**default**); this is the same parameterisation as `rexp`
@@ -257,6 +260,9 @@ The currently supported distributions are (alphabetically):
   - `shape`, `rate` (**default**)
   - `shape`, `scale`
 * `Hypergeometric` -- the [hypergeometric distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution) with parameters `m` (number of white balls), `n` (number of black balls), and `k` (number of samples), and we return the number of *white* balls.  We may support alternative parametrisations of this distribution in future (this version is the same parametrisation as `rhyper`)
+* `NegativeBinomial` -- the [negative binomial distribution](https://en.wikipedia.org/wiki/Negative_binomial_distribution) with two forms:
+  - `size`, `prob` (**default**)
+  - `size`, `mu` (the mean)`
 * `Normal` -- the [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution) with parameters `mean`, `sd`
 * `Poisson` -- the [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) with parameter `lambda` (the mean)
 * `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
