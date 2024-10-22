@@ -187,6 +187,41 @@ test_that("Error if equations unused", {
     "Unused equations: 'x' and 'b'")
 })
 
+test_that("Equation used if result is used in array assignment", {
+  ## See (mrc-5894)
+  dat <- odin2::odin({
+    seed_age_band <- as.integer(4)
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[] <- Poisson(1)
+    x[seed_age_band] <- x[seed_age_band] + 1
+  })
+})
+
+test_that("Equation used if result is used in array assignment", {
+  ## See (mrc-5894)
+  dat <- odin2::odin({
+    seed_age_band <- as.integer(4)
+    
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    
+    initial(y) <- 0
+    update(y) <- sum(x)
+    
+    lambda <- parameter()
+    dim(lambda) <- n
+    
+    x[] <- Poisson(lambda[i])
+    x[seed_age_band] <- x[i] + 1 + seed_age_band * 0
+  })
+})
+
+
+
+
 
 test_that("detect dependencies correctly across multline arrays", {
   dat <- odin_parse({
