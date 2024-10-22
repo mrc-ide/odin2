@@ -148,16 +148,16 @@ abline(v = c(mean(ll1), mean(ll2)), col = c("red", "blue"), lwd = 2)
 
 So even a relatively small difference in a parameter leads to a difference in the log-likelihood that is easily detectable in only 100 runs of the filter, even when the distributions overlap.  However, it does make optimisation-based approaches to inference, such as maximum likelihood, tricky because it's hard to know which way "up" is if each time you try a point it might return a different height.
 
-If you run a particle filter with the argument `save_history = TRUE` then we save the trajectories of particles over time:
+If you run a particle filter with the argument `save_trajectories = TRUE` then we save the trajectories of particles over time:
 
 ```{r}
-dust2::dust_likelihood_run(filter, list(beta = 0.2, gamma = 0.1), save_history = TRUE)
+dust2::dust_likelihood_run(filter, list(beta = 0.2, gamma = 0.1), save_trajectories = TRUE)
 ```
 
-You can access these with `dust2::dust_likelihood_last_history()`:
+You can access these with `dust2::dust_likelihood_last_trajectories()`:
 
 ```{r}
-h <- dust2::dust_likelihood_last_history(filter)
+h <- dust2::dust_likelihood_last_trajectories(filter)
 ```
 
 The result here is a 4 x 100 x 200 array:
