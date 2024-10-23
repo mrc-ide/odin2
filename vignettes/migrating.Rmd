@@ -235,7 +235,7 @@ The mapping is:
 * `rhyper()` to `Hypergeometric`
 * `rlogis()` to `Logistic` (unsupported for now)
 * `rlnorm()` to `Lognormal` (unsupported for now)
-* `rnbinom()` to `NegativeBinomial` (unsupported for now)
+* `rnbinom()` to `NegativeBinomial`
 * `rnorm()` to `Normal`
 * `rpois()` to `Poisson`
 * `rt()` to `T` (unsupported for now)
