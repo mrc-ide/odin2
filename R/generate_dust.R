@@ -593,6 +593,17 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   }
 }
 
+array_rewrite_index <- function(expr, src, dest) {
+  for (e in seq_along(expr)) {
+    if (is.recursive(expr[[e]])) {
+      expr[[e]] <- array_rewrite_index(expr[[e]], src, dest)
+    } else if (is.symbol(expr[[e]]) && (as.character(expr[[e]]) == src)) {
+      expr[[e]] <- as.symbol(dest)
+    }
+  }
+  expr
+}
+
 
 generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   if (eq$rhs$type == "parameter") {
@@ -660,10 +671,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
   } else {
-    is_array <- !is.null(eq$lhs$array)
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
-
     res <- sprintf("%s = %s;", lhs, rhs)
     is_array <- !is.null(eq$lhs$array)
     if (is_array) {
@@ -675,6 +684,17 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
+        } else {          # idx$type == "single"
+          
+          # We need to replace [i,j,k....] on the right hand side with
+          # the matching var inside the array[...] on the left.
+          
+          lhs_index <- which(unlist(lapply(eq$lhs$array, function(x) {
+            x$name == idx$name})))
+          lhs_var <- eq$lhs$array[[lhs_index]]$at
+          eq$rhs$expr <- array_rewrite_index(eq$rhs$expr, idx$name, lhs_var)
+          rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
+          res <- sprintf("%s = %s;", lhs, rhs)
         }
       }
       if (length(res) > 1) {
