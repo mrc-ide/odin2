@@ -598,7 +598,10 @@ array_rewrite_index <- function(expr, src, dest) {
     if (is.recursive(expr[[e]])) {
       expr[[e]] <- array_rewrite_index(expr[[e]], src, dest)
     } else if (is.symbol(expr[[e]]) && (as.character(expr[[e]]) == src)) {
-      expr[[e]] <- as.symbol(dest)
+      if (is.character(dest)) {
+        dest <- as.symbol(dest)
+      }
+      expr[[e]] <- dest
     }
   }
   expr
@@ -687,8 +690,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         } else {          # idx$type == "single"
           
           # We need to replace [i,j,k....] on the right hand side with
-          # the matching var inside the array[...] on the left.
-          
+          # the matching var (or value) in the array[a,4,b] on the left.
+
           lhs_index <- which(unlist(lapply(eq$lhs$array, function(x) {
             x$name == idx$name})))
           lhs_var <- eq$lhs$array[[lhs_index]]$at

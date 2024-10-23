@@ -189,7 +189,7 @@ test_that("Error if equations unused", {
 
 test_that("Equation used if result is used in array assignment", {
   ## See (mrc-5894)
-  dat <- odin_parse({
+  dat <- odin2::odin({
     seed_age_band <- as.integer(4)
     n <- parameter(type = "integer", constant = TRUE)
     dim(x) <- n
@@ -202,7 +202,7 @@ test_that("Equation used if result is used in array assignment", {
 
 test_that("Equation used if result is used in array assignment", {
   ## See (mrc-5894)
-  dat <- odin_parse({
+  dat <- odin2::odin({
     seed_age_band <- as.integer(4)
     
     n <- parameter(type = "integer", constant = TRUE)
@@ -216,6 +216,20 @@ test_that("Equation used if result is used in array assignment", {
     
     x[] <- Poisson(lambda[i])
     x[seed_age_band] <- x[i] + 1 + seed_age_band * 0
+  })
+})
+
+test_that("Array assigment with integer index is handled", {
+  ## See (mrc-5894)
+  dat <- odin2::odin({
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    
+    initial(y) <- 0
+    update(y) <- sum(x)
+    
+    x[] <- Poisson(1)
+    x[4] <- x[i] + 1
   })
 })
 
