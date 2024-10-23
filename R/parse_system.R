@@ -178,6 +178,37 @@ parse_system_overall <- function(exprs, call) {
        exprs = exprs)
 }
 
+parse_array_range_depends <- function(x) {
+  if (is.numeric(x)) {
+    return(NULL)
+  } else {
+    if (is.symbol(x)) {
+      return(as.character(x))
+    } else if (is.expression(x)) {
+      browser()
+      return(find_dependencies(x))
+    } else if (as.character(x[[1]]) %in% c("OdinDim", "length")) {
+      if (!is.numeric(x[[2]])) {
+        return(as.character(x[[2]]))
+      }
+    }
+  }
+}
+
+parse_array_depends <- function(arrays) {
+  
+  lhs_depends <- NULL
+  for (array in arrays) {
+    if (array$type == "range") {
+      lhs_depends <- unique(c(lhs_depends,
+                            parse_array_range_depends(array$to),
+                            parse_array_range_depends(array$from)))
+    } else if (array$type == "single")
+      lhs_depends <- unique(c(lhs_depends,
+                              parse_array_range_depends(array$at)))
+  }
+  lhs_depends
+}
 
 parse_system_depends <- function(equations, variables, call) {
   automatic <- c("time", "dt")
@@ -188,13 +219,8 @@ parse_system_depends <- function(equations, variables, call) {
   names(equations) <- nms
   deps <- collapse_dependencies(lapply(equations, function(eq) {
     rhs_depends <- eq$rhs$depends$variables
-    lhs_depends <- NULL
-    if (length(eq$lhs$array) > 0) {
-      lhs_depends <- unlist(lapply(eq$lhs$array, function(x) {
-        as.character(x[["at"]])
-      }))
-    }
-    vars <- c(rhs_depends, lhs_depends)
+    lhs_depends <- parse_array_depends(eq$lhs$array)
+    vars <- unique(c(rhs_depends, lhs_depends))
     setdiff(vars, c(implicit, eq$lhs$name))
   }))
   res <- topological_order(deps)
@@ -220,13 +246,8 @@ parse_system_depends <- function(equations, variables, call) {
   
   deps <- lapply(equations, function(eq) {
     rhs_depends <- eq$rhs$depends$variables
-    lhs_depends <- NULL
-    if (length(eq$lhs$array) > 0) {
-      lhs_depends <- unlist(lapply(eq$lhs$array, function(x) {
-        as.character(x[["at"]])
-      }))
-    }
-    vars <- c(rhs_depends, lhs_depends)
+    lhs_depends <- parse_array_depends(eq$lhs$array)
+    vars <- unique(c(rhs_depends, lhs_depends))
     setdiff(vars, automatic)
   })
   deps_recursive <- list()
