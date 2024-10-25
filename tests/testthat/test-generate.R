@@ -1827,3 +1827,85 @@ test_that("can generate pi", {
       "  state[0] = M_PI;",
       "}"))
 })
+
+test_that("Array assignment with index on lhs and rhs (1)", {
+  ## See (mrc-5894)
+  dat <- odin_parse({
+    seed_age_band <- as.integer(4)
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[] <- Poisson(1)
+    x[seed_age_band] <- x[i] + 1
+  })
+  dat <- generate_prepare(dat)
+  src <- generate_dust_system_update(dat)
+  src <- src[grepl("seed_age_band", src)]
+  expect_equal(src,
+    paste0("  internal.x[shared.seed_age_band - 1] = ",
+             "internal.x[shared.seed_age_band - 1] + 1;"))
+    
+})
+
+test_that("Array assignment with index on lhs and rhs (2)", {
+  ## See (mrc-5894)
+  dat <- odin_parse({
+    seed_age_band <- as.integer(4)
+    
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    
+    initial(y) <- 0
+    update(y) <- sum(x)
+    
+    lambda <- parameter()
+    dim(lambda) <- n
+    
+    x[] <- Poisson(lambda[i])
+    x[seed_age_band] <- x[i] + 1 + seed_age_band * 0
+  })
+  dat <- generate_prepare(dat)
+  src <- generate_dust_system_update(dat)
+  src <- src[grepl("seed_age_band", src)]
+  expect_equal(src,
+               paste0("  internal.x[shared.seed_age_band - 1] = ",
+                      "internal.x[shared.seed_age_band - 1] + 1 ",
+                      "+ shared.seed_age_band * 0;"))
+})
+
+test_that("Array assigment lhs: integer index, rhs: i", {
+  ## See (mrc-5894)
+  dat <- odin_parse({
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    
+    initial(y) <- 0
+    update(y) <- sum(x)
+    
+    x[] <- Poisson(1)
+    x[4] <- x[i] + 1
+  })
+  dat <- generate_prepare(dat)
+  src <- generate_dust_system_update(dat)
+  src <- src[grepl("internal.x\\[", src)]
+  expect_true("  internal.x[3] = internal.x[3] + 1;" %in% src)
+})
+
+test_that("Array assigment lhs: expression index, rhs: i", {
+  ## See (mrc-5894)
+  dat <- odin_parse({
+    seed_age_band <- as.integer(4)
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[] <- Poisson(1)
+    x[seed_age_band + 1] <- x[i] + 1
+  })
+  dat <- generate_prepare(dat)
+  src <- generate_dust_system_update(dat)
+  expect_true(paste0("  internal.x[shared.seed_age_band + 1 - 1] = ",
+                       "internal.x[shared.seed_age_band + 1 - 1] + 1;") %in% src)
+})
+
