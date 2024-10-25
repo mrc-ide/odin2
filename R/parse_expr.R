@@ -77,7 +77,7 @@ parse_expr_assignment <- function(expr, src, call) {
       }
     }
   }
-
+  
   index_used <- intersect(INDEX, rhs$depends$variables)
   if (length(index_used) > 0) {
     n <- length(lhs$array)
@@ -109,7 +109,6 @@ parse_expr_assignment <- function(expr, src, call) {
         "E1038", src, call)
     }
   }
-
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -165,15 +164,20 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
                  MoreArgs = list(name = name, src = src, call = call))
+    depends <- join_dependencies(
+      lapply(array, function(x)
+        join_dependencies(lapply(x[c("at", "from", "to")], find_dependencies))))
   } else {
     name <- parse_expr_check_lhs_name(lhs, special, is_array, src, call)
     array <- NULL
+    depends <- NULL
   }
 
   lhs <- list(
     name = name,
     special = special,
-    array = array)
+    array = array,
+    depends = depends)
 
   if (!is.null(args)) {
     lhs$args <- args

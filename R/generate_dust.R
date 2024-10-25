@@ -675,12 +675,19 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
+        } else {
+          at <- generate_dust_sexp(idx$at, dat$sexp_data, options)
+          res <- c("{",
+                   sprintf("const size_t %s = %s;", idx$name, at),
+                   res,
+                   "}")
         }
       }
       if (length(res) > 1) {
-        n <- (length(res) - 1) / 2
-        indent <- strrep("  ", c(seq_len(n + 1), rev(seq_len(n))) - 1)
-        res <- paste0(indent, res)
+        i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)])) 
+        i_end <- grepl("^}", res) 
+        indent <- strrep("  ", cumsum(i_start - i_end)) 
+        res <- paste0(indent, res) 
       }
     }
   }

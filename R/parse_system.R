@@ -187,7 +187,8 @@ parse_system_depends <- function(equations, variables, call) {
   ## First, compute the topological order ignoring variables
   names(equations) <- nms
   deps <- collapse_dependencies(lapply(equations, function(eq) {
-    setdiff(eq$rhs$depends$variables, c(implicit, eq$lhs$name))
+    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)), 
+            c(implicit, eq$lhs$name))
   }))
   res <- topological_order(deps)
   if (!res$success) {
@@ -210,7 +211,8 @@ parse_system_depends <- function(equations, variables, call) {
   ## Now, we need to get the variables a second time, and only exclude
   ## automatic variables
   deps <- lapply(equations, function(eq) {
-    setdiff(eq$rhs$depends$variables, automatic)
+    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)), 
+            automatic)
   })
   deps_recursive <- list()
   for (i in seq_along(deps)) {
