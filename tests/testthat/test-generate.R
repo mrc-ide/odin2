@@ -1909,3 +1909,18 @@ test_that("Array assigment lhs: expression index, rhs: i", {
                        "internal.x[shared.seed_age_band + 1 - 1] + 1;") %in% src)
 })
 
+test_that("Array assigment lhs: length index, rhs: i", {
+  ## See (mrc-5894)
+  dat <- odin_parse({
+    n <- parameter(type = "integer", constant = TRUE)
+    dim(x) <- n
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[] <- Poisson(1)
+    x[length(x)] <- x[i] + 1
+  })
+  dat <- generate_prepare(dat)
+  src <- generate_dust_system_update(dat)
+  expect_true(paste0("  internal.x[shared.dim.x.size - 1] = ",
+                       "internal.x[shared.dim.x.size - 1] + 1;") %in% src)
+})
