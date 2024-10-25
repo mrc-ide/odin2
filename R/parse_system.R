@@ -191,12 +191,11 @@ parse_array_range_depends <- function(x) {
         }
       }
       return(find_dependencies(x)$variables)
-    } 
+    }
   }
 }
 
 parse_array_depends <- function(arrays) {
-  
   lhs_depends <- NULL
   for (array in arrays) {
     if (array$type == "range") {
@@ -243,7 +242,7 @@ parse_system_depends <- function(equations, variables, call) {
 
   ## Now, we need to get the variables a second time, and only exclude
   ## automatic variables
-  
+
   deps <- lapply(equations, function(eq) {
     rhs_depends <- eq$rhs$depends$variables
     lhs_depends <- parse_array_depends(eq$lhs$array)
