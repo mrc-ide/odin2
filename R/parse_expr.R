@@ -77,7 +77,7 @@ parse_expr_assignment <- function(expr, src, call) {
       }
     }
   }
-  
+
   index_used <- intersect(INDEX, rhs$depends$variables)
   if (length(index_used) > 0) {
     n <- length(lhs$array)
