@@ -38,7 +38,8 @@ test_that("parse interpolation call", {
   res <- parse_expr(quote(x <- interpolate(a, b, "constant")), NULL, NULL)
   expect_null(res$special)
   expect_equal(res$lhs,
-               list(name = "interpolate_x", array = NULL, name_data = "x"))
+               list(name = "interpolate_x", array = NULL, depends = NULL, 
+                    name_data = "x"))
   expect_equal(res$rhs$type, "interpolate")
   expect_equal(
     res$rhs$expr,

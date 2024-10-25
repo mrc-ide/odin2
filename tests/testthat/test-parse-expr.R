@@ -242,7 +242,7 @@ test_that("Reject unclassifiable expressions", {
 test_that("can parse expressions that involve stochastics", {
   res <- parse_expr(quote(a <- Normal(0, 1)), NULL, NULL)
   expect_null(res$special)
-  expect_equal(res$lhs, list(name = "a", array = NULL))
+  expect_equal(res$lhs, list(name = "a", array = NULL, depends = NULL))
   expect_identical(
     res$rhs$expr,
     quote(OdinStochasticCall(sample = "normal", mean = 0)(0, 1)))

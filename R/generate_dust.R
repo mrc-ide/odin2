@@ -675,7 +675,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
-        } else {
+        } else if (idx$name %in% find_dependencies(eq$rhs$expr)$variables) {
           at <- generate_dust_sexp(idx$at, dat$sexp_data, options)
           res <- c("{",
                    sprintf("const size_t %s = %s;", idx$name, at),
