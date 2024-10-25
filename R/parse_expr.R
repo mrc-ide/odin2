@@ -109,6 +109,7 @@ parse_expr_assignment <- function(expr, src, call) {
         "E1038", src, call)
     }
   }
+
   list(special = special,
        lhs = lhs,
        rhs = rhs,
@@ -515,7 +516,7 @@ parse_expr_compare <- function(expr, src, call) {
   if (lhs == "pi") {
     odin_parse_error(
       "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)  
+      "E1061", src, call)
   }
   rhs$args <- c(lhs, rhs$args)
   rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))

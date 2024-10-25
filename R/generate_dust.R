@@ -660,7 +660,6 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
   } else {
-    is_array <- !is.null(eq$lhs$array)
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
 
@@ -684,10 +683,10 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         }
       }
       if (length(res) > 1) {
-        i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)])) 
-        i_end <- grepl("^}", res) 
-        indent <- strrep("  ", cumsum(i_start - i_end)) 
-        res <- paste0(indent, res) 
+        i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)]))
+        i_end <- grepl("^}", res)
+        indent <- strrep("  ", cumsum(i_start - i_end))
+        res <- paste0(indent, res)
       }
     }
   }
