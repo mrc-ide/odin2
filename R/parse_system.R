@@ -184,9 +184,8 @@ parse_array_range_depends <- function(x) {
   } else {
     if (is.symbol(x)) {
       return(as.character(x))
-    } else if (is.expression(x)) {
-      browser()
-      return(find_dependencies(x))
+    } else if (is.call(x)) {
+      return(find_dependencies(x)$variables)
     } else if (as.character(x[[1]]) %in% c("OdinDim", "length")) {
       if (!is.numeric(x[[2]])) {
         return(as.character(x[[2]]))
