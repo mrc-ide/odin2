@@ -55,20 +55,6 @@ test_that("can parse array expression", {
 })
 
 
-test_that("can parse array expression", {
-  res <- parse_expr(quote(a[] <- 1), NULL, NULL)
-  expect_null(res$special)
-  expect_equal(res$lhs$name, "a")
-  expect_equal(res$lhs$array,
-               list(list(name = "i",
-                         type = "range",
-                         from = 1,
-                         to = quote(OdinDim("a", 1L)))))
-  expect_equal(res$rhs$type, "expression")
-  expect_equal(res$rhs$expr, 1)
-})
-
-
 test_that("can parse array dependencies", {
   res <- parse_expr(quote(a[banana] <- b), NULL, NULL)
   expect_null(res$special)
