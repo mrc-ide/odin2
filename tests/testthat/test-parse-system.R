@@ -224,3 +224,27 @@ test_that("System can use pi", {
   expect_equal(dat$phases$update$unpack, "a")
   expect_equal(dat$phases$initial$variables[[1]]$rhs$depends$variables, "pi")
 })
+
+
+test_that("can throw sensible error in when a dimension is unknown", {
+  err <- expect_error(
+    odin_parse({
+      dim(x) <- c(a, b)
+      x[, ] <- 0
+      a <- parameter()
+      initial(y) <- 0
+      update(y) <- sum(x)
+    }),
+    "Dimensions of arrays are not determined at initial creation")
+  expect_equal(
+    err$body[[1]],
+    paste("'x' is determined at stage 'parameter_update', it depends on",
+          "'a' (parameter_update), 'b' (unknown!)"))
+  expect_equal(
+    err$body[[1]],
+    paste("'x' is determined at stage 'parameter_update', it depends on",
+          "'a' (parameter_update), 'b' (unknown!)"))
+  expect_equal(
+    err$body[[2]],
+    "Try adding `constant = TRUE` into the 'parameter()' call for 'a'")
+})
