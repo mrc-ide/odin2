@@ -402,9 +402,7 @@ generate_dust_system_compare_data <- function(dat) {
   unpack <- intersect(dat$variables, dat$phases$compare$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
-  ## TODO collision here in names with 'll'; we might need to prefix
-  ## with compare_ perhaps?
-  body$add("real_type ll = 0;")
+  body$add("real_type odin_ll = 0;")
 
   eqs <- get_phase_equations("compare", dat)
   for (eq in eqs) {
@@ -430,12 +428,12 @@ generate_dust_system_compare_data <- function(dat) {
     check_data <- sprintf("!std::isnan(%s)",
                           vcapply(nms_data, generate_dust_sexp, dat$sexp_data))
     body$add(sprintf("if (%s) {", paste(check_data, collapse = " && ")))
-    body$add(sprintf("  ll += monty::density::%s(%s, true);",
+    body$add(sprintf("  odin_ll += monty::density::%s(%s, true);",
                      eq$rhs$density$cpp, paste(eq_args, collapse = ", ")))
     body$add("}")
   }
 
-  body$add("return ll;")
+  body$add("return odin_ll;")
   cpp_function("real_type", "compare_data", args, body$get(), static = TRUE)
 }
 

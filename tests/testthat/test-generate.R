@@ -329,11 +329,11 @@ test_that("can build simple compare function", {
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
       "  const auto x = state[0];",
-      "  real_type ll = 0;",
+      "  real_type odin_ll = 0;",
       "  if (!std::isnan(data.d)) {",
-      "    ll += monty::density::normal(data.d, x, 1, true);",
+      "    odin_ll += monty::density::normal(data.d, x, 1, true);",
       "  }",
-      "  return ll;",
+      "  return odin_ll;",
       "}"))
 })
 
@@ -351,12 +351,12 @@ test_that("can build more complex compare function", {
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
       "  const auto x = state[0];",
-      "  real_type ll = 0;",
+      "  real_type odin_ll = 0;",
       "  const real_type a = x / data.d;",
       "  if (!std::isnan(data.d)) {",
-      "    ll += monty::density::normal(data.d, x, a, true);",
+      "    odin_ll += monty::density::normal(data.d, x, a, true);",
       "  }",
-      "  return ll;",
+      "  return odin_ll;",
       "}"))
 })
 
@@ -413,12 +413,12 @@ test_that("variables involving data are computed within compare", {
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
       "  const auto x = state[0];",
-      "  real_type ll = 0;",
+      "  real_type odin_ll = 0;",
       "  const real_type a = data.d1 / data.d2;",
       "  if (!std::isnan(data.d1) && !std::isnan(data.d2)) {",
-      "    ll += monty::density::normal(data.d1, x, a, true);",
+      "    odin_ll += monty::density::normal(data.d1, x, a, true);",
       "  }",
-      "  return ll;",
+      "  return odin_ll;",
       "}"))
 
   ## Check other methods and data structures too
@@ -463,12 +463,12 @@ test_that("pull recursive dependencies into compare_data", {
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
       "  const auto x = state[0];",
-      "  real_type ll = 0;",
+      "  real_type odin_ll = 0;",
       "  const real_type p = monty::math::exp(x);",
       "  if (!std::isnan(data.d)) {",
-      "    ll += monty::density::poisson(data.d, p, true);",
+      "    odin_ll += monty::density::poisson(data.d, p, true);",
       "  }",
-      "  return ll;",
+      "  return odin_ll;",
       "}"))
 })
 
@@ -867,11 +867,11 @@ test_that("can generate system with array variable used in compare", {
     c(method_args$compare_data,
       "  const auto * x = state + 0;",
       "  const auto y = state[2];",
-      "  real_type ll = 0;",
+      "  real_type odin_ll = 0;",
       "  if (!std::isnan(data.d)) {",
-      "    ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
+      "    odin_ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
       "  }",
-      "  return ll;",
+      "  return odin_ll;",
       "}"))
 })
 
