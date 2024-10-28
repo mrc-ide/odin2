@@ -658,7 +658,6 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
   } else {
-    is_array <- !is.null(eq$lhs$array)
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
 
@@ -673,11 +672,18 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
                            idx$name, from, idx$name, to, idx$name),
                    res,
                    "}")
+        } else if (idx$name %in% find_dependencies(eq$rhs$expr)$variables) {
+          at <- generate_dust_sexp(idx$at, dat$sexp_data, options)
+          res <- c("{",
+                   sprintf("const size_t %s = %s;", idx$name, at),
+                   res,
+                   "}")
         }
       }
       if (length(res) > 1) {
-        n <- (length(res) - 1) / 2
-        indent <- strrep("  ", c(seq_len(n + 1), rev(seq_len(n))) - 1)
+        i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)]))
+        i_end <- grepl("^}", res)
+        indent <- strrep("  ", cumsum(i_start - i_end))
         res <- paste0(indent, res)
       }
     }

@@ -165,15 +165,20 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
                  MoreArgs = list(name = name, src = src, call = call))
+    depends <- join_dependencies(
+      lapply(array, function(x)
+        join_dependencies(lapply(x[c("at", "from", "to")], find_dependencies))))
   } else {
     name <- parse_expr_check_lhs_name(lhs, special, is_array, src, call)
     array <- NULL
+    depends <- NULL
   }
 
   lhs <- list(
     name = name,
     special = special,
-    array = array)
+    array = array,
+    depends = depends)
 
   if (!is.null(args)) {
     lhs$args <- args
@@ -511,7 +516,7 @@ parse_expr_compare <- function(expr, src, call) {
   if (lhs == "pi") {
     odin_parse_error(
       "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)  
+      "E1061", src, call)
   }
   rhs$args <- c(lhs, rhs$args)
   rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))

@@ -55,6 +55,21 @@ test_that("can parse array expression", {
 })
 
 
+test_that("can parse array dependencies", {
+  res <- parse_expr(quote(a[banana] <- b), NULL, NULL)
+  expect_null(res$special)
+  expect_equal(res$lhs$name, "a")
+  expect_equal(res$lhs$array,
+               list(list(name = "i",
+                         type = "single",
+                         at = as.symbol("banana"))))
+  expect_equal(res$lhs$depends$variables, "banana")
+  expect_equal(res$rhs$type, "expression")
+  expect_equal(res$rhs$expr, as.symbol("b"))
+  expect_equal(res$rhs$depends$variables, "b")
+})
+
+
 test_that("can't use array access with higher rank than the lhs implies", {
   expect_error(
     parse_expr(quote(a[] <- x[j]), NULL, NULL),
