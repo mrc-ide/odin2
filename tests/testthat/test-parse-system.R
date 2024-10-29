@@ -241,7 +241,7 @@ test_that("System can use pi", {
 })
 
 
-test_that("can throw sensible error in when a dimension is unknown", {
+test_that("can throw sensible error when a dimension is unknown", {
   err <- expect_error(
     odin_parse({
       dim(x) <- c(a + 1, b)

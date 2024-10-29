@@ -534,7 +534,7 @@ test_that("cannot use browser in nonexistant phase", {
 })
 
 
-test_that("can automatically find make parameters constant", {
+test_that("can automatically make parameters constant", {
   dat <- odin_parse({
     n <- parameter()
     dim(x) <- n
