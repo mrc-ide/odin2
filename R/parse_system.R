@@ -290,7 +290,9 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
     err_stage <- stage_dim[is_err]
     err_deps <- vcapply(err, function(x) {
       deps <- x$rhs$depends$variables_recursive
-      paste(sprintf("'%s' (%s)", deps, stage[deps]), collapse = ", ")
+      stage_deps <- stage[deps]
+      stage_deps[is.na(stage_deps)] <- "unknown!"
+      paste(sprintf("'%s' (%s)", deps, stage_deps), collapse = ", ")
     })
     detail <- sprintf(
       "'%s' is determined at stage '%s', it depends on %s",
@@ -302,7 +304,9 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
       deps <- unlist0(lapply(err[err_stage == "parameter_update"],
                              function(x) x$rhs$depends$variables_recursive))
       deps_pars <- deps[vlapply(equations[deps], function(eq) {
-        eq$special == "parameter" && stage[[eq$lhs$name]] == "parameter_update"
+        identical(eq$special, "parameter") &&
+          eq$lhs$name %in% names(stage) &&
+          stage[[eq$lhs$name]] == "parameter_update"
       })]
       if (length(deps_pars) > 0) {
         hint <- paste(
