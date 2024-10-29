@@ -123,6 +123,21 @@ test_that("parameters default to constant in face of differentiability", {
                           constant = c(TRUE, TRUE, FALSE)))
 })
 
+test_that("differentiable parameters default to not being constant", {
+  dat <- odin_parse({
+    update(x) <- x + a
+    initial(x) <- 1
+    a <- parameter(differentiate = TRUE)
+    p <- exp(x)
+    d <- data()
+    d ~ Poisson(p)
+  })
+  expect_equal(dat$parameters,
+               data_frame(name = "a",
+                          type = "real_type",
+                          differentiate = TRUE,
+                          constant = FALSE))
+})
 
 test_that("fail informatively if recursive depenency in equations", {
   err <- expect_error(
@@ -226,10 +241,10 @@ test_that("System can use pi", {
 })
 
 
-test_that("can throw sensible error in when a dimension is unknown", {
+test_that("can throw sensible error when a dimension is unknown", {
   err <- expect_error(
     odin_parse({
-      dim(x) <- c(a, b)
+      dim(x) <- c(a + 1, b)
       x[, ] <- 0
       a <- parameter()
       initial(y) <- 0

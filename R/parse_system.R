@@ -62,17 +62,28 @@ parse_system_overall <- function(exprs, call) {
     }
   }
 
+  ## Find direct uses of parameters within dim expressions.  Change
+  ## the interpretation of default for type and constant based on
+  ## these.
+  used_directly_as_dims <- unique(unlist0(lapply(exprs[is_dim], function(eq) {
+    vcapply(Filter(is.symbol, eq$rhs$value), as.character)
+  })))
   is_differentiable <-
     vlapply(exprs[is_parameter], function(x) x$rhs$args$differentiate)
+
+  for (i in which(is_parameter)) {
+    eq <- exprs[[i]]
+    is_used_directly_as_dim <- eq$lhs$name %in% used_directly_as_dims
+    if (is.na(eq$rhs$args$constant)) {
+      eq$rhs$args$constant <- is_used_directly_as_dim || any(is_differentiable)
+    }
+    if (is.na(eq$rhs$args$type)) {
+      eq$rhs$args$type <- if (is_used_directly_as_dim) "int" else "real_type"
+    }
+    exprs[[i]] <- eq
+  }
   is_constant <- vlapply(exprs[is_parameter], function(x) x$rhs$args$constant)
   type <- vcapply(exprs[is_parameter], function(x) x$rhs$args$type)
-  if (any(is.na(is_constant))) {
-    default_constant <- any(is_differentiable)
-    for (i in which(is_parameter)[is.na(is_constant)]) {
-      exprs[[i]]$x$rhs$args$constant <- default_constant
-    }
-    is_constant[is.na(is_constant)] <- default_constant
-  }
 
   parameters <- data_frame(
     name = vcapply(exprs[is_parameter], function(x) x$lhs$name),
@@ -187,7 +198,7 @@ parse_system_depends <- function(equations, variables, call) {
   ## First, compute the topological order ignoring variables
   names(equations) <- nms
   deps <- collapse_dependencies(lapply(equations, function(eq) {
-    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)), 
+    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)),
             c(implicit, eq$lhs$name))
   }))
   res <- topological_order(deps)
@@ -211,7 +222,7 @@ parse_system_depends <- function(equations, variables, call) {
   ## Now, we need to get the variables a second time, and only exclude
   ## automatic variables
   deps <- lapply(equations, function(eq) {
-    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)), 
+    setdiff(unique(c(eq$lhs$depends$variables, eq$rhs$depends$variables)),
             automatic)
   })
   deps_recursive <- list()

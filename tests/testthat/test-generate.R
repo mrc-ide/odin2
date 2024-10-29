@@ -522,6 +522,12 @@ test_that("generate adjoint", {
       "  adjoint_next[0] = adj_x;",
       "  adjoint_next[1] = adj_a;",
       "}"))
+
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  shared.a = dust2::r::read_real(parameters, "a", shared.a);',
+      "}"))
 })
 
 
