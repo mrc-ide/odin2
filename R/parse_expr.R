@@ -403,7 +403,7 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   }
 
   if (is.null(args$type)) {
-    args$type <- "real"
+    args$type <- if (args$differentiate) "real" else NA_character_
   } else {
     if (!is_scalar_character(args$type)) {
       str <- deparse1(args$differentiate)
@@ -420,10 +420,13 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
     }
   }
 
-  if (args$differentiate && isTRUE(args$constant)) {
-    odin_parse_error(
-      "Differentiable parameters must not be constant",
-      "E1015", src, call)
+  if (args$differentiate) {
+    if (isTRUE(args$constant)) {
+      odin_parse_error(
+        "Differentiable parameters must not be constant",
+        "E1015", src, call)
+    }
+    args$constant <- FALSE
   }
 
   if (args$differentiate && args$type != "real") {
@@ -444,10 +447,12 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   ## NOTE: this is assuming C++ types here, which is not great, but we
   ## can iron that out when thinking about the js version. It might be
   ## nicer to do the type translation at generation?
-  args$type <- switch(args$type,
-                      "real" = "real_type",
-                      "integer" = "int",
-                      "logical" = "bool")
+  if (!is.na(args$type)) {
+    args$type <- switch(args$type,
+                        "real" = "real_type",
+                        "integer" = "int",
+                        "logical" = "bool")
+  }
 
   list(type = "parameter",
        args = args,

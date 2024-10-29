@@ -373,7 +373,7 @@ test_that("error if arrays have non-constant dimension", {
       update(x) <- sum(a)
       a[] <- 1
       dim(a) <- n
-      n <- parameter(type = "integer")
+      n <- parameter(type = "integer", constant = FALSE)
     }),
     "Dimensions of arrays are not determined at initial creation")
   expect_match(
@@ -531,4 +531,60 @@ test_that("cannot use browser in nonexistant phase", {
     }),
     "Cannot use 'browser()' with phase 'update', as it does not exist",
     fixed = TRUE)
+})
+
+
+test_that("can automatically find make parameters constant", {
+  dat <- odin_parse({
+    n <- parameter()
+    dim(x) <- n
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[] <- 1
+  })
+  expect_equal(
+    dat$parameters,
+    data_frame(name = "n",
+               type = "int",
+               differentiate = FALSE,
+               constant = TRUE))
+  expect_mapequal(
+    dat$storage$type,
+    c(y = "real_type", n = "int", x = "real_type", dim_x = "dimension"))
+})
+
+
+test_that("can automatically make parameters constant in arrays", {
+  dat <- odin_parse({
+    n1 <- parameter()
+    n2 <- parameter()
+    n3 <- 2
+    dim(x) <- c(n1, n2, n3)
+    initial(y) <- 0
+    update(y) <- sum(x)
+    x[, , ] <- 1
+  })
+  expect_equal(
+    dat$parameters,
+    data_frame(name = c("n1", "n2"),
+               type = "int",
+               differentiate = FALSE,
+               constant = TRUE))
+  expect_mapequal(
+    dat$storage$type,
+    c(y = "real_type", n1 = "int", n2 = "int", n3 = "real_type",
+      x = "real_type", dim_x = "dimension"))
+})
+
+
+test_that("don't be too clever", {
+  expect_error(
+    odin_parse({
+      n <- parameter()
+      dim(x) <- n + 1
+      initial(y) <- 0
+      update(y) <- sum(x)
+      x[] <- 1
+    }),
+    "Dimensions of arrays are not determined at initial creation")
 })

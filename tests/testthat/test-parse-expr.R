@@ -141,9 +141,20 @@ test_that("can't use both constant and differentiate", {
 })
 
 
+test_that("differentiable parameters are not constant", {
+  res <- parse_expr(quote(a <- parameter(differentiate = TRUE)),
+                    NULL, NULL)
+  expect_mapequal(res$rhs$args,
+                  list(default = NULL,
+                       constant = FALSE,
+                       differentiate = TRUE,
+                       type = "real_type",
+                       rank = NULL))
+})
+
 test_that("can change parameter type", {
   res <- parse_expr(quote(a <- parameter()), NULL, NULL)
-  expect_equal(res$rhs$args$type, "real_type")
+  expect_equal(res$rhs$args$type, NA_character_)
   res <- parse_expr(quote(a <- parameter(type = "real")), NULL, NULL)
   expect_equal(res$rhs$args$type, "real_type")
   res <- parse_expr(quote(a <- parameter(type = "integer")), NULL, NULL)
