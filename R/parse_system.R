@@ -438,6 +438,14 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   type <- set_names(rep("real_type", length(location)), names(location))
   type[parameters$name] <- parameters$type
 
+  storage_type <- vcapply(equations,
+                          function(eq) eq$lhs$storage_type %||% NA_character_)
+  i <- !is.na(storage_type)
+  if (any(i)) {
+    stopifnot(!anyDuplicated(names(storage_type[i]))) # array corner case
+    type[names(storage_type[i])] <- storage_type[i]
+  }
+
   is_interpolate <- vlapply(equations[names(location)],
                             function(x) identical(x$rhs$type, "interpolate"))
   type[names(type) %in% names(which(is_interpolate))] <- "interpolator"
