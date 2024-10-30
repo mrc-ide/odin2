@@ -920,3 +920,38 @@ parse_index <- function(name_data, dim, value) {
     NULL
   }
 }
+
+get_implied_ranks <- function(expr, var) {
+  ranks <- NULL
+  if (is.null(expr) || !is.recursive(expr) || "parameter" %in% expr$special) {
+    return(NULL)
+  }
+  if ((expr$name %in% var) && ("array" %in% names(expr))) {
+    ranks <- length(expr$array)
+    for (i in seq_len(length(expr$array))) {
+      ranks <- c(ranks, get_implied_ranks(expr$array[[i]]$at, var),
+                        get_implied_ranks(expr$array[[i]]$from, var),
+                        get_implied_ranks(expr$array[[i]]$to, var))
+    }
+  }
+  if ("lhs" %in% names(expr)) {
+    return(unique(c(ranks, get_implied_ranks(expr$lhs, var),
+                           get_implied_ranks(expr$rhs, var))))
+  } else if ("expression" %in% expr$type) {
+    return(unique(c(ranks, get_implied_ranks(expr$expr, var))))
+  } else if (rlang::is_call(expr)) {
+    if (as.character(expr[[1]])[1] == "[") {
+      if (expr[[2]] == var) {
+        ranks <- unique(c(ranks, length(expr) - 2))
+      }
+      for (i in 3:length(expr)) {
+        ranks <- unique(c(ranks, get_implied_ranks(expr[[i]], var)))
+      }
+    } else {
+      for (i in 2:length(expr)) {
+        ranks <- unique(c(ranks, get_implied_ranks(expr[[i]], var)))
+      }
+    }
+  }
+  ranks
+}

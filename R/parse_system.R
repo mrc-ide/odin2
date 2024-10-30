@@ -553,6 +553,31 @@ parse_system_arrays <- function(exprs, call) {
     }
   }
 
+  # Check rank of array usage matches dim, except when the whole
+  # array is consumed by min, max, prod, sum, or interpolate
+
+  for (d in dim_nms) {
+    eq <- exprs[[which(vlapply(exprs, function(x) {
+      x$special == "dim" && x$lhs$name_data == d}))]]
+    dim_rank <- length(eq$rhs$value)
+
+    used_in <- vlapply(exprs, function(x) {
+      !"dim" %in% x$special &
+      d %in% c(x$lhs$depends$variables, x$rhs$depends$variables,
+               x$lhs$name_data, x$lhs$name)})
+
+    for (eq in which(used_in)) {
+      ranks <- get_implied_ranks(exprs[[eq]], d)
+      ranks <- ranks[ranks != dim_rank]
+      if (any(ranks != dim_rank)) {
+        odin_parse_error(
+          c("Array rank mismatch",
+            i = paste("Array '{d}' has rank '{dim_rank}' when you use `dim`, ",
+                      "but elsewhere is expected to have rank '{ranks[1]}'")),
+          "E2009", exprs[[eq]]$src, call)
+      }
+    }
+  }
   exprs
 }
 

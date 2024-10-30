@@ -263,3 +263,21 @@ test_that("can throw sensible error when a dimension is unknown", {
     err$body[[2]],
     "Try adding `constant = TRUE` into the 'parameter()' call for 'a'")
 })
+
+test_that("Can detect invalid dimension when array is used in update", {
+  expect_error(odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1, 2, 3] + 1
+    a[, ] <- 0
+    dim(a) <- c(2, 2)
+  }), "Array rank mismatch")
+})
+
+test_that("Can detect invalid dimension when array is used in assign", {
+  expect_error(odin_parse({
+    initial(x) <- 1
+    update(x) <- a[1, 2] + 1
+    a[1, 2, 3] <- 0
+    dim(a) <- c(2, 2)
+  }), "Array rank mismatch")
+})
