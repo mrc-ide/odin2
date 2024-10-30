@@ -596,9 +596,8 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
 generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   if (eq$rhs$type == "parameter") {
     name <- eq$lhs$name
-    type <- dat$storage$type[[name]]
+    type <- dat$parameters$type[dat$parameters$name == name]
     read <- if (type == "real_type") "read_real" else sprintf("read_%s", type)
-    type <- if (eq$rhs$args$type == "real_type") "real" else eq$rhs$args$type
     is_array <- name %in% dat$storage$arrays$name
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
