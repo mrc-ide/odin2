@@ -714,6 +714,12 @@ parse_expr_usage <- function(expr, src, call) {
         "Unsupported function '{fn_str}'",
         "E1027", src, call)
     }
+  } else {
+    if (is.na(expr)) {
+      odin_parse_error(
+        "Cannot use '{deparse(expr)}' within expressions",
+        "E1062", src, call)
+    }
   }
   expr
 }

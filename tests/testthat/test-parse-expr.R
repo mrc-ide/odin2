@@ -613,3 +613,13 @@ test_that("top-level calls to as.logical create logical variables", {
   res <- parse_expr(quote(a <- as.logical(b)), NULL, NULL)
   expect_equal(res$lhs$storage_type, "bool")
 })
+
+
+test_that("disallow use of NA", {
+  expect_error(
+    parse_expr(quote(a <- NA), NULL, NULL),
+    "Cannot use 'NA' within expressions")
+  expect_error(
+    parse_expr(quote(a <- NA_real_), NULL, NULL),
+    "Cannot use 'NA_real_' within expressions")
+})

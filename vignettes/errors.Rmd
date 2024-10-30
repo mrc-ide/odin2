@@ -777,6 +777,16 @@ Invalid `phase` argument for call to `browser()`.  Currently this must be one of
 
 You can use the built-in constant `pi` on the right hand side of an expression, without setting it. You should not use it on the left-hand side of any expression.
 
+# `E1062`
+
+Cannot use missing values (`NA`) within expressions.  Handling of missing values in C++ code is complicated, particularly following the semantics that R uses, with missing values for integers and logicals, and sensible propagation of missingness through expressions.  In most systems a missing value will propagate though the whole system very quickly and we don't expect this is very useful.
+
+Example code that would throw this error:
+
+```r
+a <- NA
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
