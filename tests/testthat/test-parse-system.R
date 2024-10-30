@@ -103,6 +103,8 @@ test_that("collect information about parameters from parse", {
   expect_equal(res$parameters,
                data.frame(name = c("a", "b", "c"),
                           type = "real_type",
+                          rank = 0L,
+                          required = TRUE,
                           differentiate = FALSE,
                           constant = c(TRUE, FALSE, FALSE)))
 })
@@ -119,6 +121,8 @@ test_that("parameters default to constant in face of differentiability", {
   expect_equal(res$parameters,
                data.frame(name = c("a", "b", "c"),
                           type = "real_type",
+                          rank = 0L,
+                          required = TRUE,
                           differentiate = c(FALSE, FALSE, TRUE),
                           constant = c(TRUE, TRUE, FALSE)))
 })
@@ -135,6 +139,8 @@ test_that("differentiable parameters default to not being constant", {
   expect_equal(dat$parameters,
                data_frame(name = "a",
                           type = "real_type",
+                          rank = 0L,
+                          required = TRUE,
                           differentiate = TRUE,
                           constant = FALSE))
 })
