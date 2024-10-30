@@ -681,20 +681,18 @@ parse_browser <- function(browser, time_type, variables, data, phases, call) {
 
 parse_system_overall_parameters <- function(exprs, arrays) {
   special <- vcapply(exprs, function(x) x$special %||% "")
-  is_dim <- special == "dim"
-  is_parameter <- special == "parameter"
+  dims <- exprs[is_dim <- special == "dim"]
+  pars <- exprs[special == "parameter"]
 
   ## Find direct uses of parameters within dim expressions.  Change
   ## the interpretation of default for type and constant based on
   ## these.
-  used_directly_as_dims <- unique(unlist0(lapply(exprs[is_dim], function(eq) {
+  used_directly_as_dims <- unique(unlist0(lapply(dims, function(eq) {
     vcapply(Filter(is.symbol, eq$rhs$value), as.character)
   })))
-  is_differentiable <-
-    vlapply(exprs[is_parameter], function(x) x$rhs$args$differentiate)
+  is_differentiable <- vlapply(pars, function(x) x$rhs$args$differentiate)
 
-  for (i in which(is_parameter)) {
-    eq <- exprs[[i]]
+  pars <- lapply(pars, function(eq) {
     is_used_directly_as_dim <- eq$lhs$name %in% used_directly_as_dims
     if (is.na(eq$rhs$args$constant)) {
       eq$rhs$args$constant <- is_used_directly_as_dim || any(is_differentiable)
@@ -702,19 +700,20 @@ parse_system_overall_parameters <- function(exprs, arrays) {
     if (is.na(eq$rhs$args$type)) {
       eq$rhs$args$type <- if (is_used_directly_as_dim) "int" else "real_type"
     }
-    exprs[[i]] <- eq
-  }
-  is_constant <- vlapply(exprs[is_parameter], function(x) x$rhs$args$constant)
-  type <- vcapply(exprs[is_parameter], function(x) x$rhs$args$type)
-  required <- vlapply(exprs[is_parameter],
+    eq
+  })
+
+  is_constant <- vlapply(pars, function(x) x$rhs$args$constant)
+  type <- vcapply(pars, function(x) x$rhs$args$type)
+  required <- vlapply(pars,
                       function(x) is.null(x$rhs$args$default))
 
-  name <- vcapply(exprs[is_parameter], function(x) x$lhs$name)
+  name <- vcapply(pars, function(x) x$lhs$name)
   rank <- arrays$rank[match(name, arrays$name)]
   rank[is.na(rank)] <- 0L
 
   data_frame(
-    name = vcapply(exprs[is_parameter], function(x) x$lhs$name),
+    name = name,
     type = type,
     rank = rank,
     required = required,
