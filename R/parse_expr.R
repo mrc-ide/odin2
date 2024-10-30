@@ -715,7 +715,7 @@ parse_expr_usage <- function(expr, src, call) {
         "E1027", src, call)
     }
   } else {
-    if (is.na(expr)) {
+    if (rlang::is_na(expr)) {
       odin_parse_error(
         "Cannot use '{deparse(expr)}' within expressions",
         "E1062", src, call)
