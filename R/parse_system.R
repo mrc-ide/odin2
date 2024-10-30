@@ -13,7 +13,7 @@ parse_system_overall <- function(exprs, call) {
   is_equation <- special %in% c("", "parameter", "dim") & !is_compare
 
   ## We take initial as the set of variables:
-  variables <- vcapply(exprs[is_initial], function(x) x$lhs$name)
+  variables <- unique(vcapply(exprs[is_initial], function(x) x$lhs$name))
   if (length(variables) == 0) {
     odin_parse_error("Did not find any call to 'initial()'",
                      "E2001", NULL, call)
