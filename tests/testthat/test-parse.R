@@ -32,6 +32,8 @@ test_that("can parse dust MVP system", {
   expect_equal(res$parameters,
                data_frame(name = c("b", "p"),
                           type = "real_type",
+                          rank = 0L,
+                          required = TRUE,
                           differentiate = FALSE,
                           constant = c(FALSE, TRUE)))
   expect_equal(res$data, data_frame(name = "d"))
@@ -546,6 +548,8 @@ test_that("can automatically make parameters constant", {
     dat$parameters,
     data_frame(name = "n",
                type = "int",
+               rank = 0,
+               required = TRUE,
                differentiate = FALSE,
                constant = TRUE))
   expect_mapequal(
@@ -568,6 +572,8 @@ test_that("can automatically make parameters constant in arrays", {
     dat$parameters,
     data_frame(name = c("n1", "n2"),
                type = "int",
+               rank = 0L,
+               required = TRUE,
                differentiate = FALSE,
                constant = TRUE))
   expect_mapequal(

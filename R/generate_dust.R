@@ -177,6 +177,9 @@ generate_dust_system_packing <- function(name, dat) {
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
   body <- collector()
+  if (nrow(dat$storage$arrays) > 0) {
+    body$add("shared_state::dim_type dim;");
+  }
   eqs <- get_phase_equations("build_shared", dat)
   allocated <- character()
   for (eq in eqs) {
@@ -195,8 +198,6 @@ generate_dust_system_build_shared <- function(dat) {
   is_dim <- vlapply(eqs, function(x) identical(x$special, "dim"))
   if (any(is_dim)) {
     nms_dim <- vcapply(eqs[is_dim], function(x) x$lhs$name)
-    body$add(sprintf("const shared_state::dim_type dim{%s};",
-                     paste(nms_dim, collapse = ", ")))
     nms_return <- c("dim", "offset",
                     setdiff(dat$phases$build_shared$equations, nms_dim))
   } else {
@@ -595,14 +596,13 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
 generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   if (eq$rhs$type == "parameter") {
     name <- eq$lhs$name
-    type <- dat$storage$type[[name]]
+    type <- dat$parameters$type[dat$parameters$name == name]
     read <- if (type == "real_type") "read_real" else sprintf("read_%s", type)
-    type <- if (eq$rhs$args$type == "real_type") "real" else eq$rhs$args$type
     is_array <- name %in% dat$storage$arrays$name
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
       if (isFALSE(options$shared_exists)) {
-        dim <- sprintf("dim_%s", name)
+        dim <- sprintf("dim.%s", name)
         required <- "true"
       } else {
         dim <- sprintf("shared.dim.%s", name)
@@ -634,19 +634,15 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
     rank <- dat$storage$arrays$rank[[i]]
     if (eq$rhs$is_user_sized) {
-      res <- sprintf('const auto %s = dust2::r::read_dimensions<%d>(parameters, "%s");',
-                     eq$lhs$name,
-                     rank,
-                     eq$lhs$name_data)
+      res <- sprintf(
+        'dim.%s = dust2::r::read_dimensions<%d>(parameters, "%s");',
+        eq$lhs$name_data, rank, eq$lhs$name_data)
     } else {
       dims <- vcapply(dat$storage$arrays$dims[[i]], generate_dust_sexp,
                       dat$sexp_data, options)
       dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims),
                         collapse = ", ")
-      res <- sprintf("const dust2::array::dimensions<%d> %s{%s};",
-                     rank,
-                     eq$lhs$name,
-                     dims_str)
+      res <- sprintf("dim.%s.set({%s});", eq$lhs$name_data, dims_str)
     }
   } else if (identical(eq$rhs$type, "interpolate")) {
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)

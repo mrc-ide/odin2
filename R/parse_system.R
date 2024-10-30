@@ -62,44 +62,19 @@ parse_system_overall <- function(exprs, call) {
     }
   }
 
-  ## Find direct uses of parameters within dim expressions.  Change
-  ## the interpretation of default for type and constant based on
-  ## these.
-  used_directly_as_dims <- unique(unlist0(lapply(exprs[is_dim], function(eq) {
-    vcapply(Filter(is.symbol, eq$rhs$value), as.character)
-  })))
-  is_differentiable <-
-    vlapply(exprs[is_parameter], function(x) x$rhs$args$differentiate)
-
-  for (i in which(is_parameter)) {
-    eq <- exprs[[i]]
-    is_used_directly_as_dim <- eq$lhs$name %in% used_directly_as_dims
-    if (is.na(eq$rhs$args$constant)) {
-      eq$rhs$args$constant <- is_used_directly_as_dim || any(is_differentiable)
-    }
-    if (is.na(eq$rhs$args$type)) {
-      eq$rhs$args$type <- if (is_used_directly_as_dim) "int" else "real_type"
-    }
-    exprs[[i]] <- eq
-  }
-  is_constant <- vlapply(exprs[is_parameter], function(x) x$rhs$args$constant)
-  type <- vcapply(exprs[is_parameter], function(x) x$rhs$args$type)
-
-  parameters <- data_frame(
-    name = vcapply(exprs[is_parameter], function(x) x$lhs$name),
-    type = type,
-    differentiate = is_differentiable,
-    constant = is_constant)
-
-  data <- data_frame(
-    name = vcapply(exprs[is_data], function(x) x$lhs$name))
-
   dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = lengths(dims),
     dims = I(dims),
     size = I(lapply(dims, expr_prod)))
+
+  parameters <- parse_system_overall_parameters(exprs, arrays)
+  ## This now means that our parameters are nolonger the source of
+  ## truth.
+
+  data <- data_frame(
+    name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
   ## This whole chunk probably moves into its own section at some
   ## point.
@@ -248,7 +223,8 @@ parse_system_depends <- function(equations, variables, call) {
 ## Next step, make phase (again) a property of a name, not an id.  I
 ## don't think the alternative is interesting enough to warrant the
 ## effort.  Then things simplify back out quite nicely again....
-parse_system_phases <- function(exprs, equations, variables, data, call) {
+parse_system_phases <- function(exprs, equations, variables, parameters, data,
+                                call) {
   ## First compute the 'stage' that things occur in; there are only
   ## three of these, but "time" covers a multitude of sins and
   ## includes things like the compare function as well as deriv/update
@@ -267,7 +243,8 @@ parse_system_phases <- function(exprs, equations, variables, data, call) {
     rhs <- eq$rhs
     vars <- setdiff(rhs$depends[["variables"]], eq$lhs$name)
     if (identical(rhs$type, "parameter")) {
-      is_constant <- isTRUE(rhs$args$constant)
+      is_constant <- isTRUE(
+        parameters$constant[match(eq$lhs$name, parameters$name)])
       stage[[i]] <- if (is_constant) "system_create" else "parameter_update"
     } else if (any(vars %in% data)) {
       stage[[i]] <- "data"
@@ -699,4 +676,47 @@ parse_browser <- function(browser, time_type, variables, data, phases, call) {
   }
 
   ret
+}
+
+
+parse_system_overall_parameters <- function(exprs, arrays) {
+  special <- vcapply(exprs, function(x) x$special %||% "")
+  dims <- exprs[is_dim <- special == "dim"]
+  pars <- exprs[special == "parameter"]
+
+  ## Find direct uses of parameters within dim expressions.  Change
+  ## the interpretation of default for type and constant based on
+  ## these.
+  used_directly_as_dims <- unique(unlist0(lapply(dims, function(eq) {
+    vcapply(Filter(is.symbol, eq$rhs$value), as.character)
+  })))
+  is_differentiable <- vlapply(pars, function(x) x$rhs$args$differentiate)
+
+  pars <- lapply(pars, function(eq) {
+    is_used_directly_as_dim <- eq$lhs$name %in% used_directly_as_dims
+    if (is.na(eq$rhs$args$constant)) {
+      eq$rhs$args$constant <- is_used_directly_as_dim || any(is_differentiable)
+    }
+    if (is.na(eq$rhs$args$type)) {
+      eq$rhs$args$type <- if (is_used_directly_as_dim) "int" else "real_type"
+    }
+    eq
+  })
+
+  is_constant <- vlapply(pars, function(x) x$rhs$args$constant)
+  type <- vcapply(pars, function(x) x$rhs$args$type)
+  required <- vlapply(pars,
+                      function(x) is.null(x$rhs$args$default))
+
+  name <- vcapply(pars, function(x) x$lhs$name)
+  rank <- arrays$rank[match(name, arrays$name)]
+  rank[is.na(rank)] <- 0L
+
+  data_frame(
+    name = name,
+    type = type,
+    rank = rank,
+    required = required,
+    differentiate = is_differentiable,
+    constant = is_constant)
 }
