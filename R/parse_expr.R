@@ -60,6 +60,12 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     lhs$name_data <- lhs$name
     lhs$name <- paste0("interpolate_", lhs$name)
+  } else {
+    if (rlang::is_call(rhs$expr, "as.integer")) {
+      lhs$storage_type <- "int"
+    } else if (rlang::is_call(rhs$expr, "as.logical")) {
+      lhs$storage_type <- "bool"
+    }
   }
 
   if (identical(special, "initial")) {
@@ -446,7 +452,8 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
 
   ## NOTE: this is assuming C++ types here, which is not great, but we
   ## can iron that out when thinking about the js version. It might be
-  ## nicer to do the type translation at generation?
+  ## nicer to do the type translation at generation? See also above
+  ## where we use int/bool too.
   if (!is.na(args$type)) {
     args$type <- switch(args$type,
                         "real" = "real_type",

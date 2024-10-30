@@ -603,3 +603,13 @@ test_that("Can't parse with pi on lhs", {
 })
 
 
+test_that("top-level calls to as.integer create integer variables", {
+  res <- parse_expr(quote(a <- as.integer(b)), NULL, NULL)
+  expect_equal(res$lhs$storage_type, "int")
+})
+
+
+test_that("top-level calls to as.logical create logical variables", {
+  res <- parse_expr(quote(a <- as.logical(b)), NULL, NULL)
+  expect_equal(res$lhs$storage_type, "bool")
+})

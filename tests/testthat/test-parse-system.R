@@ -263,3 +263,15 @@ test_that("can throw sensible error when a dimension is unknown", {
     err$body[[2]],
     "Try adding `constant = TRUE` into the 'parameter()' call for 'a'")
 })
+
+
+test_that("correct storage type when coersion used", {
+  dat <- odin_parse({
+    a <- as.integer(5)
+    b <- as.logical(TRUE)
+    update(x) <- if (b) a else 0
+    initial(x) <- 0
+  })
+  expect_mapequal(dat$storage$type,
+                  c(x = "real_type", a = "int", b = "bool"))
+})
