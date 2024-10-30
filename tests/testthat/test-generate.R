@@ -11,6 +11,38 @@ test_that("generate basic attributes for trivial system", {
 })
 
 
+test_that("generate basic attributes for system with parameters", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- a + b
+    a <- parameter(1)
+    b <- parameter()
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_attributes(dat),
+    c("// [[dust2::class(odin)]]",
+      "// [[dust2::time_type(discrete)]]",
+      '// [[dust2::parameter(a, type = "real_type", rank = 0, required = FALSE, constant = FALSE)]]',
+      '// [[dust2::parameter(b, type = "real_type", rank = 0, required = TRUE, constant = FALSE)]]'))
+})
+
+
+test_that("generate basic attributes for system with a single parameter", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- a
+    a <- parameter(1)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_attributes(dat),
+    c("// [[dust2::class(odin)]]",
+      "// [[dust2::time_type(discrete)]]",
+      '// [[dust2::parameter(a, type = "real_type", rank = 0, required = FALSE, constant = FALSE)]]'))
+})
+
+
 test_that("generate trivial types for trivial system", {
   dat <- odin_parse({
     update(x) <- 1
