@@ -689,3 +689,15 @@ test_that("Spot rank inconsistency when dim uses parameter(rank)", {
     }),
     "Array rank in expression differs from the rank")
 })
+
+
+test_that("don't duplicate offsets when boundary condition used in initial", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    initial(x[1]) <- 1
+    update(x[]) <- x + 1
+    dim(x) <- 4
+  })
+  expect_equal(dat$variables, "x")
+  expect_equal(nrow(dat$storage$packing$state), 1)
+})
