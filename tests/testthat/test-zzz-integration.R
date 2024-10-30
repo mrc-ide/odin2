@@ -35,6 +35,13 @@ test_that("can compile a simple ode model", {
   })
 
   expect_equal(s, cmp[1:3])
+
+  expect_equal(coef(res),
+               data_frame(name = c("N", "beta", "gamma", "I0"),
+                          type = "real_type",
+                          constant = c(TRUE, FALSE, FALSE, FALSE),
+                          required = FALSE,
+                          rank = 0))
 })
 
 
