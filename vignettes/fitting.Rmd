@@ -422,11 +422,14 @@ posterior
 
 With a model configured this way, you can use the [Hamiltonian Monte Carlo](https://en.wikipedia.org/wiki/Hamiltonian_Monte_Carlo) method with `monty::monty_sampler_hmc()`, which can be far more efficient than a random walk once tuned.
 
-**WARNING**": Using `derivative = TRUE` on some parameters has the effect of making the rest use `constant = TRUE`.  We will describe the effects of this in a vignette on differentiable models, soon.
+**WARNING**: Using `derivative = TRUE` on some parameters has the effect of making the rest use `constant = TRUE`.  We will describe the effects of this in a vignette on differentiable models, soon.
 
 # Running multiple parameter sets at once
 
-You can efficiently run multiple parameter sets at once; this will be parallelised where possible when enabled.
+You can efficiently run multiple parameter sets at once; this will be parallelised where possible when enabled.  There are two cases where this might be useful:
+
+1. to support things like parallel tempering where we use the same system, the *same* data and multiple parameter sets to compute the likelihood of multiple parameter sets simultaneously
+2. to compute likelihoods across multiple "groups" in combination, where we have the same system, *different* data and multiple parameter sets.
 
 ## For dust2 systems
 
@@ -535,16 +538,38 @@ dust2::dust_likelihood_last_gradient(unfilter)
 
 ## For monty models
 
-Here, rather than a parameter vector you would pass in a matrix, where each column represents a parameter set:
+The only supported mode here is the combined likelihood case, which requires slightly more set up.  To match the monty interface, we name our groups; we now have data for groups `a` and `b`:
 
 ```{r}
-p <- cbind(c(0.2, 0.1), c(0.25, 0.1))
+data2$group <- letters[data2$group]
+head(data2)
 ```
 
-However, there's a small bit of functionality we need to add here in dust2, still.
+```{r}
+filter2 <- dust2::dust_filter_create(sir(), 0, data2, n_particles = 200)
+```
+
+Here, you would use a `monty::monty_packer_grouped` object rather than a packer, to represent grouped structure.  Here, we create a packer for our two groups for the two parameters (`beta` and `gamma`), indicating that `gamma` is shared between groups and using a fixed `I0` of 5 across both groups:
 
 ```{r}
-likelihood2 <- dust2::dust_likelihood_monty(filter2, sir_packer)
+packer2 <- monty::monty_packer_grouped(groups = c("a", "b"),
+                                       scalar = c("beta", "gamma"),
+                                       shared = "gamma",
+                                       fixed = list(I0 = 5))
+packer2
+```
+
+A suitable starting point for this packer might be
+
+```{r}
+p <- c(0.1, 0.2, 0.25)
+packer2$unpack(p)
+```
+
+Now, we can build the likelihood:
+
+```{r}
+likelihood2 <- dust2::dust_likelihood_monty(filter2, packer2)
 monty::monty_model_density(likelihood2, p)
 ```
 
