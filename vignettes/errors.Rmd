@@ -979,3 +979,29 @@ browser("update")
 ```
 
 in a system of ODEs which does not have an update phase.  The error will indicate which phases are valid.
+
+# `E2018`
+
+Array rank in expression differs from the rank declared with `dim`
+
+Here, the number of dimensions for a variable in an expression is different from the number declared with the `dim` function, which is the source of truth for rank. For example, you might declare a matrix and a 3-dimensional structure like this:-
+
+```
+dim(xy) <- c(5,5)
+dim(xyz) <- parameter(rank = 3)
+```
+
+When you use these in other expressions, the rank must match the declaration above. So these examples would be valid syntax:-
+
+```
+initial(xy[, ]) <- 0
+xyz[1, 2, 3] <- 5
+xy <- sum(xyz[1, ,])
+```
+
+but these would not:-
+
+```
+update(xy[]) <- 1
+xyz[1, 2] <- xyz[1, 2] + 1
+```
