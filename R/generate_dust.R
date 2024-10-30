@@ -678,6 +678,10 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         if (idx$type == "range") {
           from <- generate_dust_sexp(idx$from, dat$sexp_data, options)
           to <- generate_dust_sexp(idx$to, dat$sexp_data, options)
+          size_fns <- c("length", "dim", "OdinDim", "OdinLength")
+          if (!rlang::is_call(idx$to, size_fns) && !is.numeric(idx$to)) {
+            to <- sprintf("static_cast<size_t>(%s)", to)
+          }
           res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
                            idx$name, from, idx$name, to, idx$name),
                    res,

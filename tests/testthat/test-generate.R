@@ -2006,3 +2006,23 @@ test_that("Array assigment lhs: length index, rhs: i", {
       "}")
   )
 })
+
+
+test_that("cast integers to sizes", {
+  dat <- odin_parse({
+    n <- parameter(5, type = "integer")
+    dim(x) <- n
+    x[1:n] <- time
+    initial(y) <- 0
+    update(y) <- x[1]
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= static_cast<size_t>(shared.n); ++i) {",
+      "    internal.x[i - 1] = time;",
+      "  }",
+      "  state_next[0] = internal.x[0];",
+      "}"))
+})
