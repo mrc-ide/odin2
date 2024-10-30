@@ -13,7 +13,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     if (fn == "[") {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
-      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
       name <- expr[[2]]
       if (dat$rank[[name]] == 1) {
         return(sprintf("%s%s.size", dim, name))
@@ -21,10 +21,10 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
         return(sprintf("%s%s.dim[%d]", dim, name, expr[[3]] - 1))
       }
     } else if (fn == "OdinLength") {
-      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
       return(sprintf("%s%s.size", dim, expr[[2]]))
     } else if (fn == "OdinMult") {
-      dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+      dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
       return(sprintf("%s%s.mult[%d]", dim, expr[[2]], expr[[3]] - 1))
     } else if (fn == "OdinOffset") {
       where <- expr[[2]]
@@ -56,7 +56,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
         return(sprintf('dust2::interpolate::Interpolate%s(%s, %s, "%s", "%s")',
                        mode, time_var, value_var, expr$time, expr$value))
       } else {
-        dim <- if (isFALSE(options$shared_exists)) "dim_" else "shared.dim."
+        dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
         dim_var <- sprintf("%s%s", dim, expr$dim)
         return(sprintf(
           'dust2::interpolate::Interpolate%sArray<real_type, %d>(%s, %s, %s, "%s", "%s")',
@@ -224,7 +224,7 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   }
   index <- expr$index
   dim <- paste0(
-    if (isFALSE(options$shared_exists)) "dim_" else "shared.dim.",
+    if (isFALSE(options$shared_exists)) "dim." else "shared.dim.",
     target)
   stopifnot(fn %in% c("sum", "prod", "min", "max"))
   if (is.null(index)) {
