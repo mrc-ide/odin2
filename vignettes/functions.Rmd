@@ -200,7 +200,7 @@ m1_tot <- sum(m[, 2])
 This partial sum approach is frequently used within implicit loops:
 
 ```
-m_col_totals[] <- sum([, i])
+m_col_totals[] <- sum(m[, i])
 ```
 
 You can use this approach to compute a matrix-vector product $\mathbf(Ax)$:

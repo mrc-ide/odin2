@@ -594,3 +594,98 @@ test_that("don't be too clever", {
     }),
     "Dimensions of arrays are not determined at initial creation")
 })
+
+
+test_that("Argument to update on LHS must use correct rank", {
+  expect_error(
+    odin_parse({
+      update(x[]) <- 1
+      initial(x[, ]) <- 0
+      dim(x) <- c(4, 3)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("Argument to initial on LHS must use correct rank", {
+  expect_error(
+    odin_parse({
+      update(x[, ]) <- 1
+      initial(x[]) <- 0
+      dim(x) <- c(4, 3)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("LHS of assignment must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1] <- 1
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("LHS of assignment with [] on sum is accepted", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a_tot
+      dim(a) <- c(4, 4)
+      dim(a_tot) <- 4
+      a[, ] <- 3
+      a_tot[, ] <- sum(a[1, ])
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("LHS of compare must use correct rank", {
+  skip(message = "Arrays in data not implemented - see mrc-5711")
+ 
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1] ~ Poisson(2)
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("LHS of sample must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[] <- Poisson(2)
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1] <- Poisson(2)
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("Spot rank inconsistency when dim uses parameter(rank)", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1] <- 5
+      dim(a) <- parameter(rank = 2)
+    }),
+    "Array rank in expression differs from the rank")
+})

@@ -489,7 +489,7 @@ parse_system_arrays <- function(exprs, call) {
         c("Array expressions must always use '[]' on the lhs",
           i = paste("Your expression for '{nm}' has a 'dim()' equation, so it",
                     "is an array, but {cli::qty(sum(err))}",
-                    "{?this usage/these usages} assign it as if it was a",
+                    "{?this usage assigns/these usages assign} it as if it were a",
                     "scalar")),
         "E2009", src, call)
     }

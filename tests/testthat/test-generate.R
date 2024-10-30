@@ -1269,7 +1269,7 @@ test_that("can use length() on the rhs", {
 test_that("can use nrow() and ncol() on the rhs", {
   dat <- odin_parse({
     update(x[, ]) <- x[i, j] + nrow(x) / ncol(x)
-    initial(x[]) <- 0
+    initial(x[, ]) <- 0
     dim(x) <- c(4, 3)
   })
   dat <- generate_prepare(dat)

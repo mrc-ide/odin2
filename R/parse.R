@@ -50,6 +50,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
 parse_check_usage <- function(dat, call) {
   parse_check_usage_find_unknown(dat, call)
   parse_check_usage_find_unused(dat, call)
+  parse_check_consistent_dimensions(dat, call)
 }
 
 
@@ -105,4 +106,32 @@ parse_check_usage_find_unused <- function(dat, call) {
   odin_parse_error(
     "Unused equation{?s}: {squote(unused)}",
     "E2016", src, call)
+}
+
+parse_check_consistent_dimensions <- function(dat, call) {
+  eqs <- c(dat$phases$update$variables,
+           dat$phases$deriv$variables,
+           dat$phases$output$variables,
+           dat$phases$initial$variables,
+           dat$phases$compare$compare,
+           unname(dat$equations))
+  for (eq in eqs) {
+    if (!is.null(eq$lhs)) {
+      parse_check_consistent_dimensions_lhs(eq, dat, call)
+    }
+  }
+}
+
+parse_check_consistent_dimensions_lhs <- function(eq, dat, call) {
+  if (!is.null(eq$lhs$array)) {
+    rank <- length(eq$lhs$array)
+    dim_rank <- dat$storage$arrays$rank[dat$storage$arrays$name == eq$lhs$name]
+    if (rank != dim_rank) {
+      odin_parse_error(
+        c("Array rank in expression differs from the rank declared with `dim`",
+        i = paste("'{eq$lhs$name}' has rank '{dim_rank}' in the `dim` call, ",
+                  "but the line below assumes it has rank '{rank}'.")),
+        "E2018", eq$src, call)
+    }
+  }
 }
