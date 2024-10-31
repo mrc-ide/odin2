@@ -411,7 +411,7 @@ test_that("generate stack equations during update", {
 
 
 test_that("can look up lhs for bits of data", {
-  packing <- parse_packing(c("x", "y", "b", "z"), NULL, "state")
+  packing <- parse_packing(c("x", "y", "b", "z"), NULL, NULL, "state")
   dat <- list(storage = list(
                 location = c(a = "stack",
                              b = "state",
@@ -2024,5 +2024,53 @@ test_that("cast integers to sizes", {
       "    internal.x[i - 1] = time;",
       "  }",
       "  state_next[0] = internal.x[0];",
+      "}"))
+})
+
+
+test_that("can generate system with output", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    deriv(x[]) <- x * r[i]
+    r <- parameter()
+    n <- 3
+    dim(x) <- n
+    dim(r) <- n
+    output(tot) <- sum(x)
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(dat$variables, c("x", "tot"))
+  expect_equal(dat$output, "tot")
+  expect_equal(dat$storage$packing$state$name, c("x", "tot"))
+
+  expect_equal(
+    generate_dust_system_initial(dat),
+    c(method_args$initial_continuous,
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state[i - 1 + 0] = 0;",
+      "  }",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_deriv[i - 1 + 0] = x * shared.r[i - 1];",
+      "  }",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_output(dat),
+    c(method_args$output,
+      "  const auto * x = state + 0;",
+      "  state[shared.offset.state.tot] = dust2::array::sum<real_type>(x, shared.dim.x);",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_size_output(dat),
+    c(method_args$size_output,
+      "  return 1;",
       "}"))
 })

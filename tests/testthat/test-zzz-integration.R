@@ -183,3 +183,35 @@ test_that("can generate model with interpolation", {
   expect_equal(y[3, ], c(0, approx(tb, yb[2, ], t_out)$y[-n]))
   expect_equal(y[4, ], c(0, approx(tb, yb[3, ], t_out)$y[-n]))
 })
+
+
+test_that("Can generate an ode system with output", {
+  gen <- odin({
+    initial(x[]) <- 1
+    deriv(x[]) <- r[i] * x[i] * (1 - x[i] / K[i])
+    output(tot) <- sum(x)
+    r <- parameter()
+    K <- parameter()
+    n <- 5
+    dim(x) <- n
+    dim(r) <- n
+    dim(K) <- n
+  }, debug = TRUE, quiet = TRUE)
+
+  logistic <- function(r, k, times, y0) {
+    len <- max(length(r), length(k), length(y0))
+    y <- vapply(times, function(t) k / (1 + (k / y0 - 1) * exp(-r * t)),
+                numeric(len))
+    rbind(y, colSums(y))
+  }
+
+  set.seed(1)
+  pars <- list(r = runif(5, 0, 3), K = runif(5, 100, 1000))
+  sys <- dust2::dust_system_create(gen, pars)
+  dust2::dust_system_set_state_initial(sys)
+
+  t <- 0:20
+  y <- dust2::dust_system_simulate(sys, t)
+
+  expect_equal(y, logistic(pars$r, pars$K, t, rep(1, 5)), tolerance = 1e-5)
+})

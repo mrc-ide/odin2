@@ -62,6 +62,22 @@ parse_system_overall <- function(exprs, call) {
     }
   }
 
+  if (any(is_output)) {
+    if (!is_continuous) {
+      odin_parse_error(
+        c("Can't use 'output()' in discrete time systems",
+          i = paste("You should be able to do what you need using 'update()'.",
+                    "If you are migrating from odin 1.x.x, you might find",
+                    'some advice in {.vignette "migrating"}')),
+        "E2999", src, call)
+    }
+
+    output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))
+    variables <- c(variables, output)
+  } else {
+    output <- NULL
+  }
+
   dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
   arrays <- data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
@@ -158,6 +174,7 @@ parse_system_overall <- function(exprs, call) {
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
+       output = output,
        parameters = parameters,
        arrays = arrays,
        data = data,
@@ -384,8 +401,8 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
 }
 
 
-parse_storage <- function(equations, phases, variables, arrays, parameters,
-                          data, call) {
+parse_storage <- function(equations, phases, variables, output, arrays,
+                          parameters, data, call) {
   used <- unique(unlist0(lapply(phases, "[[", "equations")))
   unused <- setdiff(names(equations), used)
 
@@ -397,7 +414,8 @@ parse_storage <- function(equations, phases, variables, arrays, parameters,
   stack <- setdiff(used, c(shared, dim, arrays$name))
   internal <- setdiff(intersect(used, arrays$name), shared)
 
-  packing <- list(state = parse_packing(variables, arrays, "state"))
+  packing <- list(
+    state = parse_packing(variables, arrays, output, "state"))
 
   contents <- list(
     variables = variables,
@@ -571,7 +589,7 @@ parse_system_arrays_check_duplicated <- function(i, exprs, call) {
 }
 
 
-parse_packing <- function(names, arrays, type) {
+parse_packing <- function(names, arrays, no_reorder, type) {
   scalar <- setdiff(names, arrays$name)
   if (length(scalar) > 0) {
     packing_scalar <- data_frame(
@@ -583,11 +601,9 @@ parse_packing <- function(names, arrays, type) {
   }
 
   packing <- packing[match(names, packing$name), ]
-
-  pack_group <- viapply(packing$size, function(x) {
-    if (is.numeric(x)) 1L else 2L
-  })
-  packing <- packing[order(pack_group), ] # stable sort relative to names
+  pack_first <- vlapply(packing$size, is.numeric) &
+    !(packing$name %in% no_reorder)
+  packing <- packing[order(!pack_first), ]
   rownames(packing) <- NULL
 
   offset <- vector("list", nrow(packing))
