@@ -69,7 +69,7 @@ parse_system_overall <- function(exprs, call) {
           i = paste("You should be able to do what you need using 'update()'.",
                     "If you are migrating from odin 1.x.x, you might find",
                     'some advice in {.vignette "migrating"}')),
-        "E2999", src, call)
+        "E2020", src, call)
     }
 
     output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))

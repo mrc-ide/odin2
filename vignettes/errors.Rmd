@@ -1034,3 +1034,8 @@ y <- length(x[])
 ```
 
 are both invalid.
+
+# `E2020`
+
+`output()` was used (on lhs) within a discrete-time system.  You can only use `output()` within systems that involve `deriv()` as it provides a way of computing variables for which you do not have derivatives.  If you are writing a discrete-time system, you should use `update()` with a corresponding `initial()` statement.
+
