@@ -119,6 +119,9 @@ parse_check_consistent_dimensions <- function(dat, call) {
     if (!is.null(eq$lhs)) {
       parse_check_consistent_dimensions_lhs(eq, dat, call)
     }
+    if (!is.null(eq$rhs)) {
+      parse_check_consistent_dimensions_rhs(eq, dat, call)
+    }
   }
 }
 
@@ -132,6 +135,50 @@ parse_check_consistent_dimensions_lhs <- function(eq, dat, call) {
         i = paste("'{eq$lhs$name}' has rank '{dim_rank}' in the `dim` call, ",
                   "but the line below assumes it has rank '{rank}'.")),
         "E2018", eq$src, call)
+    }
+  }
+}
+
+find_ranks_in_expr <- function(expr, reduction = FALSE) {
+  ranks <- list()
+  if (is.symbol(expr)) {
+    return(ranks)
+  }
+  is_array <- any(expr[[1]] == "[")
+
+  if (is_array && !reduction) {
+    array_name <- expr[[2]]
+    array_rank <- length(expr) - 2
+    entry <- list()
+    entry[[array_name]] <- array_rank
+    ranks <- c(ranks, entry)
+  }
+
+  reduction <- expr[[1]] == "OdinReduce"
+
+  for (i in seq_along(expr)) {
+    e <- expr[[i]]
+    if (is.recursive(e)) {
+      ranks <- c(ranks, find_ranks_in_expr(e, reduction))
+    }
+  }
+  ranks
+}
+
+parse_check_consistent_dimensions_rhs <- function(eq, dat, call) {
+  arrays <- intersect(eq$rhs$depends$variables, dat$storage$arrays$name)
+  if (length(arrays) > 0) {
+    ranks <- find_ranks_in_expr(eq$rhs$expr)
+    arrays <- names(ranks)
+    for (i in seq_along(ranks)) {
+      dim_rank <- dat$storage$arrays$rank[dat$storage$arrays$name == arrays[i]]
+      if (dim_rank != ranks[i]) {
+        odin_parse_error(
+          c("Array rank in expression differs from the rank declared with `dim`",
+            i = paste("'{eq$lhs$name}' has rank '{dim_rank}' in the `dim` call, ",
+                      "but the line below assumes it has rank '{ranks[i]}'.")),
+          "E2018", eq$src, call)
+      }
     }
   }
 }

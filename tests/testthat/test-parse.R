@@ -691,6 +691,60 @@ test_that("Spot rank inconsistency when dim uses parameter(rank)", {
 })
 
 
+test_that("RHS of expression must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- a[1] + 1
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("RHS of expression in function must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- sin(a[1]) + 1
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- sin(a[1] + 1)
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("RHS reduction can use different rank", {
+  expect_no_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- sum(a[])
+      a[, ] <- 5
+      dim(a) <- c(2, 2)
+    })
+  )
+  expect_no_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- prod(a[1, ])
+      a[, ] <- 5
+      dim(a) <- c(2, 2)
+    })
+  )
+})
+
+
+
 test_that("don't duplicate offsets when boundary condition used in initial", {
   dat <- odin_parse({
     initial(x[]) <- 0
