@@ -646,7 +646,7 @@ test_that("LHS of assignment with [] on sum is accepted", {
 
 test_that("LHS of compare must use correct rank", {
   skip(message = "Arrays in data not implemented - see mrc-5711")
- 
+
   expect_error(
     odin_parse({
       initial(x) <- 0
@@ -751,9 +751,28 @@ test_that("RHS array for non-dimensioned variable", {
       update(x) <- a[1]
       update(a) <- 1
     }),
-    "Array rank in expression differs from the rank")
+    "Missing 'dim\\(\\)' for expression assigned as an array")
 })
 
+test_that("Invalid argument to func that expects an array", {
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + length(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    })
+  )
+})
+
+test_that("Non-array passed to func that expects an array", {
+  expect_error(
+    odin_parse({
+      update(x) <- length(y)
+      initial(x) <- 0
+      y <- 2
+    })
+  )
+})
 
 
 test_that("don't duplicate offsets when boundary condition used in initial", {

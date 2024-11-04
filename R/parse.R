@@ -143,68 +143,79 @@ parse_check_consistent_dimensions_lhs <- function(expr, dat, call) {
 }
 
 parse_check_consistent_dimensions_rhs <- function(expr, dat, call) {
-  
+
+  report_mismatch <- function(var, dim_rank, array_rank, src, call) {
+    odin_parse_error(
+      c("Array rank in expression differs from the rank declared with `dim`",
+        i = paste("'{var}' has rank '{dim_rank}' in the `dim` call, ",
+                  "but the line below assumes it has rank '{array_rank}'.")),
+         "E2018", src, call)
+  }
+
+  report_no_dim <- function(var, src, call) {
+    odin_parse_error(
+      paste("Missing 'dim()' for expression{?s} assigned as an array:",
+            "{squote(var)}"),
+      "E2008", src, call)
+  }
+
+  report_non_array_arg <- function(func, var, src, call) {
+    odin_parse_error(
+      c("The function {func} expects an array name without indexes.",
+        i = "{var} is not a simple array name"),
+      "E2019", src, call)
+  }
+
   fn_use_whole_array <- c("length", "nrow", "ncol", "OdinReduce",
                           "OdinLength", "OdinInterpolate")
-  
-  arrays <- set_names(as.list(dat$storage$arrays$rank),
-                      dat$storage$arrays$name)
-  
+
+  dim_ranks <- set_names(as.list(dat$storage$arrays$rank),
+                         dat$storage$arrays$name)
+
   check <- function(expr, src) {
     if (is.recursive(expr)) {
       if (rlang::is_call(expr, "[")) {
         array_rank <- length(expr) - 2L
-        array_name <- as.character(expr[[2]])
-        is_dim_array <- array_name %in% names(arrays)
+        array_name <- deparse(expr[[2]])
+        is_dim_array <- array_name %in% names(dim_ranks)
         if (!is_dim_array) {
-          stop()
-          # Array on RHS, no matching dim
+          report_no_dim(array_name, src, call)
         } else {
-          if (array_rank != arrays[[array_name]]) {
-            stop()
-            # Dim rank doesn't match usage
+          dim_rank <- dim_ranks[[array_name]]
+          if (array_rank != dim_rank) {
+            report_mismatch(array_name, dim_rank, array_rank, src, call)
           }
         }
         lapply(expr[-(1:2)], check, src)
 
       } else if (rlang::is_call(expr, fn_use_whole_array)) {
         if (rlang::is_call(expr, "OdinReduce")) {
-          # Index 2 is "sum", 3 is "a", 4 is NULL or
-          if (!expr[[3]] %in% names(arrays)) {
-            # OdinReduce variable not found in arrays
-            stop()
+          array_name <- expr[[3]]
+          if (!array_name %in% names(dim_ranks)) {
+            report_no_dim(array_name, src, call)
           }
           index <- expr[[4]]
           if (!is.null(index)) {
-            if (length(index) != arrays[[expr[[3]]]]) {
-                # OdinReduce call using incorrect rank
-              stop()
+            dim_rank <- dim_ranks[[array_name]]
+            if (length(index) != dim_rank) {
+              report_mismatch(array_name, length(index), dim_rank, src, call)
             }
           }
         } else {
-          browser()
-        } 
+          func <- deparse(expr[[1]])
+          if (is.recursive(expr[[2]]) || !is.symbol(expr[[2]])) {
+            report_non_array_arg(func, deparse(expr[[2]]), src, call)
+          }
+          array_name <- deparse(expr[[2]])
+          if (!array_name %in% names(dim_ranks)) {
+            report_no_dim(array_name, src, call)
+          }
+        }
       } else {
-        # Assumed to be a function.
+        # Assumed to be a primitive function.
         lapply(expr[-1], check, src)
       }
     }
   }
   check(expr$rhs$expr, expr$src)
 }
-
-
-#    ranks <- find_ranks_in_expr(eq$rhs$expr)
-#    arrays <- names(ranks)
-#    for (i in seq_along(ranks)) {
-#      dim_rank <- dat$storage$arrays$rank[dat$storage$arrays$name == arrays[i]]
-#      if (dim_rank != ranks[i]) {
-#        odin_parse_error(
-#          c("Array rank in expression differs from the rank declared with `dim`",
-#            i = paste("'{eq$lhs$name}' has rank '{dim_rank}' in the `dim` call, ",
-#                      "but the line below assumes it has rank '{ranks[i]}'.")),
-#          "E2018", eq$src, call)
-#      }
-#    }
-#  }
-# }
