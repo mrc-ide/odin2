@@ -161,7 +161,7 @@ parse_check_consistent_dimensions_rhs <- function(expr, dat, call) {
 
   report_non_array_arg <- function(func, var, src, call) {
     odin_parse_error(
-      c("The function {func} expects an array name without indexes.",
+      c("The function `{func}()` expects an array name without indexes.",
         i = "{var} is not a simple array name"),
       "E2019", src, call)
   }

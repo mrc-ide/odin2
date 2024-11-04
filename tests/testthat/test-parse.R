@@ -760,7 +760,8 @@ test_that("Invalid argument to func that expects an array", {
       update(x[]) <- x[i] + length(x[2])
       initial(x[]) <- 0
       dim(x) <- 4
-    })
+    }),
+    "The function `length\\(\\)` expects an array name without indexes."
   )
 })
 
@@ -770,7 +771,8 @@ test_that("Non-array passed to func that expects an array", {
       update(x) <- length(y)
       initial(x) <- 0
       y <- 2
-    })
+    }),
+    "Missing 'dim\\(\\)' for expression assigned as an array"
   )
 })
 
