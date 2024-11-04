@@ -728,7 +728,7 @@ test_that("RHS reduction can use different rank", {
   expect_no_error(
     odin_parse({
       initial(x) <- 0
-      update(x) <- sum(a[])
+      update(x) <- sum(a)
       a[, ] <- 5
       dim(a) <- c(2, 2)
     })
@@ -741,6 +741,17 @@ test_that("RHS reduction can use different rank", {
       dim(a) <- c(2, 2)
     })
   )
+})
+
+test_that("RHS array for non-dimensioned variable", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      initial(a) <- 0
+      update(x) <- a[1]
+      update(a) <- 1
+    }),
+    "Array rank in expression differs from the rank")
 })
 
 
