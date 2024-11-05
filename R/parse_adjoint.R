@@ -36,8 +36,9 @@ parse_adjoint <- function(dat) {
     names(adjoint_location)[adjoint_location == "adjoint"]
   dat$storage$location <- c(dat$storage$location, adjoint_location)
   dat$storage$packing$adjoint <-
-    parse_packing(dat$storage$contents$adjoint, arrays, "adjoint")
-  dat$storage$packing$gradient <- parse_packing(parameters, arrays, "gradient")
+    parse_packing(dat$storage$contents$adjoint, arrays, NULL, "adjoint")
+  dat$storage$packing$gradient <-
+    parse_packing(parameters, arrays, NULL, "gradient")
 
   dat$storage$type <- c(
     dat$storage$type,

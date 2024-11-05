@@ -55,7 +55,7 @@ test_that("can generate simple expressions involving arithmetic", {
       c = "shared",
       d = "internal",
       e = "data"),
-    packing = list(state = parse_packing("a", NULL, "state")),
+    packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
     rank = NULL)
   options <- list()
@@ -103,7 +103,7 @@ test_that("can coerce to different types", {
       c = "shared",
       d = "internal",
       e = "data"),
-    packing = list(state = parse_packing("a", NULL, "state")),
+    packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
     rank = NULL)
   options <- list()
@@ -126,7 +126,7 @@ test_that("can generate min/max", {
       c = "shared",
       d = "internal",
       e = "data"),
-    packing = list(state = parse_packing("a", NULL, "state")),
+    packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
     rank = NULL)
   options <- list()

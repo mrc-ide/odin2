@@ -49,7 +49,6 @@ This list is incomplete, and we'll expand it as we work through the tests.  We'r
 
 Things we do plan on implementing:
 
-* Non-variable output from ODEs with `output()` (`mrc-5497`)
 * Delay differential equations, e.g. `y_lag <- delay(y, tau)` (`mrc-5434`)
 * Compile-time parameter substitution (`mrc-5575`)
 * Compilation to JavaScript

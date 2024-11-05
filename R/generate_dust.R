@@ -36,6 +36,8 @@ generate_dust_parts <- function() {
     initial = generate_dust_system_initial,
     update = generate_dust_system_update,
     rhs = generate_dust_system_rhs,
+    output = generate_dust_system_output,
+    size_output = generate_dust_system_size_output,
     zero_every = generate_dust_system_zero_every,
     compare_data = generate_dust_system_compare_data,
     adjoint = generate_dust_system_adjoint)
@@ -361,6 +363,38 @@ generate_dust_system_rhs <- function(dat) {
   }
 
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_system_output <- function(dat) {
+  if (length(dat$output) == 0) {
+    return(NULL)
+  }
+  args <- c("real_type" = "time",
+            "real_type*" = "state",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal")
+  body <- collector()
+  unpack <- intersect(dat$variables, dat$phases$output$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
+  eqs <- c(get_phase_equations("output", dat),
+           dat$phases$output$variables)
+  for (eq in eqs) {
+    body$add(generate_dust_assignment(eq, "state", dat))
+  }
+
+  cpp_function("void", "output", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_system_size_output <- function(dat) {
+  if (length(dat$output) == 0) {
+    return(NULL)
+  }
+  args <- list()
+  body <- sprintf("return %d;", length(dat$output))
+  cpp_function("size_t", "size_output", args, body, static = TRUE)
 }
 
 
