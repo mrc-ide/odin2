@@ -646,6 +646,7 @@ test_that("LHS of assignment with [] on sum is accepted", {
 
 test_that("LHS of compare must use correct rank", {
   skip(message = "Arrays in data not implemented - see mrc-5711")
+
   expect_error(
     odin_parse({
       initial(x) <- 0
