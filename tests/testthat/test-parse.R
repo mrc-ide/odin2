@@ -646,7 +646,7 @@ test_that("LHS of assignment with [] on sum is accepted", {
 
 test_that("LHS of compare must use correct rank", {
   skip(message = "Arrays in data not implemented - see mrc-5711")
- 
+
   expect_error(
     odin_parse({
       initial(x) <- 0
@@ -688,6 +688,110 @@ test_that("Spot rank inconsistency when dim uses parameter(rank)", {
       dim(a) <- parameter(rank = 2)
     }),
     "Array rank in expression differs from the rank")
+})
+
+
+test_that("RHS of expression must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- a[1] + 1
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("RHS of expression in function must use correct rank", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- sin(a[1]) + 1
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[1, 1] + 1
+      a[1, 1] <- sin(a[1] + 1)
+      dim(a) <- c(2, 2)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("RHS reduction can use different rank", {
+  expect_no_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- sum(a)
+      a[, ] <- 5
+      dim(a) <- c(2, 2)
+    })
+  )
+  expect_no_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- prod(a[1, ])
+      a[, ] <- 5
+      dim(a) <- c(2, 2)
+    })
+  )
+})
+
+test_that("RHS array for non-dimensioned variable", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      initial(a) <- 0
+      update(x) <- a[1]
+      update(a) <- 1
+    }),
+    "Missing 'dim\\(\\)' for expression assigned as an array")
+})
+
+test_that("Invalid argument to func that expects an array", {
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + length(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    }),
+    "The function `length\\(\\)` expects an array name without indexes."
+  )
+
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + nrow(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    }),
+    "The function `nrow\\(\\)` expects an array name without indexes."
+  )
+
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + ncol(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    }),
+    "The function `ncol\\(\\)` expects an array name without indexes."
+  )
+})
+
+test_that("Non-array passed to func that expects an array", {
+  expect_error(
+    odin_parse({
+      update(x) <- length(y)
+      initial(x) <- 0
+      y <- 2
+    }),
+    "Missing 'dim\\(\\)' for expression assigned as an array"
+  )
 })
 
 

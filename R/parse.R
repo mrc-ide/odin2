@@ -119,19 +119,106 @@ parse_check_consistent_dimensions <- function(dat, call) {
     if (!is.null(eq$lhs)) {
       parse_check_consistent_dimensions_lhs(eq, dat, call)
     }
+    if (!is.null(eq$rhs)) {
+      parse_check_consistent_dimensions_rhs(eq, dat, call)
+    }
   }
 }
 
-parse_check_consistent_dimensions_lhs <- function(eq, dat, call) {
-  if (!is.null(eq$lhs$array)) {
-    rank <- length(eq$lhs$array)
-    dim_rank <- dat$storage$arrays$rank[dat$storage$arrays$name == eq$lhs$name]
-    if (rank != dim_rank) {
-      odin_parse_error(
-        c("Array rank in expression differs from the rank declared with `dim`",
-        i = paste("'{eq$lhs$name}' has rank '{dim_rank}' in the `dim` call, ",
-                  "but the line below assumes it has rank '{rank}'.")),
-        "E2018", eq$src, call)
+parse_check_consistent_dimensions_lhs <- function(eq, dat, call, src = eq$src) {
+  throw_mismatch <- function(var, dim_rank, array_rank) {
+    odin_parse_error(
+      c("Array rank in expression differs from the rank declared with `dim`",
+        i = paste("'{var}' has rank '{dim_rank}' in the `dim` call, ",
+                  "but the line below assumes it has rank '{array_rank}'.")),
+      "E2018", src, call)
+  }
+
+  check <- function(expr) {
+    if (!is.null(expr$array)) {
+      rank <- length(expr$array)
+      dim_rank <- dat$storage$arrays$rank[dat$storage$arrays$name == expr$name]
+      if (rank != dim_rank) {
+        throw_mismatch(expr$name, dim_rank, rank)
+      }
     }
   }
+  check(eq$lhs)
+}
+
+parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
+  throw_mismatch <- function(var, dim_rank, array_rank) {
+    odin_parse_error(
+      c("Array rank in expression differs from the rank declared with `dim`",
+        i = paste("'{var}' has rank '{dim_rank}' in the `dim` call, ",
+                  "but the line below assumes it has rank '{array_rank}'.")),
+         "E2018", src, call)
+  }
+
+  throw_no_dim <- function(var) {
+    odin_parse_error(
+      paste("Missing 'dim()' for expression{?s} assigned as an array:",
+            "{squote(var)}"),
+      "E2008", src, call)
+  }
+
+  throw_non_array_arg <- function(func, var) {
+    odin_parse_error(
+      c("The function `{func}()` expects an array name without indexes.",
+        i = "{var} is not a simple array name"),
+      "E2019", src, call)
+  }
+
+  fn_use_whole_array <- c("length", "nrow", "ncol", "OdinReduce",
+                          "OdinInterpolate")
+
+  dim_ranks <- set_names(as.list(dat$storage$arrays$rank),
+                         dat$storage$arrays$name)
+
+  check <- function(expr) {
+    if (is.recursive(expr)) {
+      if (rlang::is_call(expr, "[")) {
+        array_rank <- length(expr) - 2L
+        array_name <- deparse(expr[[2]])
+        is_dim_array <- array_name %in% names(dim_ranks)
+        if (!is_dim_array) {
+          throw_no_dim(array_name)
+        } else {
+          dim_rank <- dim_ranks[[array_name]]
+          if (array_rank != dim_rank) {
+            throw_mismatch(array_name, dim_rank, array_rank)
+          }
+        }
+        lapply(expr[-(1:2)], check)
+
+      } else if (rlang::is_call(expr, fn_use_whole_array)) {
+        if (rlang::is_call(expr, "OdinReduce")) {
+          array_name <- expr[[3]]
+          if (!(array_name %in% names(dim_ranks))) {
+            throw_no_dim(array_name)
+          }
+          index <- expr[[4]]
+          if (!is.null(index)) {
+            dim_rank <- dim_ranks[[array_name]]
+            if (length(index) != dim_rank) {
+              throw_mismatch(array_name, length(index), dim_rank)
+            }
+          }
+        } else {
+          func <- deparse(expr[[1]])
+          arg <- expr[[2]]
+          if (is.recursive(arg) || !is.symbol(arg)) {
+            throw_non_array_arg(func, deparse(arg))
+          }
+          array_name <- deparse(arg)
+          if (!(array_name %in% names(dim_ranks))) {
+            throw_no_dim(array_name)
+          }
+        }
+      } else {
+        lapply(expr[-1], check)
+      }
+    }
+  }
+  check(eq$rhs$expr)
 }
