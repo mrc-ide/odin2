@@ -646,7 +646,6 @@ test_that("LHS of assignment with [] on sum is accepted", {
 
 test_that("LHS of compare must use correct rank", {
   skip(message = "Arrays in data not implemented - see mrc-5711")
-
   expect_error(
     odin_parse({
       initial(x) <- 0
@@ -762,6 +761,24 @@ test_that("Invalid argument to func that expects an array", {
       dim(x) <- 4
     }),
     "The function `length\\(\\)` expects an array name without indexes."
+  )
+
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + nrow(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    }),
+    "The function `nrow\\(\\)` expects an array name without indexes."
+  )
+
+  expect_error(
+    odin_parse({
+      update(x[]) <- x[i] + ncol(x[2])
+      initial(x[]) <- 0
+      dim(x) <- 4
+    }),
+    "The function `ncol\\(\\)` expects an array name without indexes."
   )
 })
 
