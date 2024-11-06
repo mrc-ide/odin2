@@ -271,7 +271,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
       "E1040", src, call)
   }
   ## See parse_expr_check_lhs_index, which has similar restrictions
-  allowed <- c("+", "-", "(", "length", "nrow", "ncol")
+  allowed <- c("+", "-", "(", "length", "nrow", "ncol", "dim")
   err <- setdiff(depends$functions, allowed)
   if (length(err) > 0) {
     odin_parse_error(

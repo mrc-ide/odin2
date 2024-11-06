@@ -431,6 +431,57 @@ test_that("only arrays can be duplicated", {
 })
 
 
+test_that("can copy dims from a to b", {
+  arrays <- odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- 1
+      dim(b) <- dim(a)
+      a[] <- 1
+      b[] <- 2
+  })$storage$arrays
+
+  b <- which(arrays$name == "b")
+  expect_equal(unlist(arrays$dims[b]), 1)
+  expect_equal(unlist(arrays$size[b]), 1)
+})
+
+
+test_that("can copy dims from a to c via b", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b) + sum(c)
+    initial(x) <- 0
+    dim(a) <- 1
+    dim(b) <- dim(a)
+    dim(c) <- dim(b)
+    a[] <- 1
+    b[] <- 2
+    c[] <- 3
+  })$storage$arrays
+
+  b <- which(arrays$name == "b")
+  expect_equal(unlist(arrays$dims[b]), 1)
+  expect_equal(unlist(arrays$size[b]), 1)
+  c <- which(arrays$name == "c")
+  expect_equal(unlist(arrays$dims[c]), 1)
+  expect_equal(unlist(arrays$size[c]), 1)
+})
+
+
+test_that("can't copy dims circularly", {
+  expect_error(
+    odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- dim(b)
+      dim(b) <- dim(a)
+      a[] <- 1
+      b[] <- 2
+    }),
+    "Cyclic dependency detected")
+})
+
+
 test_that("don't confuse compare statements for arrays (mrc-5866)", {
   dat <- odin_parse({
     a ~ Normal(0, 1)

@@ -79,14 +79,14 @@ parse_system_overall <- function(exprs, call) {
   }
 
   dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
-  arrays <- data_frame(
+  arrays <- resolve_array_references(data_frame(
     name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
     rank = lengths(dims),
     dims = I(dims),
-    size = I(lapply(dims, expr_prod)))
+    size = I(lapply(dims, expr_prod))))
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
-  ## This now means that our parameters are nolonger the source of
+  ## This now means that our parameters are no longer the source of
   ## truth.
 
   data <- data_frame(
@@ -179,6 +179,33 @@ parse_system_overall <- function(exprs, call) {
        arrays = arrays,
        data = data,
        exprs = exprs)
+}
+
+
+resolve_array_references <- function(arrays) {
+  lookup_array <- function(name, copy_from, d) {
+    i <- which(d$name == copy_from)
+    dims <- d$dims[i]
+    if (rlang::is_call(dims[[1]], "dim")) {
+      rhs_dim_var <- d$dims[[i]][[1]][[2]]
+      return(lookup_array(name, rhs_dim_var, d[-i, ]))
+    }
+    return(list(dims = d$dims[i], size = d$size[i]))
+  }
+
+  is_ref <- vlapply(arrays$dims, function(x)
+    rlang::is_call(x[[1]], "dim"))
+
+  for (i in which(is_ref)) {
+    lhs_dim_var <- arrays$name[i]
+    rhs_dim_var <- arrays$dims[[i]][[1]][[2]]
+    res <- lookup_array(lhs_dim_var, rhs_dim_var, arrays[-i, ])
+    arrays$dims[i] <- res$dims
+    arrays$size[i] <- res$size
+  }
+
+  arrays
+
 }
 
 
