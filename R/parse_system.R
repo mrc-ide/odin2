@@ -188,9 +188,9 @@ resolve_array_references <- function(arrays) {
     if (length(i) == 0) {
       return(NULL)
     }
-    dims <- d$dims[i]
-    if (rlang::is_call(dims[[1]][[1]], "dim")) {
-      rhs_dim_var <- d$dims[[i]][[1]][[2]]
+    dim_i <- d$dims[[i]]
+    if (rlang::is_call(dim_i[[1]], "dim")) {
+      rhs_dim_var <- dim_i[[1]][[2]]
       return(lookup_array(name, rhs_dim_var, d[-i, ]))
     }
     return(list(dims = d$dims[i], size = d$size[i]))
