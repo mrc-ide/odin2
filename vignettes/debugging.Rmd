@@ -190,7 +190,7 @@ sys <- dust_system_create(gen(), list())
 dust_system_set_state_initial(sys)
 ```
 
-However, when you run the sytem you will pause part way through evaluation:
+However, when you run the system you will pause part way through evaluation:
 
 ```r
 dust_system_run_to_time(sys, 200)
