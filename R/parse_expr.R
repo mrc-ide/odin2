@@ -455,19 +455,19 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
       if (identical(args$type, "logical")) {
         odin_parse_error(
           "'{nm}' cannot be used with 'type = \"logical\"'",
-          "E1999", src, call)
+          "E1063", src, call)
       }
       if (!is_scalar_numeric(args[[nm]])) {
         odin_parse_error(
           "'{nm}' must be a number",
-          "E1999", src, call)
+          "E1064", src, call)
       }
     }
   }
 
   if (!is.null(args$min) && !is.null(args$max) && args$min >= args$max) {
     odin_parse_error("'min' must be smaller than 'max'",
-                     "E1999", src, call)
+                     "E1065", src, call)
   }
 
   ## NOTE: this is assuming C++ types here, which is not great, but we

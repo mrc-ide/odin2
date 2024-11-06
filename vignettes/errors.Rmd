@@ -787,6 +787,37 @@ Example code that would throw this error:
 a <- NA
 ```
 
+# `E1063`
+
+Trying to use the arguments `min` or `max` in a `parameter()` call defining a logical parameter.  This is not supported because logical parameters can only take the values `TRUE` and `FALSE`.  Example code that would throw this error:
+
+```r
+a <- parameter(type = "logical", min = 0)
+```
+
+# `E1064`
+
+Invalid argument for `min` or `max` in a `parameter()` call.  You can only use numbers here, not expressions or symbols.  We may relax this in future, so please let us know if this is a problem.
+
+Example assignments that would throw this error:
+
+```r
+a <- parameter(min = 1/2)  # 1/2 is really an expression, use 0.5 instead
+b <- parameter(max = a)    # would create dependency issues
+c <- parameter(min = TRUE) # not a number
+d <- parameter(max = NaN)  # also not a number!
+```
+
+# `E1065`
+
+Impossible range implied by `min` and `max` in `parameter()` call.  This is thrown when `min` is greater than or equal to `max` as either this means you really have a constant, or no value can satisfy the relationship.
+
+Example assignment that would throw this error
+
+```
+a <- parameter(min = 10, max = 0)
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
