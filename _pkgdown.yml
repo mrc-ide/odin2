@@ -4,20 +4,21 @@ template:
   bootstrap: 5
 
 reference:
-  - title: All functions
-    desc: >-
-      All functions, until the API starts to develop properly.
+  - title: Generate odin code
     contents:
       - odin
-      - odin_error_explain
       - odin_package
+      - odin_validate
+
+  - title: Helpers
+    contents:
+      - odin_error_explain
       - odin_show
       - odin_migrate
-      - odin_validate
 
 articles:
   - title: Basics
-    navbar: Basics
+    navbar: ~
     contents:
       - fitting
       - debugging
@@ -28,3 +29,4 @@ articles:
       - errors
       - functions
       - migrating
+      - packaging

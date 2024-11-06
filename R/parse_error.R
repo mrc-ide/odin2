@@ -69,15 +69,15 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
 }
 
 
-##' Explain error codes produced by odin.  This is a work in progress,
-##' and we would like feedback on what is useful as we improve it.
-##' The idea is that if you see an error you can link through to get
-##' more information on what it means and how to resolve it.  The
-##' current implementation of this will send you to the rendered
-##' vignettes, but in future we will arrange for offline rendering
-##' too.
+##' Explain error codes produced by odin.  When odin fails to parse
+##' your code (e.g., via [odin()] or [odin_validate()]) it will return
+##' an error with a code.  You can use `odin_error_explain` to get
+##' more information on that code.  By default we will print an
+##' explanation to the screen, but you can control this behaviour via
+##' the `how` argument.  All error codes can be found in
+##' `vignette("errors")`.
 ##'
-##' @title Explain odin error
+##' @title Explain an odin error
 ##'
 ##' @param code The error code, as a string, in the form `Exxxx` (a
 ##'   capital "E" followed by four numbers)
@@ -89,6 +89,8 @@ cnd_footer.odin_parse_error <- function(cnd, ...) {
 ##' @return Nothing, this is called for its side effect only
 ##'
 ##' @export
+##' @examples
+##' odin_error_explain("E1006")
 odin_error_explain <- function(code, how = "pretty") {
   error_explain(errors, code, how)
 }

@@ -1,8 +1,11 @@
 Package: odin2
 Title: Next generation odin
-Version: 0.1.12
+Version: 0.2.0
 Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
+             person("Wes", "Hinsley", role = "aut"),
+             person("Thibaut", "Jombart", role = "ctb"),
+             person("Ed", "Knock", role = "ctb"),
              person("Imperial College of Science, Technology and Medicine",
                     role = "cph"))
 Description: Temporary package for rewriting odin.
@@ -20,6 +23,7 @@ Imports:
     rlang
 Suggests:
     decor,
+    fs,
     knitr,
     rmarkdown,
     mockery,

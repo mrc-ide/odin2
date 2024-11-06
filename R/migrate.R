@@ -13,6 +13,22 @@
 ##' @return Nothing; called for side effects only
 ##'
 ##' @export
+##' @examples
+##' \dontshow{
+##' path <- tempfile(fileext = ".R")
+##' writeLines(
+##'   c("initial(x) <- 0",
+##'     "deriv(x) <- x * r",
+##'     "r <- user()"),
+##'   path)
+##' }
+##' # A file 'path' contains odin code using old features:
+##' writeLines(readLines(path))
+##'
+##' # Migrate this file in place (by overwriting)
+##' odin_migrate(path, path)
+##'
+##' writeLines(readLines(path))
 odin_migrate <- function(path, dest) {
   if (!file.exists(path)) {
     cli::cli_abort("File '{path}' does not exist")
