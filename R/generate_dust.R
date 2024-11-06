@@ -647,6 +647,11 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     type <- dat$parameters$type[dat$parameters$name == name]
     read <- if (type == "real_type") "read_real" else sprintf("read_%s", type)
     is_array <- name %in% dat$storage$arrays$name
+    if (isFALSE(options$shared_exists)) {
+      dest <- name
+    } else {
+      dest <- sprintf("shared.%s", name)
+    }
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
       if (isFALSE(options$shared_exists)) {
@@ -674,9 +679,19 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         }
       } else {
         rhs <- sprintf('dust2::r::%s(parameters, "%s", %s)',
-                       read, eq$lhs$name, lhs)
+                       read, eq$lhs$name, dest)
       }
       res <- sprintf("%s = %s;", lhs, rhs)
+    }
+    for (constraint in c("min", "max")) {
+      if (!is.null(eq$rhs$args[[constraint]])) {
+        what <- if (is_array) "array" else "scalar"
+        constraint_value <- generate_dust_sexp(eq$rhs$args[[constraint]],
+                                               dat$sexp_data, options)
+        res <- c(res,
+                 sprintf('dust2::r::check_%s_%s(%s, %s, "%s");',
+                         constraint, what, dest, constraint_value, name))
+      }
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)

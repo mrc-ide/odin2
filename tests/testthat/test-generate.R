@@ -2074,3 +2074,57 @@ test_that("can generate system with output", {
       "  return 1;",
       "}"))
 })
+
+
+test_that("can generate code for parameter constraints", {
+  dat <- odin_parse({
+    r <- parameter(min = 2)
+    initial(y) <- 0
+    update(y) <- y * r
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      '  const real_type r = dust2::r::read_real(parameters, "r");',
+      '  dust2::r::check_min_scalar(r, 2, "r");',
+      "  shared_state::offset_type offset;",
+      "  offset.state.y = 0;",
+      "  return shared_state{offset, r};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  shared.r = dust2::r::read_real(parameters, "r", shared.r);',
+      '  dust2::r::check_min_scalar(shared.r, 2, "r");',
+      "}"))
+})
+
+
+test_that("can generate code for array parameter constraints", {
+  dat <- odin_parse({
+    r <- parameter(max = 2)
+    dim(r) <- 5
+    initial(y) <- 0
+    update(y) <- y * sum(r)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.r.set({static_cast<size_t>(5)});",
+      "  std::vector<real_type> r(dim.r.size);",
+      '  dust2::r::read_real_array(parameters, dim.r, r.data(), "r", true);',
+      '  dust2::r::check_max_array(r, 2, "r");',
+      "  shared_state::offset_type offset;",
+      "  offset.state.y = 0;",
+      "  return shared_state{dim, offset, r};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.r, shared.r.data(), "r", false);',
+      '  dust2::r::check_max_array(shared.r, 2, "r");'
+      "}"))
+})
