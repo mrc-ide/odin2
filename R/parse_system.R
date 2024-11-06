@@ -186,7 +186,7 @@ resolve_array_references <- function(arrays) {
   lookup_array <- function(name, copy_from, d) {
     i <- which(d$name == copy_from)
     dims <- d$dims[i]
-    if (rlang::is_call(dims[[1]], "dim")) {
+    if (rlang::is_call(dims[[1]][[1]], "dim")) {
       rhs_dim_var <- d$dims[[i]][[1]][[2]]
       return(lookup_array(name, rhs_dim_var, d[-i, ]))
     }

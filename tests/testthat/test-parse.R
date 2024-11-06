@@ -452,8 +452,8 @@ test_that("can copy dims from a to c via b", {
     update(x) <- sum(a) + sum(b) + sum(c)
     initial(x) <- 0
     dim(a) <- 1
-    dim(b) <- dim(a)
     dim(c) <- dim(b)
+    dim(b) <- dim(a)
     a[] <- 1
     b[] <- 2
     c[] <- 3
