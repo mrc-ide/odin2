@@ -49,8 +49,8 @@ is_scalar_logical <- function(x) {
 }
 
 
-is_scalar_character <- function(x) {
-  is.character(x) && length(x) == 1 && !is.na(x)
+is_scalar_numeric <- function(x) {
+  is.numeric(x) && length(x) == 1 && !is.na(x)
 }
 
 
