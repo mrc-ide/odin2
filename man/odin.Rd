@@ -66,3 +66,16 @@ dust functions (starting from \link[dust2:dust_system_create]{dust2::dust_system
 \description{
 Compile an odin model, yielding a \code{dust_system_generator} object.
 }
+\examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+# A random walk:
+gen <- odin({
+  initial(x) <- 0
+  update(x) <- Normal(x, 1)
+})
+
+sys <- dust2::dust_system_create(gen, list(), n_particles = 10)
+y <- dust2::dust_system_simulate(sys, 0:100)
+matplot(t(y[1, , ]), type = "l", lty = 1, xlab = "Time", ylab = "Value")
+\dontshow{\}) # examplesIf}
+}

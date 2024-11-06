@@ -2,7 +2,7 @@
 % Please edit documentation in R/parse_error.R
 \name{odin_error_explain}
 \alias{odin_error_explain}
-\title{Explain odin error}
+\title{Explain an odin error}
 \usage{
 odin_error_explain(code, how = "pretty")
 }
@@ -18,11 +18,14 @@ console) and \code{link} (browse to the online help).}
 Nothing, this is called for its side effect only
 }
 \description{
-Explain error codes produced by odin.  This is a work in progress,
-and we would like feedback on what is useful as we improve it.
-The idea is that if you see an error you can link through to get
-more information on what it means and how to resolve it.  The
-current implementation of this will send you to the rendered
-vignettes, but in future we will arrange for offline rendering
-too.
+Explain error codes produced by odin.  When odin fails to parse
+your code (e.g., via \code{\link[=odin]{odin()}} or \code{\link[=odin_validate]{odin_validate()}}) it will return
+an error with a code.  You can use \code{odin_error_explain} to get
+more information on that code.  By default we will print an
+explanation to the screen, but you can control this behaviour via
+the \code{how} argument.  All error codes can be found in
+\code{vignette("errors")}.
+}
+\examples{
+odin_error_explain("E1006")
 }

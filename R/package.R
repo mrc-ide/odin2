@@ -42,7 +42,22 @@
 ##'   files in `inst/dust` and `src` within this package after you
 ##'   have changed the odin code in `inst/odin`.
 ##'
+##' @seealso `vignette("packaging")` for more details, and
+##'   `dust2::dust_package()`, which does most of the work here.
+##'
 ##' @export
+##' @examplesIf requireNamespace("fs", quietly = TRUE)
+##' \dontshow{
+##' path <- odin2:::example_package()
+##' }
+##' # An example package structure
+##' fs::dir_tree(path)
+##'
+##' # Generate odin code:
+##' odin_package(path)
+##'
+##' # Resulting files:
+##' fs::dir_tree(path)
 odin_package <- function(path, quiet = FALSE, compatibility = "warning") {
   ## This finds the package root, and errors (fairly) nicely if it is
   ## not found.

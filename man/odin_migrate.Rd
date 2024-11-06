@@ -21,3 +21,20 @@ code and writes out migrated code to a new file.  It is possible
 that no code will be migrated, in which case the written contents
 will be identical to those read.
 }
+\examples{
+\dontshow{
+path <- tempfile(fileext = ".R")
+writeLines(
+  c("initial(x) <- 0",
+    "deriv(x) <- x * r",
+    "r <- user()"),
+  path)
+}
+# A file 'path' contains odin code using old features:
+writeLines(readLines(path))
+
+# Migrate this file in place (by overwriting)
+odin_migrate(path, path)
+
+writeLines(readLines(path))
+}

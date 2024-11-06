@@ -26,6 +26,16 @@
 ##'   dust functions (starting from [dust2::dust_system_create])
 ##'
 ##' @export
+##' @examplesIf interactive()
+##' # A random walk:
+##' gen <- odin({
+##'   initial(x) <- 0
+##'   update(x) <- Normal(x, 1)
+##' })
+##'
+##' sys <- dust2::dust_system_create(gen, list(), n_particles = 10)
+##' y <- dust2::dust_system_simulate(sys, 0:100)
+##' matplot(t(y[1, , ]), type = "l", lty = 1, xlab = "Time", ylab = "Value")
 odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
                  debug = NULL, skip_cache = FALSE, compatibility = "warning") {
   call <- environment()
@@ -37,7 +47,6 @@ odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
   dust2::dust_compile(tmp, quiet = quiet, workdir = workdir, debug = debug,
                       skip_cache = skip_cache)
 }
-
 
 
 ##' Show generated code from compiling an odin model.

@@ -8,3 +8,8 @@ plain_output <- function(x) lang_output(x, "plain")
 fast_and_quiet_dust <- function() {
   Sys.setenv(DUST_QUIET = "TRUE", DUST_DEBUG = "TRUE")
 }
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)

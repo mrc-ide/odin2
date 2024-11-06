@@ -65,3 +65,22 @@ installable via \code{remotes::install_github} you should add to your
 
 Note that you do not need to include odin2 itself as a dependency.
 }
+\examples{
+\dontshow{if (requireNamespace("fs", quietly = TRUE)) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{
+path <- odin2:::example_package()
+}
+# An example package structure
+fs::dir_tree(path)
+
+# Generate odin code:
+odin_package(path)
+
+# Resulting files:
+fs::dir_tree(path)
+\dontshow{\}) # examplesIf}
+}
+\seealso{
+\code{vignette("packaging")} for more details, and
+\code{dust2::dust_package()}, which does most of the work here.
+}
