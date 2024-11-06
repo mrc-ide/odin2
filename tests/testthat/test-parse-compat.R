@@ -43,16 +43,16 @@ test_that("can translate simple user calls", {
     list(value = quote(a <- parameter(1)),
          index = 1L,
          compat = list(type = "user", original = quote(a <- user(1)))))
-  expect_error(
+  expect_equal(
     parse_compat_fix_user(list(value = quote(a <- user(min = 0)), index = 1L)),
-    "Can't yet translate 'user()' calls that use the 'min' argument",
-    fixed = TRUE,
-    class = "odin_parse_error")
-  expect_error(
+    list(value = quote(a <- parameter(min = 0)),
+         index = 1L,
+         compat = list(type = "user", original = quote(a <- user(min = 0)))))
+  expect_equal(
     parse_compat_fix_user(list(value = quote(a <- user(max = 1)), index = 1L)),
-    "Can't yet translate 'user()' calls that use the 'max' argument",
-    fixed = TRUE,
-    class = "odin_parse_error")
+    list(value = quote(a <- parameter(max = 1)),
+         index = 1L,
+         compat = list(type = "user", original = quote(a <- user(max = 1)))))
 })
 
 
