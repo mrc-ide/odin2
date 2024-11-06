@@ -185,6 +185,9 @@ parse_system_overall <- function(exprs, call) {
 resolve_array_references <- function(arrays) {
   lookup_array <- function(name, copy_from, d) {
     i <- which(d$name == copy_from)
+    if (length(i) == 0) {
+      return(NULL)
+    }
     dims <- d$dims[i]
     if (rlang::is_call(dims[[1]][[1]], "dim")) {
       rhs_dim_var <- d$dims[[i]][[1]][[2]]
@@ -200,8 +203,10 @@ resolve_array_references <- function(arrays) {
     lhs_dim_var <- arrays$name[i]
     rhs_dim_var <- arrays$dims[[i]][[1]][[2]]
     res <- lookup_array(lhs_dim_var, rhs_dim_var, arrays[-i, ])
-    arrays$dims[i] <- res$dims
-    arrays$size[i] <- res$size
+    if (!is.null(res)) {
+      arrays$dims[i] <- res$dims
+      arrays$size[i] <- res$size
+    }
   }
 
   arrays
