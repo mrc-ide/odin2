@@ -609,7 +609,7 @@ test_that("n + 1 for constant n is still constant", {
 
 
 test_that("n + b for non-constant b is not constant", {
-  expect_error(
+  err <- expect_error(
     odin_parse({
       n <- parameter()
       b <- parameter(constant = FALSE)
@@ -619,6 +619,13 @@ test_that("n + b for non-constant b is not constant", {
       x[] <- 1
     }),
     "Dimensions of arrays are not determined at initial creation")
+  expect_equal(
+    err$body[[1]],
+    paste("'x' is determined at stage 'parameter_update', it depends on",
+          "'n' (system_create), 'b' (parameter_update)"))
+  expect_equal(
+    err$body[[2]],
+    "Try adding `constant = TRUE` into the 'parameter()' call for 'b'")
 })
 
 
