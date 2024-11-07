@@ -493,7 +493,7 @@ test_that("Don't allow vectors to have defaults", {
 })
 
 
-test_that("Assign dim to length of another dim", {
+test_that("Assign dim to length of parameter-dim", {
   expect_no_error(odin_parse({
     update(x) <- sum(a) + sum(b)
     initial(x) <- 0

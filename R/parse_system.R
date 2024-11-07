@@ -254,6 +254,7 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
   implicit <- c(variables, "time", "dt")
 
   stage <- rep(NA_character_, length(equations))
+
   for (i in seq_along(equations)) {
     eq <- equations[[i]]
     rhs <- eq$rhs
