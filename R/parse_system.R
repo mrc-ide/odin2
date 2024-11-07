@@ -254,7 +254,6 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
   implicit <- c(variables, "time", "dt")
 
   stage <- rep(NA_character_, length(equations))
-
   for (i in seq_along(equations)) {
     eq <- equations[[i]]
     rhs <- eq$rhs
@@ -269,6 +268,8 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
       stage[[i]] <- "time"
     } else if (rlang::is_call(rhs$expr, "OdinInterpolateEval")) {
       stage[[i]] <- "time"
+    } else if (identical(rhs$type, "dim")) {
+      stage[[i]] <- "system_create"
     } else {
       stage_i <- stage[names(equations) %in% vars]
       if (length(stage_i) == 0) {

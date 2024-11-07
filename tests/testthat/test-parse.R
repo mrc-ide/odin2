@@ -493,6 +493,18 @@ test_that("Don't allow vectors to have defaults", {
 })
 
 
+test_that("Assign dim to length of another dim", {
+  expect_no_error(odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- parameter(rank = 1)
+    dim(b) <- length(a)
+    a <- parameter()
+    b <- parameter()
+  }))
+})
+
+
 test_that("check rank of interpolate assignment", {
   expect_error(
     odin_parse({
