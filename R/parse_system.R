@@ -269,8 +269,6 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
       stage[[i]] <- "time"
     } else if (rlang::is_call(rhs$expr, "OdinInterpolateEval")) {
       stage[[i]] <- "time"
-    } else if (identical(rhs$type, "dim")) {
-      stage[[i]] <- "system_create"
     } else {
       stage_i <- stage[names(equations) %in% vars]
       if (length(stage_i) == 0) {
@@ -701,13 +699,13 @@ parse_system_overall_parameters <- function(exprs, arrays) {
   special <- vcapply(exprs, function(x) x$special %||% "")
   dims <- exprs[is_dim <- special == "dim"]
   pars <- exprs[special == "parameter"]
-
   ## Find direct uses of parameters within dim expressions.  Change
   ## the interpretation of default for type and constant based on
   ## these.
   used_directly_as_dims <- unique(unlist0(lapply(dims, function(eq) {
-    vcapply(Filter(is.symbol, eq$rhs$value), as.character)
+    eq$rhs$depends$variables
   })))
+
   is_differentiable <- vlapply(pars, function(x) x$rhs$args$differentiate)
 
   pars <- lapply(pars, function(eq) {

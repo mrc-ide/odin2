@@ -497,7 +497,7 @@ test_that("Assign dim to length of parameter-dim", {
   expect_no_error(odin_parse({
     update(x) <- sum(a) + sum(b)
     initial(x) <- 0
-    dim(a) <- parameter(rank = 1)
+    dim(a) <- parameter(rank = 1, constant = TRUE)
     dim(b) <- length(a)
     a <- parameter()
     b <- parameter()
@@ -595,11 +595,25 @@ test_that("can automatically make parameters constant in arrays", {
 })
 
 
-test_that("don't be too clever", {
-  expect_error(
+test_that("n + 1 for constant n is still constant", {
+  expect_no_error(
     odin_parse({
       n <- parameter()
       dim(x) <- n + 1
+      initial(y) <- 0
+      update(y) <- sum(x)
+      x[] <- 1
+    })
+  )
+})
+
+
+test_that("n + b for non-constant b is not constant", {
+  expect_error(
+    odin_parse({
+      n <- parameter()
+      b <- parameter(constant = FALSE)
+      dim(x) <- n + b
       initial(y) <- 0
       update(y) <- sum(x)
       x[] <- 1
