@@ -689,8 +689,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
         constraint_value <- generate_dust_sexp(eq$rhs$args[[constraint]],
                                                dat$sexp_data, options)
         res <- c(res,
-                 sprintf('dust2::r::check_%s_%s(%s, %s, "%s");',
-                         constraint, what, dest, constraint_value, name))
+                 sprintf('dust2::r::check_%s_%s<%s>(%s, %s, "%s");',
+                         constraint, what, type, dest, constraint_value, name))
       }
     }
   } else if (identical(eq$special, "dim")) {
