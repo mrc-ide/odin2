@@ -2125,6 +2125,6 @@ test_that("can generate code for array parameter constraints", {
     generate_dust_system_update_shared(dat),
     c(method_args$update_shared,
       '  dust2::r::read_real_array(parameters, shared.dim.r, shared.r.data(), "r", false);',
-      '  dust2::r::check_max_array(shared.r, 2, "r");'
+      '  dust2::r::check_max_array(shared.r, 2, "r");',
       "}"))
 })
