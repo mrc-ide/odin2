@@ -149,7 +149,9 @@ test_that("differentiable parameters are not constant", {
                        constant = FALSE,
                        differentiate = TRUE,
                        type = "real_type",
-                       rank = NULL))
+                       rank = NULL,
+                       min = NULL,
+                       max = NULL))
 })
 
 test_that("can change parameter type", {
