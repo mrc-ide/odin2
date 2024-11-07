@@ -468,6 +468,24 @@ test_that("can copy dims from a to c via b", {
 })
 
 
+test_that("can copy multi-dims with rank > 1", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- c(2, 2)
+    dim(b) <- dim(a)
+    a[, ] <- 1
+    b[, ] <- 2
+  })$storage$arrays
+  
+  a <- which(arrays$name == "a")
+  b <- which(arrays$name == "b")
+  expect_equal(unlist(arrays$dims[b]), unlist(arrays$dims[a]))
+  expect_equal(unlist(arrays$size[b]), unlist(arrays$size[a]))
+  expect_equal(unlist(arrays$rank[b]), unlist(arrays$rank[a]))
+})
+
+
 test_that("can't copy dims circularly", {
   expect_error(
     odin_parse({
@@ -479,6 +497,25 @@ test_that("can't copy dims circularly", {
       b[] <- 2
     }),
     "Cyclic dependency detected")
+})
+
+
+test_that("copy dim with ranked parameter", {
+  arrays <- odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- parameter(rank = 2)
+      dim(b) <- dim(a)
+      a[, ] <- 1
+      b[, ] <- 2
+    })$storage$arrays
+  
+  a <- which(arrays$name == "a")
+  b <- which(arrays$name == "b")
+  expect_equal(unlist(arrays$dims[b]), unlist(arrays$dims[a]))
+  expect_equal(unlist(arrays$size[b]), unlist(arrays$size[a]))
+  expect_equal(unlist(arrays$rank[b]), unlist(arrays$rank[a]))
+
 })
 
 

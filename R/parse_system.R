@@ -193,7 +193,7 @@ resolve_array_references <- function(arrays) {
       rhs_dim_var <- dim_i[[1]][[2]]
       return(lookup_array(name, rhs_dim_var, d[-i, ]))
     }
-    return(list(dims = d$dims[i], size = d$size[i]))
+    return(list(rank = d$rank[i], dims = d$dims[i], size = d$size[i]))
   }
 
   is_ref <- vlapply(arrays$dims, function(x)
@@ -206,6 +206,7 @@ resolve_array_references <- function(arrays) {
     if (!is.null(res)) {
       arrays$dims[i] <- res$dims
       arrays$size[i] <- res$size
+      arrays$rank[i] <- res$rank
     }
   }
 
