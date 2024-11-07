@@ -42,15 +42,6 @@ parse_compat_fix_user <- function(expr, exprs, call) {
         "Failed to translate your 'user()' expression to use 'parameter()'",
         "E1016", expr, call = call)
     }
-    for (arg in c("min", "max")) {
-      if (!rlang::is_missing(res$value[[arg]])) {
-        odin_parse_error(
-          c("Can't yet translate 'user()' calls that use the '{arg}' argument",
-            i = paste("We don't support this argument in parameter() yet,",
-                      "but once we do we will support translation")),
-          "E0001", expr, call = call)
-      }
-    }
 
     original <- expr$value
     args <- list(as.name("parameter"))
@@ -60,6 +51,12 @@ parse_compat_fix_user <- function(expr, exprs, call) {
     if (!rlang::is_missing(res$value$integer)) {
       type <- if (isTRUE(res$value$integer)) "integer" else "real"
       args <- c(args, list(type = type))
+    }
+    if (!rlang::is_missing(res$value$min)) {
+      args <- c(args, list(min = res$value$min))
+    }
+    if (!rlang::is_missing(res$value$max)) {
+      args <- c(args, list(max = res$value$max))
     }
 
     lhs <- expr$value[[2]]

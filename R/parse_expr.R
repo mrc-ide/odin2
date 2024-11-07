@@ -366,7 +366,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
 
 parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
   template <- function(default = NULL, constant = NULL, differentiate = FALSE,
-                       type = NULL, rank = NULL) {
+                       type = NULL, rank = NULL, min = NULL, max = NULL) {
   }
   result <- match_call(rhs, template)
   if (!result$success) {
@@ -448,6 +448,26 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
         "'rank' must be a scalar size, if given",
         "E1057", src, call)
     }
+  }
+
+  for (nm in c("min", "max")) {
+    if (!is.null(args[[nm]])) {
+      if (identical(args$type, "logical")) {
+        odin_parse_error(
+          "'{nm}' cannot be used with 'type = \"logical\"'",
+          "E1063", src, call)
+      }
+      if (!is_scalar_numeric(args[[nm]])) {
+        odin_parse_error(
+          "'{nm}' must be a number",
+          "E1064", src, call)
+      }
+    }
+  }
+
+  if (!is.null(args$min) && !is.null(args$max) && args$min >= args$max) {
+    odin_parse_error("'min' must be smaller than 'max'",
+                     "E1065", src, call)
   }
 
   ## NOTE: this is assuming C++ types here, which is not great, but we
