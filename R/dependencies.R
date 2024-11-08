@@ -4,12 +4,14 @@ find_dependencies <- function(expr) {
   descend <- function(e) {
     if (is.recursive(e)) {
       nm <- deparse(e[[1L]])
-      ## If we hit dim/length here we should not take a dependency
-      ## most of the time though.
       functions$add(nm)
-      for (el in as.list(e[-1])) {
-        if (!missing(el)) {
-          descend(el)
+      if (nm %in% c("length", "dim") && length(e) == 2 && is.symbol(e[[2]])) {
+        variables$add(odin_dim_name(deparse(e[[2]])))
+      } else {
+        for (el in as.list(e[-1])) {
+          if (!missing(el)) {
+            descend(el)
+          }
         }
       }
     } else {

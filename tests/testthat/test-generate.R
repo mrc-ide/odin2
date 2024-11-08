@@ -1749,13 +1749,24 @@ test_that("cast array size to int when compared to integers", {
   })
   dat <- generate_prepare(dat)
   expect_equal(
+    generate_dust_system_build_shared(dat),
+    c("static shared_state build_shared(cpp11::list parameters) {",
+      "  shared_state::dim_type dim;",
+      "  const int n = dust2::r::read_int(parameters, \"n\");",
+      "  dim.a.set({static_cast<size_t>(3)});",
+      "  const real_type b = (static_cast<int>(dim.a.size) == n ? 0 : 1);",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, n, b};",
+      "}"))
+
+  expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = time;",
       "  }",
-      "  const real_type b = (static_cast<int>(shared.dim.a.size) == shared.n ? 0 : 1);",
-      "  state_next[0] = internal.a[0] + b;",
+      "  state_next[0] = internal.a[0] + shared.b;",
       "}"))
 })
     
@@ -2072,5 +2083,59 @@ test_that("can generate system with output", {
     generate_dust_system_size_output(dat),
     c(method_args$size_output,
       "  return 1;",
+      "}"))
+})
+
+
+test_that("can generate code for parameter constraints", {
+  dat <- odin_parse({
+    r <- parameter(min = 2)
+    initial(y) <- 0
+    update(y) <- y * r
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      '  const real_type r = dust2::r::read_real(parameters, "r");',
+      '  dust2::r::check_min_scalar<real_type>(r, 2, "r");',
+      "  shared_state::offset_type offset;",
+      "  offset.state.y = 0;",
+      "  return shared_state{offset, r};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  shared.r = dust2::r::read_real(parameters, "r", shared.r);',
+      '  dust2::r::check_min_scalar<real_type>(shared.r, 2, "r");',
+      "}"))
+})
+
+
+test_that("can generate code for array parameter constraints", {
+  dat <- odin_parse({
+    r <- parameter(max = 2)
+    dim(r) <- 5
+    initial(y) <- 0
+    update(y) <- y * sum(r)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.r.set({static_cast<size_t>(5)});",
+      "  std::vector<real_type> r(dim.r.size);",
+      '  dust2::r::read_real_array(parameters, dim.r, r.data(), "r", true);',
+      '  dust2::r::check_max_array<real_type>(r, 2, "r");',
+      "  shared_state::offset_type offset;",
+      "  offset.state.y = 0;",
+      "  return shared_state{dim, offset, r};",
+      "}"))
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.r, shared.r.data(), "r", false);',
+      '  dust2::r::check_max_array<real_type>(shared.r, 2, "r");',
       "}"))
 })

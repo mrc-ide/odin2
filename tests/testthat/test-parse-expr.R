@@ -149,7 +149,9 @@ test_that("differentiable parameters are not constant", {
                        constant = FALSE,
                        differentiate = TRUE,
                        type = "real_type",
-                       rank = NULL))
+                       rank = NULL,
+                       min = NULL,
+                       max = NULL))
 })
 
 test_that("can change parameter type", {
@@ -185,6 +187,38 @@ test_that("can't differentiate non-real parameters", {
     "Differentiable parameters must have 'type = \"real\"'")
 })
 
+test_that("can specify min/max values", {
+  res <- parse_expr(quote(a <- parameter(min = 1, max = 2)), NULL, NULL)
+  expect_equal(res$rhs$args$min, 1)
+  expect_equal(res$rhs$args$max, 2)
+})
+
+
+test_that("can't use min/max for logical parameters", {
+  expect_error(
+    parse_expr(quote(a <- parameter(type = "logical", min = 1)), NULL, NULL),
+    "'min' cannot be used with 'type = \"logical\"'")
+  expect_error(
+    parse_expr(quote(a <- parameter(type = "logical", max = 1)), NULL, NULL),
+    "'max' cannot be used with 'type = \"logical\"'")
+})
+
+
+test_that("min/max must be numbers", {
+  expect_error(
+    parse_expr(quote(a <- parameter(min = x)), NULL, NULL),
+    "'min' must be a number")
+  expect_error(
+    parse_expr(quote(a <- parameter(max = NA_real_)), NULL, NULL),
+    "'max' must be a number")
+})
+
+
+test_that("min/max must leave a range of valid values", {
+  expect_error(
+    parse_expr(quote(a <- parameter(min = 10, max = 1)), NULL, NULL),
+    "'min' must be smaller than 'max'")
+})
 
 
 test_that("sensible error if parameters are incorrectly specified", {
@@ -622,4 +656,12 @@ test_that("disallow use of NA", {
   expect_error(
     parse_expr(quote(a <- NA_real_), NULL, NULL),
     "Cannot use 'NA_real_' within expressions")
+})
+
+
+test_that("length is treated as special dependency", {
+  res <- parse_expr(quote(x <- length(b)), NULL, NULL)
+  expect_equal(res$rhs$depends$variables, "dim_b")
+  res <- parse_expr(quote(dim(a) <- length(b)), NULL, NULL)
+  expect_equal(res$rhs$depends$variables, "dim_b")
 })

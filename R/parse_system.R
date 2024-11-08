@@ -737,7 +737,7 @@ parse_system_overall_parameters <- function(exprs, arrays) {
   ## the interpretation of default for type and constant based on
   ## these.
   used_directly_as_dims <- unique(unlist0(lapply(dims, function(eq) {
-    vcapply(Filter(is.symbol, eq$rhs$value), as.character)
+    eq$rhs$depends$variables
   })))
   is_differentiable <- vlapply(pars, function(x) x$rhs$args$differentiate)
 
