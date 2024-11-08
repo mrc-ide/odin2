@@ -26,7 +26,7 @@ parse_expr_assignment <- function(expr, src, call) {
       "E1061", src, call)
   } else if (identical(special, "dim")) {
     lhs$name_data <- lhs$name
-    lhs$name <- paste0("dim_", lhs$name)
+    lhs$name <- odin_dim_name(lhs$name)
     rhs <- parse_expr_assignment_rhs_dim(expr[[3]], src, call)
   } else {
     rhs <- parse_expr_assignment_rhs(expr[[3]], src, call)
