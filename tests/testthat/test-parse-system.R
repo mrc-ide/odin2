@@ -256,18 +256,7 @@ test_that("can throw sensible error when a dimension is unknown", {
       initial(y) <- 0
       update(y) <- sum(x)
     }),
-    "Dimensions of arrays are not determined at initial creation")
-  expect_equal(
-    err$body[[1]],
-    paste("'x' is determined at stage 'parameter_update', it depends on",
-          "'a' (parameter_update), 'b' (unknown!)"))
-  expect_equal(
-    err$body[[1]],
-    paste("'x' is determined at stage 'parameter_update', it depends on",
-          "'a' (parameter_update), 'b' (unknown!)"))
-  expect_equal(
-    err$body[[2]],
-    "Try adding `constant = TRUE` into the 'parameter()' call for 'a'")
+    "Unknown variable used in odin code: 'b'")
 })
 
 

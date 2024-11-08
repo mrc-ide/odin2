@@ -493,6 +493,35 @@ test_that("Don't allow vectors to have defaults", {
 })
 
 
+test_that("Assign dim to length of parameter-dim", {
+  d <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- parameter(rank = 1)
+    dim(b) <- length(a)
+    a <- parameter()
+    b <- parameter()
+  })
+  expect_equal(d$parameters$constant, c(FALSE, FALSE))
+  expect_equal(d$equations$dim_b$rhs$depends$variables, "dim_a")
+})
+
+
+test_that("Length takes only a symbol", {
+  skip("Not implemented yet")
+  d <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- parameter(rank = 1)
+    dim(b) <- length(a + 1)
+    a <- parameter()
+    b <- parameter()
+  })
+  expect_equal(d$parameters$constant, c(FALSE, FALSE))
+  expect_equal(d$equations$dim_b$rhs$depends$variables, "dim_a")
+})
+
+
 test_that("check rank of interpolate assignment", {
   expect_error(
     odin_parse({
@@ -583,16 +612,37 @@ test_that("can automatically make parameters constant in arrays", {
 })
 
 
-test_that("don't be too clever", {
-  expect_error(
+test_that("n + 1 dim for constant n is handled", {
+  res <- odin_parse({
+      n <- parameter(constant = TRUE)
+      dim(x) <- n + 1
+      initial(y) <- 0
+      update(y) <- sum(x)
+      x[] <- 1
+    })
+  expect_equal(res$storage$arrays$name, "x")
+  expect_equal(unlist(res$storage$arrays$dims)[[1]], quote(n + 1))
+})
+
+
+test_that("n + b for non-constant b is not constant", {
+  err <- expect_error(
     odin_parse({
       n <- parameter()
-      dim(x) <- n + 1
+      b <- parameter(constant = FALSE)
+      dim(x) <- n + b
       initial(y) <- 0
       update(y) <- sum(x)
       x[] <- 1
     }),
     "Dimensions of arrays are not determined at initial creation")
+  expect_equal(
+    err$body[[1]],
+    paste("'x' is determined at stage 'parameter_update', it depends on",
+          "'n' (system_create), 'b' (parameter_update)"))
+  expect_equal(
+    err$body[[2]],
+    "Try adding `constant = TRUE` into the 'parameter()' call for 'b'")
 })
 
 
@@ -786,9 +836,10 @@ test_that("Invalid argument to func that expects an array", {
 test_that("Non-array passed to func that expects an array", {
   expect_error(
     odin_parse({
-      update(x) <- length(y)
+      update(x) <- y + length(y)
       initial(x) <- 0
-      y <- 2
+      initial(y) <- 0
+      update(y) <- 1
     }),
     "Missing 'dim\\(\\)' for expression assigned as an array"
   )

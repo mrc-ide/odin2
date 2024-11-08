@@ -1749,13 +1749,24 @@ test_that("cast array size to int when compared to integers", {
   })
   dat <- generate_prepare(dat)
   expect_equal(
+    generate_dust_system_build_shared(dat),
+    c("static shared_state build_shared(cpp11::list parameters) {",
+      "  shared_state::dim_type dim;",
+      "  const int n = dust2::r::read_int(parameters, \"n\");",
+      "  dim.a.set({static_cast<size_t>(3)});",
+      "  const real_type b = (static_cast<int>(dim.a.size) == n ? 0 : 1);",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, n, b};",
+      "}"))
+
+  expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = time;",
       "  }",
-      "  const real_type b = (static_cast<int>(shared.dim.a.size) == shared.n ? 0 : 1);",
-      "  state_next[0] = internal.a[0] + b;",
+      "  state_next[0] = internal.a[0] + shared.b;",
       "}"))
 })
     
