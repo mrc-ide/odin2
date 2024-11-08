@@ -612,16 +612,16 @@ test_that("can automatically make parameters constant in arrays", {
 })
 
 
-test_that("n + 1 for constant n is still constant", {
-  expect_no_error(
-    odin_parse({
-      n <- parameter()
+test_that("n + 1 dim for constant n is handled", {
+  res <- odin_parse({
+      n <- parameter(constant = TRUE)
       dim(x) <- n + 1
       initial(y) <- 0
       update(y) <- sum(x)
       x[] <- 1
     })
-  )
+  expect_equal(res$storage$arrays$name, "x")
+  expect_equal(unlist(res$storage$arrays$dims)[[1]], quote(n + 1))
 })
 
 
