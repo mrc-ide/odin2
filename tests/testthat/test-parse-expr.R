@@ -657,3 +657,11 @@ test_that("disallow use of NA", {
     parse_expr(quote(a <- NA_real_), NULL, NULL),
     "Cannot use 'NA_real_' within expressions")
 })
+
+
+test_that("length is treated as special dependency", {
+  res <- parse_expr(quote(x <- length(b)), NULL, NULL)
+  expect_equal(res$rhs$depends$variables, "dim_b")
+  res <- parse_expr(quote(dim(a) <- length(b)), NULL, NULL)
+  expect_equal(res$rhs$depends$variables, "dim_b")
+})

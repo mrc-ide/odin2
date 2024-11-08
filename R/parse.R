@@ -68,15 +68,27 @@ parse_check_usage_find_unknown <- function(dat, call) {
            dat$phases$initial$variables,
            dat$phases$compare$compare,
            unname(dat$equations))
+
+  for (i in seq_along(eqs)) {
+    eqs[[i]]$rhs$depends$variables <- lapply(eqs[[i]]$rhs$depends$variables,
+      function(x) {
+        if (length(x) > 0)  {
+          is_dim <- grepl("^dim_", x)
+          x[is_dim] <- substring(x[is_dim], 5)
+        }
+        x
+      })
+  }
+
   unknown <- lapply(eqs, function(eq) setdiff(eq$rhs$depends$variables, known))
+
   err <- lengths(unknown) > 0
   if (!any(err)) {
     return()
   }
-
   err_nms <- unique(unlist(unknown))
   src <- lapply(eqs[err], "[[", "src")
-  if (dat$time == "continuous" && "dt" %in% unknown) {
+  if (dat$time == "continuous" && "dt" %in% err_nms) {
     uses_dt <- vlapply(err_nms, function(nms) "dt" %in% nms)
     odin_parse_error(
       c("Cannot use 'dt' in a continuous time (ODE) model",

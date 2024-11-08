@@ -234,3 +234,9 @@ counter <- function() {
     env$n
   }
 }
+
+
+odin_dim_name <- function(n) {
+  assert_scalar_character(n)
+  sprintf("dim_%s", n)
+}

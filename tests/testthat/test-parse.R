@@ -494,14 +494,31 @@ test_that("Don't allow vectors to have defaults", {
 
 
 test_that("Assign dim to length of parameter-dim", {
-  expect_no_error(odin_parse({
+  d <- odin_parse({
     update(x) <- sum(a) + sum(b)
     initial(x) <- 0
-    dim(a) <- parameter(rank = 1, constant = TRUE)
+    dim(a) <- parameter(rank = 1)
     dim(b) <- length(a)
     a <- parameter()
     b <- parameter()
-  }))
+  })
+  expect_equal(d$parameters$constant, c(FALSE, FALSE))
+  expect_equal(d$equations$dim_b$rhs$depends$variables, "dim_a")
+})
+
+
+test_that("Length takes only a symbol", {
+  skip("Not implemented yet")
+  d <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- parameter(rank = 1)
+    dim(b) <- length(a + 1)
+    a <- parameter()
+    b <- parameter()
+  })
+  expect_equal(d$parameters$constant, c(FALSE, FALSE))
+  expect_equal(d$equations$dim_b$rhs$depends$variables, "dim_a")
 })
 
 
@@ -819,9 +836,10 @@ test_that("Invalid argument to func that expects an array", {
 test_that("Non-array passed to func that expects an array", {
   expect_error(
     odin_parse({
-      update(x) <- length(y)
+      update(x) <- y + length(y)
       initial(x) <- 0
-      y <- 2
+      initial(y) <- 0
+      update(y) <- 1
     }),
     "Missing 'dim\\(\\)' for expression assigned as an array"
   )
