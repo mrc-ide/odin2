@@ -182,6 +182,7 @@ test_that("can parse systems that involve arrays in internal", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
+               alias = NA_character_,
                rank = 1,
                dims = I(list(list(2))),
                size = I(list(2))))
@@ -204,6 +205,7 @@ test_that("can parse systems that involve arrays in shared", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
+               alias = NA_character_,
                rank = 1,
                dims = I(list(list(3))),
                size = I(list(3))))
@@ -226,6 +228,7 @@ test_that("pack system entirely composed of arrays", {
   expect_equal(
     d$storage$packing$state,
     data_frame(name = c("x", "y"),
+               alias = c(NA_character_, NA_character_),
                rank = 1,
                dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
@@ -247,6 +250,7 @@ test_that("pack system of mixed arrays and scalars", {
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
                size = I(list(2, 1)),
+               alias = c(NA_character_, NA_character_),
                offset = I(list(0, 2))))
 })
 
@@ -431,7 +435,7 @@ test_that("only arrays can be duplicated", {
 })
 
 
-test_that("can copy dims from a to b", {
+test_that("can make dims_b alias of dims_a", {
   arrays <- odin_parse({
       update(x) <- sum(a) + sum(b)
       initial(x) <- 0
@@ -441,13 +445,12 @@ test_that("can copy dims from a to b", {
       b[] <- 2
   })$storage$arrays
 
-  b <- which(arrays$name == "b")
-  expect_equal(unlist(arrays$dims[b]), 1)
-  expect_equal(unlist(arrays$size[b]), 1)
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_true(is.na(arrays$alias[arrays$name == "a"]))
 })
 
 
-test_that("can copy dims from a to c via b", {
+test_that("can do transitive alias", {
   arrays <- odin_parse({
     update(x) <- sum(a) + sum(b) + sum(c)
     initial(x) <- 0
@@ -459,12 +462,9 @@ test_that("can copy dims from a to c via b", {
     c[] <- 3
   })$storage$arrays
 
-  b <- which(arrays$name == "b")
-  expect_equal(unlist(arrays$dims[b]), 1)
-  expect_equal(unlist(arrays$size[b]), 1)
-  c <- which(arrays$name == "c")
-  expect_equal(unlist(arrays$dims[c]), 1)
-  expect_equal(unlist(arrays$size[c]), 1)
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_equal(arrays$alias[arrays$name == "c"], "a")
+  expect_true(is.na(arrays$alias[arrays$name == "a"]))
 })
 
 
@@ -477,12 +477,11 @@ test_that("can copy multi-dims with rank > 1", {
     a[, ] <- 1
     b[, ] <- 2
   })$storage$arrays
-  
+
   a <- which(arrays$name == "a")
   b <- which(arrays$name == "b")
-  expect_equal(unlist(arrays$dims[b]), unlist(arrays$dims[a]))
-  expect_equal(unlist(arrays$size[b]), unlist(arrays$size[a]))
-  expect_equal(unlist(arrays$rank[b]), unlist(arrays$rank[a]))
+  expect_equal(arrays$alias[b], "a")
+  expect_equal(arrays$rank[b], arrays$rank[a])
 })
 
 
@@ -506,15 +505,22 @@ test_that("copy dim with ranked parameter", {
       initial(x) <- 0
       dim(a) <- parameter(rank = 2)
       dim(b) <- dim(a)
-      a[, ] <- 1
-      b[, ] <- 2
+      a <- parameter()
+      b <- parameter()
     })$storage$arrays
-  
+
   a <- which(arrays$name == "a")
   b <- which(arrays$name == "b")
-  expect_equal(unlist(arrays$dims[b]), unlist(arrays$dims[a]))
-  expect_equal(unlist(arrays$size[b]), unlist(arrays$size[a]))
-  expect_equal(unlist(arrays$rank[b]), unlist(arrays$rank[a]))
+  expect_equal(arrays$alias[b], "a")
+  expect_equal(arrays$rank[a], 2)
+  expect_equal(arrays$rank[b], 2)
+
+  #dim(a) <- 10
+  #dim(b) <- dim(a)
+  #b[] <- a[i]
+  #for (size_t i = 0; i < shared.dims.a.size; ++i) {
+    #b[i] = ...
+  #}
 
 })
 

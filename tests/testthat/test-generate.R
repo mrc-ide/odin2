@@ -942,6 +942,103 @@ test_that("can generate system with array from user", {
 })
 
 
+test_that("can generate system with aliased array", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- x + a[1] + b[1]
+    dim(a) <- 1
+    dim(b) <- dim(a)
+    a[] <- 1
+    b[] <- 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> a;",
+      "  std::vector<real_type> b;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.a.set({static_cast<size_t>(1)});",
+      "  std::vector<real_type> a(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    a[i - 1] = 1;",
+      "  }",
+      "  std::vector<real_type> b(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    b[i - 1] = 2;",
+      "  }",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a, b};",
+      "}"))
+})
+
+
+test_that("can generate system with 2-d aliased parameterised array", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- x + a[1, 1] + b[1, 1]
+    dim(a) <- parameter(rank = 2)
+    dim(b) <- dim(a)
+    a[, ] <- 1
+    b[, ] <- 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<2> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> a;",
+      "  std::vector<real_type> b;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      '  dim.a = dust2::r::read_dimensions<2>(parameters, "a");',
+      "  std::vector<real_type> a(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.dim[0]; ++i) {",
+      "    for (size_t j = 1; j <= dim.a.dim[1]; ++j) {",
+      "      a[i - 1 + (j - 1) * (dim.a.mult[1])] = 1;",
+      "    }",
+      "  }",
+      "  std::vector<real_type> b(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.dim[0]; ++i) {",
+      "    for (size_t j = 1; j <= dim.a.dim[1]; ++j) {",
+      "      b[i - 1 + (j - 1) * (dim.a.mult[1])] = 2;",
+      "    }",
+      "  }",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a, b};",
+      "}"))
+})
+
+
+
 test_that("can generate system with simple variable sized array", {
   dat <- odin_parse({
     initial(x) <- 1
@@ -1769,7 +1866,7 @@ test_that("cast array size to int when compared to integers", {
       "  state_next[0] = internal.a[0] + shared.b;",
       "}"))
 })
-    
+
 
 test_that("can generate browser code", {
   dat <- odin_parse({

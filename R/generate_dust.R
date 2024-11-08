@@ -114,11 +114,14 @@ generate_dust_system_shared_state <- function(dat) {
       })
   }
 
-  if (nrow(dat$storage$arrays) > 0) {
+  not_aliased <- is.na(dat$storage$arrays$alias)
+
+  if (nrow(dat$storage$arrays[not_aliased, ]) > 0) {
     dims <- c(
       "struct dim_type {",
       sprintf("  dust2::array::dimensions<%d> %s;",
-              dat$storage$arrays$rank, dat$storage$arrays$name),
+              dat$storage$arrays$rank[not_aliased],
+              dat$storage$arrays$name[not_aliased]),
       "} dim;")
   } else {
     dims <- NULL
@@ -202,8 +205,13 @@ generate_dust_system_build_shared <- function(dat) {
     name <- eq$lhs$name
     if (name %in% dat$storage$arrays$name && !(name %in% allocated)) {
       i <- match(name, dat$storage$arrays$name)
+      dim_name <- name
+      if (!is.na(dat$storage$arrays$alias[i])) {
+        i <- match(dat$storage$arrays$alias[i], dat$storage$arrays$name)
+        dim_name <- dat$storage$arrays$name[i]
+      }
       size <- generate_dust_sexp(
-        call("OdinLength", name),
+        call("OdinLength", dim_name),
         dat$sexp_data, options)
       body$add(sprintf("std::vector<%s> %s(%s);",
                        dat$storage$type[[name]], name, size))
@@ -695,6 +703,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
+    if (!is.na(dat$storage$arrays$alias[i])) {
+      return(NULL)
+    }
     rank <- dat$storage$arrays$rank[[i]]
     if (eq$rhs$is_user_sized) {
       res <- sprintf(
@@ -717,6 +728,18 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
   } else {
+
+    resolve_array_alias <- function(dim) {
+      if (rlang::is_call(dim, c("OdinDim", "OdinMult"))) {
+        array <- dim[[2]]
+        i <- match(array, dat$storage$arrays$name)
+        if (!is.na(dat$storage$arrays$alias[i])) {
+          dim[[2]] <- dat$storage$arrays$alias[i]
+        }
+      }
+      return(dim)
+    }
+
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
 
@@ -725,6 +748,8 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     if (is_array) {
       for (idx in rev(eq$lhs$array)) {
         if (idx$type == "range") {
+          idx$from <- resolve_array_alias(idx$from)
+          idx$to <- resolve_array_alias(idx$to)
           from <- generate_dust_sexp(idx$from, dat$sexp_data, options)
           to <- generate_dust_sexp(idx$to, dat$sexp_data, options)
           size_fns <- c("length", "dim", "OdinDim", "OdinLength")
