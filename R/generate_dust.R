@@ -598,11 +598,17 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   name <- lhs$name
   is_array <- !is.null(lhs$array)
   if (is_array) {
+    dim_name <- name
+    i <- match(name, dat$storage$arrays$name)
+    if (!is.na(dat$storage$arrays$alias[i])) {
+      dim_name <- dat$storage$arrays$alias[i]
+    }
+
     idx <- flatten_index(
       lapply(lhs$array, function(x) {
         if (x$type == "range") as.name(x$name) else x$at
       }),
-      name)
+      dim_name)
   } else {
     idx <- NULL
   }
@@ -730,7 +736,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
   } else {
 
     resolve_array_alias <- function(dim) {
-      if (rlang::is_call(dim, c("OdinDim", "OdinMult"))) {
+      if (rlang::is_call(dim, c("OdinDim"))) {
         array <- dim[[2]]
         i <- match(array, dat$storage$arrays$name)
         if (!is.na(dat$storage$arrays$alias[i])) {
