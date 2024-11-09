@@ -116,7 +116,6 @@ generate_dust_system_shared_state <- function(dat) {
   }
 
   not_aliased <- is.na(dat$storage$arrays$alias)
-
   if (nrow(dat$storage$arrays[not_aliased, ]) > 0) {
     dims <- c(
       "struct dim_type {",
@@ -723,7 +722,6 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
   } else {
-
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
 

@@ -82,7 +82,6 @@ parse_system_overall <- function(exprs, call) {
 
   ## We take initial as the set of variables:
   variables <- unique(vcapply(exprs[is_initial], function(x) x$lhs$name))
-
   if (length(variables) == 0) {
     throw_no_initial_call()
   }
@@ -257,11 +256,8 @@ resolve_array_references <- function(arrays) {
       arrays$alias[i] <- res$alias
     }
   }
-
   arrays
-
 }
-
 
 parse_system_depends <- function(equations, variables, call) {
   automatic <- c("time", "dt")

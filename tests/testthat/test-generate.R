@@ -1919,7 +1919,6 @@ test_that("cast array size to int when compared to integers", {
       "}"))
 })
 
-
 test_that("can generate browser code", {
   dat <- odin_parse({
     initial(x) <- 0

@@ -288,11 +288,9 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   depends <- join_dependencies(lapply(value, find_dependencies))
   is_stochastic <- any(
     depends$functions %in% monty::monty_dsl_distributions()$name)
-
   if (is_stochastic) {
     throw_no_stochastic()
   }
-
   if ("time" %in% depends$variables) {
     throw_cant_determine_extent()
   }
@@ -301,7 +299,6 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     if (!is.symbol(rhs[[2]])) {
       throw_bad_dim_arg()
     }
-
     return(list(type = "dim",
                 is_user_sized = FALSE,
                 is_dependent_dim = TRUE,
@@ -310,7 +307,6 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
                   functions = character(0),
                   variables = deparse(rhs[[2]]))))
   }
-
   allowed <- c("+", "-", "(", "length", "nrow", "ncol")
   err <- setdiff(depends$functions, allowed)
   if (length(err) > 0) {
