@@ -988,6 +988,58 @@ test_that("can generate system with aliased array", {
 })
 
 
+test_that("can generate system with length and sum of aliased array", {
+  dat <- odin_parse({
+    update(x) <- sb + lb
+    initial(x) <- 0
+    dim(a) <- 5
+    dim(b) <- dim(a)
+    lb <- length(b)
+    sb <- sum(b)
+    a[] <- 1
+    b[] <- 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> a;",
+      "  real_type lb;",
+      "  std::vector<real_type> b;",
+      "  real_type sb;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.a.set({static_cast<size_t>(5)});",
+      "  std::vector<real_type> a(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    a[i - 1] = 1;",
+      "  }",
+      "  const real_type lb = dim.a.size;",
+      "  std::vector<real_type> b(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    b[i - 1] = 2;",
+      "  }",
+      "  const real_type sb = dust2::array::sum<real_type>(b.data(), dim.a);",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a, lb, b, sb};",
+      "}"))
+})
+
+
 test_that("can generate system with 2-d aliased parameterised array", {
   dat <- odin_parse({
     initial(x) <- 0

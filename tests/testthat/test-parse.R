@@ -468,7 +468,7 @@ test_that("can do transitive alias", {
 })
 
 
-test_that("can copy multi-dims with rank > 1", {
+test_that("can alias multi-dims with rank > 1", {
   arrays <- odin_parse({
     update(x) <- sum(a) + sum(b)
     initial(x) <- 0
@@ -485,7 +485,7 @@ test_that("can copy multi-dims with rank > 1", {
 })
 
 
-test_that("can't copy dims circularly", {
+test_that("can't alias dims circularly", {
   expect_error(
     odin_parse({
       update(x) <- sum(a) + sum(b)
@@ -499,7 +499,7 @@ test_that("can't copy dims circularly", {
 })
 
 
-test_that("copy dim with ranked parameter", {
+test_that("alias dim with ranked parameter", {
   arrays <- odin_parse({
       update(x) <- sum(a) + sum(b)
       initial(x) <- 0
@@ -514,14 +514,6 @@ test_that("copy dim with ranked parameter", {
   expect_equal(arrays$alias[b], "a")
   expect_equal(arrays$rank[a], 2)
   expect_equal(arrays$rank[b], 2)
-
-  #dim(a) <- 10
-  #dim(b) <- dim(a)
-  #b[] <- a[i]
-  #for (size_t i = 0; i < shared.dims.a.size; ++i) {
-    #b[i] = ...
-  #}
-
 })
 
 
