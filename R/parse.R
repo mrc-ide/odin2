@@ -207,9 +207,15 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
       } else if (rlang::is_call(expr, fn_use_whole_array)) {
         if (rlang::is_call(expr, "OdinReduce")) {
           array_name <- expr[[3]]
+          if (!(array_name %in% names(dim_ranks))) {
+            throw_no_dim(array_name)
+          }
           index <- expr[[4]]
           if (!is.null(index)) {
             dim_rank <- dim_ranks[[array_name]]
+            if (length(index) != dim_rank) {
+              throw_mismatch(array_name, length(index), dim_rank)
+            }
           }
         } else {
           func <- deparse(expr[[1]])
