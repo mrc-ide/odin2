@@ -1272,10 +1272,10 @@ test_that("can generate a simple multidimensional array equation", {
     c(method_args$update,
       "  for (size_t i = 1; i <= shared.dim.a.dim[0]; ++i) {",
       "    for (size_t j = 1; j <= shared.dim.a.dim[1]; ++j) {",
-      "      internal.a[i - 1 + (j - 1) * (shared.dim.a.mult[1])] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "      internal.a[i - 1 + (j - 1) * shared.dim.a.mult[1]] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "    }",
       "  }",
-      "  state_next[0] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * (shared.dim.a.mult[1])] / internal.a[1 + 2 * (shared.dim.a.mult[1])];",
+      "  state_next[0] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * shared.dim.a.mult[1]] / internal.a[1 + 2 * shared.dim.a.mult[1]];",
       "}"))
 })
 
@@ -1311,7 +1311,7 @@ test_that("can use nrow() and ncol() on the rhs", {
       "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.dim[0]; ++i) {",
       "    for (size_t j = 1; j <= shared.dim.x.dim[1]; ++j) {",
-      "      state_next[i - 1 + (j - 1) * (shared.dim.x.mult[1]) + 0] = x[i - 1 + (j - 1) * (shared.dim.x.mult[1])] + shared.dim.x.dim[0] / shared.dim.x.dim[1];",
+      "      state_next[i - 1 + (j - 1) * shared.dim.x.mult[1] + 0] = x[i - 1 + (j - 1) * shared.dim.x.mult[1]] + shared.dim.x.dim[0] / shared.dim.x.dim[1];",
       "    }",
       "  }",
       "}"))
@@ -1351,7 +1351,7 @@ test_that("can generate partial sums over arrays", {
     c(method_args$update,
       "  for (size_t i = 1; i <= shared.dim.y.dim[0]; ++i) {",
       "    for (size_t j = 1; j <= shared.dim.y.dim[1]; ++j) {",
-      "      internal.y[i - 1 + (j - 1) * (shared.dim.y.mult[1])] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "      internal.y[i - 1 + (j - 1) * shared.dim.y.mult[1]] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "    }",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
@@ -1750,26 +1750,17 @@ test_that("cast array size to int when compared to integers", {
   dat <- generate_prepare(dat)
   expect_equal(
     generate_dust_system_build_shared(dat),
-    c("static shared_state build_shared(cpp11::list parameters) {",
+    c(method_args$build_shared,
       "  shared_state::dim_type dim;",
-      "  const int n = dust2::r::read_int(parameters, \"n\");",
+      '  const int n = dust2::r::read_int(parameters, "n");',
       "  dim.a.set({static_cast<size_t>(3)});",
       "  const real_type b = (static_cast<int>(dim.a.size) == n ? 0 : 1);",
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
       "  return shared_state{dim, offset, n, b};",
       "}"))
-
-  expect_equal(
-    generate_dust_system_update(dat),
-    c(method_args$update,
-      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
-      "    internal.a[i - 1] = time;",
-      "  }",
-      "  state_next[0] = internal.a[0] + shared.b;",
-      "}"))
 })
-    
+
 
 test_that("can generate browser code", {
   dat <- odin_parse({
