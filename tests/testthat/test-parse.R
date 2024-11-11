@@ -478,8 +478,8 @@ test_that("can alias multi-dims with rank > 1", {
     b[, ] <- 2
   })$storage$arrays
 
-  a <- which(arrays$name == "a")
-  b <- which(arrays$name == "b")
+  a <- arrays$name == "a"
+  b <- arrays$name == "b"
   expect_equal(arrays$alias[b], "a")
   expect_equal(arrays$rank[b], arrays$rank[a])
 })
@@ -509,8 +509,8 @@ test_that("alias dim with ranked parameter", {
       b <- parameter()
     })$storage$arrays
 
-  a <- which(arrays$name == "a")
-  b <- which(arrays$name == "b")
+  a <- arrays$name == "a"
+  b <- arrays$name == "b"
   expect_equal(arrays$alias[b], "a")
   expect_equal(arrays$rank[a], 2)
   expect_equal(arrays$rank[b], 2)

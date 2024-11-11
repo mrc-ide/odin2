@@ -177,7 +177,7 @@ where `y` is defined to be a 1-dimensional array of length 10 and `ay` is a matr
 If you have different arrays with the same dimensons, you can also use `dim()` on the right-hand side, to copy from an array you have set the dimensions of elsewhere. For example:-
 
 ```r
-dim(x1) <- c(5,3,2)
+dim(x1) <- c(5, 3, 2)
 dim(x2) <- dim(x1)
 dim(x3) <- dim(x1)
 ```
