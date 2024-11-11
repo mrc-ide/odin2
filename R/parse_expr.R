@@ -301,7 +301,6 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
     }
     return(list(type = "dim",
                 is_user_sized = FALSE,
-                is_dependent_dim = TRUE,
                 value = rhs,
                 depends = list(
                   functions = character(0),

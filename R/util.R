@@ -145,10 +145,6 @@ expr_sum <- function(x) {
 
 
 expr_prod <- function(x) {
-  if (rlang::is_call(x, "dim")) {
-    return(NA_integer_)
-  }
-
   times <- monty::monty_differentiation()$maths$times
   ret <- 1
   for (el in x) {

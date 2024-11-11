@@ -182,10 +182,10 @@ test_that("can parse systems that involve arrays in internal", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
-               alias = "a",
                rank = 1,
                dims = I(list(list(2))),
-               size = I(list(2))))
+               size = I(list(2)),
+               alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", type = "range",
@@ -205,10 +205,10 @@ test_that("can parse systems that involve arrays in shared", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
-               alias = "a",
                rank = 1,
                dims = I(list(list(3))),
-               size = I(list(3))))
+               size = I(list(3)),
+               alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", type = "range",
@@ -228,10 +228,10 @@ test_that("pack system entirely composed of arrays", {
   expect_equal(
     d$storage$packing$state,
     data_frame(name = c("x", "y"),
-               alias = c("x", "y"),
                rank = 1,
                dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
+               alias = c("x", "y"),
                offset = I(list(0, 2))))
 })
 

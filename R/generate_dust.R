@@ -116,7 +116,7 @@ generate_dust_system_shared_state <- function(dat) {
   }
 
   not_aliased <- dat$storage$arrays$alias == dat$storage$arrays$name
-  if (nrow(dat$storage$arrays[not_aliased, ]) > 0) {
+  if (any(not_aliased)) {
     dims <- c(
       "struct dim_type {",
       sprintf("  dust2::array::dimensions<%d> %s;",

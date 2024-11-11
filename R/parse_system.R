@@ -133,17 +133,20 @@ parse_system_overall <- function(exprs, call) {
 
   dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
   names <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
+  sizes <- lapply(dims, function(x) {
+    if (rlang::is_call(x, "dim")) {
+      1
+    } else {
+      expr_prod(x)
+    }
+  })
   arrays <- resolve_array_references(data_frame(
     name = names,
-    alias = names,
     rank = lengths(dims),
     dims = I(dims),
-    size = I(lapply(dims, expr_prod))))
+    size = I(sizes)))
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
-  ## This now means that our parameters are no longer the source of
-  ## truth.
-
   data <- data_frame(
     name = vcapply(exprs[is_data], function(x) x$lhs$name))
 
@@ -244,6 +247,7 @@ resolve_array_references <- function(arrays) {
     return(list(rank = d$rank[i], alias = d$name[i]))
   }
 
+  arrays$alias <- arrays$name
   is_ref <- vlapply(arrays$dims, rlang::is_call, "dim")
 
   for (i in which(is_ref)) {
