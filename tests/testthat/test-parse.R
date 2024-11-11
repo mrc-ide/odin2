@@ -184,7 +184,8 @@ test_that("can parse systems that involve arrays in internal", {
     data_frame(name = "a",
                rank = 1,
                dims = I(list(list(2))),
-               size = I(list(2))))
+               size = I(list(2)),
+               alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", type = "range",
@@ -206,7 +207,8 @@ test_that("can parse systems that involve arrays in shared", {
     data_frame(name = "a",
                rank = 1,
                dims = I(list(list(3))),
-               size = I(list(3))))
+               size = I(list(3)),
+               alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
     list(list(name = "i", type = "range",
@@ -229,6 +231,7 @@ test_that("pack system entirely composed of arrays", {
                rank = 1,
                dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
+               alias = c("x", "y"),
                offset = I(list(0, 2))))
 })
 
@@ -247,6 +250,7 @@ test_that("pack system of mixed arrays and scalars", {
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
                size = I(list(2, 1)),
+               alias = c("x", "y"),
                offset = I(list(0, 2))))
 })
 
@@ -428,6 +432,88 @@ test_that("only arrays can be duplicated", {
       a <- 2
     }),
     "Only arrays can be assigned over multiple statements, but 'a' is")
+})
+
+
+test_that("can make dims_b alias of dims_a", {
+  arrays <- odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- 1
+      dim(b) <- dim(a)
+      a[] <- 1
+      b[] <- 2
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
+})
+
+
+test_that("can do transitive alias", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b) + sum(c)
+    initial(x) <- 0
+    dim(a) <- 1
+    dim(c) <- dim(b)
+    dim(b) <- dim(a)
+    a[] <- 1
+    b[] <- 2
+    c[] <- 3
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_equal(arrays$alias[arrays$name == "c"], "a")
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
+})
+
+
+test_that("can alias multi-dims with rank > 1", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a) <- c(2, 2)
+    dim(b) <- dim(a)
+    a[, ] <- 1
+    b[, ] <- 2
+  })$storage$arrays
+
+  a <- arrays$name == "a"
+  b <- arrays$name == "b"
+  expect_equal(arrays$alias[b], "a")
+  expect_equal(arrays$rank[b], arrays$rank[a])
+})
+
+
+test_that("can't alias dims circularly", {
+  expect_error(
+    odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- dim(b)
+      dim(b) <- dim(a)
+      a[] <- 1
+      b[] <- 2
+    }),
+    "Cyclic dependency detected")
+})
+
+
+test_that("alias dim with ranked parameter", {
+  arrays <- odin_parse({
+      update(x) <- sum(a) + sum(b)
+      initial(x) <- 0
+      dim(a) <- parameter(rank = 2)
+      dim(b) <- dim(a)
+      a <- parameter()
+      b <- parameter()
+    })$storage$arrays
+
+  a <- arrays$name == "a"
+  b <- arrays$name == "b"
+  expect_equal(arrays$alias[b], "a")
+  expect_equal(arrays$rank[a], 2)
+  expect_equal(arrays$rank[b], 2)
 })
 
 

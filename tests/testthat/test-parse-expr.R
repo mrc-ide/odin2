@@ -498,6 +498,14 @@ test_that("require that rank argument is missing generally for parameters", {
 })
 
 
+test_that("require that dim argument rhs is array name", {
+  expect_error(
+    parse_expr(quote(dim(a) <- dim(b[])), NULL, NULL),
+    "When using 'dim()' on the right-hand-side, it takes only an array name",
+    fixed = TRUE)
+})
+
+
 test_that("helpful error message on misspelt special function", {
   err <- expect_error(
     parse_expr(quote(udate(x) <- 1), NULL, NULL),

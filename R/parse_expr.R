@@ -244,12 +244,40 @@ parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
 
 
 parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
+  throw_no_stochastic <- function() {
+    odin_parse_error(
+      "Array extent cannot be stochastic",
+      "E1039", src, call)
+  }
+
+  throw_cant_determine_extent <- function() {
+    odin_parse_error(
+      "Array extent cannot be determined by time",
+      "E1040", src, call)
+  }
+
+  throw_invalid_rhs_dim <- function(err) {
+    odin_parse_error(
+      "Invalid function{?s} used on rhs of 'dim()': {squote(err)}",
+      "E1043", src, call)
+  }
+
+  throw_rank_needed <- function() {
+    odin_parse_error(
+      "When using 'dim() <- parameter(...)', a 'rank' argument is required",
+      "E1056", src, call)
+  }
+
+  throw_bad_dim_arg <- function() {
+    odin_parse_error(
+      "When using 'dim()' on the right-hand-side, it takes only an array name",
+      "E1066", src, call)
+  }
+
   is_user_sized <- rlang::is_call(rhs, "parameter")
   if (is_user_sized) {
     if (is.null(rhs$rank)) {
-      odin_parse_error(
-        "When using 'dim() <- parameter(...)', a 'rank' argument is required",
-        "E1056", src, call)
+      throw_rank_needed()
     }
     value <- vector("list", rhs$rank)
   } else if (rlang::is_call(rhs, "c")) {
@@ -261,22 +289,27 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   is_stochastic <- any(
     depends$functions %in% monty::monty_dsl_distributions()$name)
   if (is_stochastic) {
-    odin_parse_error(
-      "Array extent cannot be stochastic",
-      "E1039", src, call)
+    throw_no_stochastic()
   }
   if ("time" %in% depends$variables) {
-    odin_parse_error(
-      "Array extent cannot be determined by time",
-      "E1040", src, call)
+    throw_cant_determine_extent()
   }
-  ## See parse_expr_check_lhs_index, which has similar restrictions
+
+  if (rlang::is_call(rhs, "dim")) {
+    if (!is.symbol(rhs[[2]])) {
+      throw_bad_dim_arg()
+    }
+    return(list(type = "dim",
+                is_user_sized = FALSE,
+                value = rhs,
+                depends = list(
+                  functions = character(0),
+                  variables = deparse(rhs[[2]]))))
+  }
   allowed <- c("+", "-", "(", "length", "nrow", "ncol")
   err <- setdiff(depends$functions, allowed)
   if (length(err) > 0) {
-    odin_parse_error(
-      "Invalid function{?s} used on rhs of 'dim()': {squote(err)}",
-      "E1043", src, call)
+    throw_invalid_rhs_dim(err)
   }
   list(type = "dim",
        is_user_sized = is_user_sized,

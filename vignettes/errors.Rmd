@@ -818,6 +818,24 @@ Example assignment that would throw this error
 a <- parameter(min = 10, max = 0)
 ```
 
+# `E1066`
+
+The `dim` function when used on the right hand side only takes the name of an array whose dimensions are to be copied. For example:
+
+```
+dim(b) <- dim(a)
+dim(c) <- dim(b)
+```
+
+are both valid, resulting in both `b` and `c` having the same dimensions as `a`. Below, however, are all incorrect:
+
+```
+dim(a) <- dim(1)
+dim(a) <- dim(b[])
+dim(a) <- dim(a * 2)
+dim(a) <- dim(a + 5)
+```
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
