@@ -182,7 +182,7 @@ test_that("can parse systems that involve arrays in internal", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
-               alias = NA_character_,
+               alias = "a",
                rank = 1,
                dims = I(list(list(2))),
                size = I(list(2))))
@@ -205,7 +205,7 @@ test_that("can parse systems that involve arrays in shared", {
   expect_equal(
     d$storage$arrays,
     data_frame(name = "a",
-               alias = NA_character_,
+               alias = "a",
                rank = 1,
                dims = I(list(list(3))),
                size = I(list(3))))
@@ -228,7 +228,7 @@ test_that("pack system entirely composed of arrays", {
   expect_equal(
     d$storage$packing$state,
     data_frame(name = c("x", "y"),
-               alias = c(NA_character_, NA_character_),
+               alias = c("x", "y"),
                rank = 1,
                dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
@@ -250,7 +250,7 @@ test_that("pack system of mixed arrays and scalars", {
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
                size = I(list(2, 1)),
-               alias = c(NA_character_, NA_character_),
+               alias = c("x", "y"),
                offset = I(list(0, 2))))
 })
 
@@ -446,7 +446,7 @@ test_that("can make dims_b alias of dims_a", {
   })$storage$arrays
 
   expect_equal(arrays$alias[arrays$name == "b"], "a")
-  expect_true(is.na(arrays$alias[arrays$name == "a"]))
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
 })
 
 
@@ -464,7 +464,7 @@ test_that("can do transitive alias", {
 
   expect_equal(arrays$alias[arrays$name == "b"], "a")
   expect_equal(arrays$alias[arrays$name == "c"], "a")
-  expect_true(is.na(arrays$alias[arrays$name == "a"]))
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
 })
 
 

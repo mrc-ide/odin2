@@ -132,9 +132,10 @@ parse_system_overall <- function(exprs, call) {
   }
 
   dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
+  names <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
   arrays <- resolve_array_references(data_frame(
-    name = vcapply(exprs[is_dim], function(x) x$lhs$name_data),
-    alias = rep(NA_character_, length(dims)),
+    name = names,
+    alias = names,
     rank = lengths(dims),
     dims = I(dims),
     size = I(lapply(dims, expr_prod))))
@@ -672,7 +673,7 @@ parse_packing <- function(names, arrays, no_reorder, type) {
     packing_scalar <- data_frame(
       name = scalar, rank = 0, dims = I(vector("list", length(scalar))),
       size = I(rep(list(1), length(scalar))),
-      alias = NA)
+      alias = scalar)
     packing <- rbind(packing_scalar, arrays)
   } else {
     packing <- arrays

@@ -115,7 +115,7 @@ generate_dust_system_shared_state <- function(dat) {
       })
   }
 
-  not_aliased <- is.na(dat$storage$arrays$alias)
+  not_aliased <- dat$storage$arrays$alias == dat$storage$arrays$name
   if (nrow(dat$storage$arrays[not_aliased, ]) > 0) {
     dims <- c(
       "struct dim_type {",
@@ -697,7 +697,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
-    if (!is.na(dat$storage$arrays$alias[i])) {
+    if (dat$storage$array$name[i] != dat$storage$arrays$alias[i]) {
       return(NULL)
     }
     rank <- dat$storage$arrays$rank[[i]]

@@ -1,10 +1,3 @@
-unalias_array <- function(name, dat) {
-  if (!is.na(dat$alias[[name]])) {
-    name <- dat$alias[[name]]
-  }
-  name
-}
-
 generate_dust_sexp <- function(expr, dat, options = list()) {
   if (is.recursive(expr)) {
     is_stochastic_call <- rlang::is_call(expr[[1]], "OdinStochasticCall")
@@ -21,7 +14,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      name <- unalias_array(expr[[2]], dat)
+      name <- dat$alias[[expr[[2]]]]
       if (dat$rank[[name]] == 1) {
         return(sprintf("%s%s.size", dim, name))
       } else {
@@ -29,10 +22,10 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       }
     } else if (fn == "OdinLength") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      return(sprintf("%s%s.size", dim, unalias_array(expr[[2]], dat)))
+      return(sprintf("%s%s.size", dim, dat$alias[[expr[[2]]]]))
     } else if (fn == "OdinMult") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      return(sprintf("%s%s.mult[%d]", dim, unalias_array(expr[[2]], dat),
+      return(sprintf("%s%s.mult[%d]", dim, dat$alias[[expr[[2]]]],
                      expr[[3]] - 1))
     } else if (fn == "OdinOffset") {
       where <- expr[[2]]
@@ -234,7 +227,7 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   index <- expr$index
   dim <- paste0(
     if (isFALSE(options$shared_exists)) "dim." else "shared.dim.",
-    unalias_array(target, dat))
+    dat$alias[[target]])
   stopifnot(fn %in% c("sum", "prod", "min", "max"))
   if (is.null(index)) {
     sprintf("dust2::array::%s<real_type>(%s, %s)", fn, target_str, dim)
