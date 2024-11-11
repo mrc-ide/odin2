@@ -697,7 +697,7 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$special, "dim")) {
     i <- match(eq$lhs$name_data, dat$storage$arrays$name)
-    if (dat$storage$array$name[i] != dat$storage$arrays$alias[i]) {
+    if (dat$storage$arrays$name[i] != dat$storage$arrays$alias[i]) {
       return(NULL)
     }
     rank <- dat$storage$arrays$rank[[i]]
