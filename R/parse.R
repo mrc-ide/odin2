@@ -27,6 +27,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
                        system$data, phases, call)
   browser <- parse_browser(system$exprs$browser, system$time, system$variables,
                            system$data, phases, call)
+  src <- lapply(exprs, "[[", "src")
 
   ret <- list(time = system$time,
               class = "odin",
@@ -39,11 +40,12 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               zero_every = zero_every,
               print = print,
               browser = browser,
-              data = system$data)
+              data = system$data,
+              src = src)
 
   parse_check_usage(ret, call)
+  parse_array_bounds(ret, call)
   ret <- parse_adjoint(ret)
-
   ret
 }
 
