@@ -19,7 +19,7 @@ Imports:
     cli,
     dust2 (>= 0.2.1),
     glue,
-    monty (>= 0.2.29),
+    monty (>= 0.2.39),
     rlang
 Suggests:
     decor,
