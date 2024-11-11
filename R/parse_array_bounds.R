@@ -22,12 +22,14 @@ parse_array_bounds <- function(dat, call) {
   ## all over the show, and we can collect these together.
   res <- constraint_finalise(rlang::inject(rbind(!!!unname(res))))
 
-  ## Finally, dedup on constraint and collapse do most restrictive per
-  ## parameter (lhs) then compare against min/max in code; in the next
-  ## PR on this.
-
-  ## We should also report back on accesses not proven, but that also
-  ## can wait as it should be possible to action or silence these all.
+  ## We might be able to remove some parameter constraints by looking
+  ## at the min values that they take (if given).  We should also
+  ## report back on accesses not proven, but that also can wait as it
+  ## should be possible to action or silence these all.
+  ##
+  ## Some of these from sircovid/lancelot are really quite hard, so
+  ## this stage is nontrivial
+  NULL
 }
 
 
@@ -279,6 +281,8 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
       } else {
         stop("[odin bug] Unexpected equation type during simplification")
       }
+    } else if (rlang::is_call(x, c("as.numeric", "as.integer"))) {
+      simplify(x[[2]])
     } else if (rlang::is_call(x, "OdinDim")) {
       nm <- x[[2]]
       i <- x[[3]]
@@ -331,7 +335,10 @@ constraint_finalise <- function(constraints) {
 
   i <- !is.na(constraints$parameter)
   if (any(i)) {
-    dat <- lapply(split(constraints[i], constraints[i]$parameter), function(d) {
+    ## Split by parameter, and sum all numeric constraints over
+    ## parameter
+    dat <- split(constraints[i, ], constraints$parameter[i])
+    dat <- lapply(dat, function(d) {
       v <- vnapply(d$constraint, function(expr) {
         if (rlang::is_scalar_integerish(expr[[3]])) expr[[3]] else NA_real_
       })

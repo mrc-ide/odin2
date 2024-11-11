@@ -137,6 +137,11 @@ test_that("can simplify constraints", {
                              arrays, equations, variables),
     3)
 
+  expect_equal(
+    constraint_simplify_expr(quote(as.integer(1) + 2),
+                             arrays, equations, variables),
+    3)
+
   ## We have reached the bounds of knowledge here:
   expect_equal(
     constraint_simplify_expr(quote(p + 1), arrays, equations, variables),
