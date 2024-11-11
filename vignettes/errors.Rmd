@@ -46,6 +46,7 @@ The error numbers are arbitrary after the first digit.  The first digit will cor
 * `E0xxx` - general errors
 * `E1xxx` - errors during parsing of individual expressions
 * `E2xxx` - errors when considering the system as a whole
+* `E3xxx` - errors when during the analysis phase, after validating the code
 
 When an error is thrown you will be directed here, for example:
 
