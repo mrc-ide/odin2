@@ -561,6 +561,7 @@ test_that("alias dim with ranked parameter", {
 })
 
 
+
 test_that("don't confuse compare statements for arrays (mrc-5866)", {
   dat <- odin_parse({
     a ~ Normal(0, 1)
@@ -571,6 +572,33 @@ test_that("don't confuse compare statements for arrays (mrc-5866)", {
     b <- data()
   })
   expect_length(dat$phases$compare$compare, 2)
+})
+
+
+test_that("Multiple dims on a line", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b)
+    initial(x) <- 0
+    dim(a, b) <- 1
+    a[] <- 1
+    b[] <- 2
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
+
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b) + sum(c)
+    initial(x) <- 0
+    dim(c, a, b) <- 1
+    a[] <- 1
+    b[] <- 2
+    c[] <- 3
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "b"], "c")
+  expect_equal(arrays$alias[arrays$name == "a"], "c")
+  expect_equal(arrays$alias[arrays$name == "c"], "c")
 })
 
 

@@ -131,17 +131,35 @@ parse_system_overall <- function(exprs, call) {
     output <- NULL
   }
 
-  dims <- lapply(exprs[is_dim], function(x) x$rhs$value)
-  names <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
-  sizes <- lapply(dims, function(x) {
-    if (rlang::is_call(x, "dim")) {
-      1
+  dims <- list()
+  names <- list()
+  sizes <- list()
+  n <- 1
+  for (i in which(is_dim)) {
+    expr <- exprs[[i]]
+    names_i <- c(expr$lhs$name_data, unlist(lapply(expr$lhs$args, deparse)))
+    dims_i <- expr$rhs$value
+    if (rlang::is_call(dims_i, "dim")) {
+      size_i <- 1
     } else {
-      expr_prod(x)
+      size_i <- expr_prod(dims_i)
+      if (is.null(size_i)) {
+        size_i <- list(NULL)
+      }
     }
-  })
+
+    first_dim <- str2lang(sprintf("dim(%s)", expr$lhs$name_data))
+
+    for (j in seq_along(names_i)) {
+      dims[[n]] <- if (j == 1) dims_i else first_dim
+      names[[n]] <- names_i[j]
+      sizes[[n]] <- size_i
+      n <- n + 1
+    }
+  }
+
   arrays <- resolve_array_references(data_frame(
-    name = names,
+    name = unlist(names),
     rank = lengths(dims),
     dims = I(dims),
     size = I(sizes)))
@@ -561,11 +579,14 @@ parse_system_arrays <- function(exprs, call) {
   is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
 
   dim_nms <- vcapply(exprs[is_dim], function(x) x$lhs$name_data)
+  more_dim_nms <- unlist(lapply(exprs[is_dim], function(x)
+                                unlist(lapply(x$lhs$args, deparse))))
 
   ## First, look for any array calls that do not have a corresponding
   ## dim()
   is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
-  err <- !vlapply(exprs[is_array], function(x) x$lhs$name %in% dim_nms)
+  err <- !vlapply(exprs[is_array],
+                  function(x) x$lhs$name %in% c(dim_nms, more_dim_nms))
   if (any(err)) {
     src <- exprs[is_array][err]
     err_nms <- unique(vcapply(src, function(x) x$lhs$name))
@@ -578,7 +599,7 @@ parse_system_arrays <- function(exprs, call) {
   ## Next, we collect up any subexpressions, in order, for all arrays,
   ## and make sure that we are always assigned as an array.
   nms <- vcapply(exprs, function(x) x$lhs$name %||% "") # empty for compare...
-  for (nm in dim_nms) {
+  for (nm in c(dim_nms, more_dim_nms)) {
     i <- nms == nm & !is_dim
     err <- vlapply(exprs[i], function(x) {
       is.null(x$lhs$array) && !identical(x$special, "parameter")
@@ -599,6 +620,14 @@ parse_system_arrays <- function(exprs, call) {
   name_dim_equation <- set_names(
     vcapply(exprs[is_dim], function(eq) eq$lhs$name),
     dim_nms)
+
+  for (i in which(is_dim)) {
+    x <- exprs[[i]]
+    extra_dims <- unlist(lapply(x$lhs$args, deparse))
+    for (d in extra_dims) {
+      name_dim_equation[[d]] <- odin_dim_name(d)
+    }
+  }
 
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {

@@ -987,6 +987,102 @@ test_that("can generate system with aliased array", {
       "}"))
 })
 
+test_that("can generate system with aliased arrays dimmed together", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- x + a[1] + b[1]
+    dim(a, b) <- 1
+    a[] <- 1
+    b[] <- 2
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> a;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> b;",
+      "  std::vector<real_type> a;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.a.set({static_cast<size_t>(1)});",
+      "  std::vector<real_type> b(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    b[i - 1] = 2;",
+      "  }",
+      "  std::vector<real_type> a(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    a[i - 1] = 1;",
+      "  }",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, b, a};",
+      "}"))
+})
+
+
+test_that("can generate system with 2 aliased arrays dimmed together", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    update(x) <- x + a[1] + b[1] + c[1]
+    dim(c, a, b) <- 1
+    a[] <- 1
+    b[] <- 2
+    c[] <- 3
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct dim_type {",
+      "    dust2::array::dimensions<1> c;",
+      "  } dim;",
+      "  struct offset_type {",
+      "    struct {",
+      "      size_t x;",
+      "    } state;",
+      "  } offset;",
+      "  std::vector<real_type> a;",
+      "  std::vector<real_type> b;",
+      "  std::vector<real_type> c;",
+      "};"))
+
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  dim.c.set({static_cast<size_t>(1)});",
+      "  std::vector<real_type> a(dim.c.size);",
+      "  for (size_t i = 1; i <= dim.c.size; ++i) {",
+      "    a[i - 1] = 1;",
+      "  }",
+      "  std::vector<real_type> b(dim.c.size);",
+      "  for (size_t i = 1; i <= dim.c.size; ++i) {",
+      "    b[i - 1] = 2;",
+      "  }",
+      "  std::vector<real_type> c(dim.c.size);",
+      "  for (size_t i = 1; i <= dim.c.size; ++i) {",
+      "    c[i - 1] = 3;",
+      "  }",
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, a, b, c};",
+      "}"))
+})
+
+
 
 test_that("can generate system with length and sum of aliased array", {
   dat <- odin_parse({

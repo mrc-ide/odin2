@@ -133,7 +133,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     update = function(name) NULL,
     deriv = function(name) NULL,
     output = function(name) NULL,
-    dim = function(name) NULL,
+    dim = function(name, ...) NULL,
     config = function(name) NULL)
 
   args <- NULL
