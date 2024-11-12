@@ -600,6 +600,19 @@ test_that("Multiple dims on a line", {
   expect_equal(arrays$alias[arrays$name == "c"], "c")
 })
 
+test_that("Spot duplicate dims in multi-lhs dim", {
+  expect_error(
+    odin_parse({
+      update(x) <- sum(a) + sum(b) + sum(c)
+      initial(x) <- 0
+      dim(a, b, c) <- 1
+      dim(c) <- 2
+      a[] <- 1
+      b[] <- 2
+      c[] <- 3
+    }), "The variable c was given dimensions multiple")
+ })
+
 
 test_that("Multiple dims on a line with alias...", {
   arrays <- odin_parse({

@@ -67,6 +67,12 @@ parse_system_overall <- function(exprs, call) {
       "E2014", src, call)
   }
 
+  throw_duplicate_dim <- function(name, places) {
+    odin_parse_error(
+      paste("The variable {name} was given dimensions multiple times."),
+      "E2021", places, call)
+  }
+
   special <- vcapply(exprs, function(x) x$special %||% "")
   is_update <- special == "update"
   is_deriv <- special == "deriv"
@@ -163,6 +169,18 @@ parse_system_overall <- function(exprs, call) {
     rank = lengths(dims),
     dims = I(dims),
     size = I(sizes)))
+
+  if (any(duplicated(arrays$name))) {
+    dup_dim <- unique(arrays$name[duplicated(arrays$name)])[1]
+    lines <- vlapply(exprs, function(x) {
+      isTRUE(x$special == "dim" &
+             dup_dim %in% c(x$lhs$name_data,
+                            unlist(lapply(x$lhs$args, deparse))))
+    })
+    srcs <- lapply(exprs[lines], "[[", "src")
+    #eqs <- vcapply(which(lines), function(i) deparse(exprs[[i]]$src$value))
+    throw_duplicate_dim(dup_dim, srcs)
+  }
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
   data <- data_frame(
@@ -284,7 +302,7 @@ resolve_array_references <- function(arrays) {
   #   dim(a) <- 1
   #   dim(b, c) <- dim(a)
   # At this point, dim(c) will be aliased to dim(b), not dim(a),
-  # so find aliases that actually point to other aliases, and 
+  # so find aliases that actually point to other aliases, and
   # resolve them to something that is not an alias.
 
   not_aliased <- arrays$name[arrays$name == arrays$alias]
