@@ -601,6 +601,23 @@ test_that("Multiple dims on a line", {
 })
 
 
+test_that("Multiple dims on a line with alias...", {
+  arrays <- odin_parse({
+    update(x) <- sum(a) + sum(b) + sum(c)
+    initial(x) <- 0
+    dim(a) <- 1
+    dim(b, c) <- dim(a)
+    a[] <- 1
+    b[] <- 2
+    c[] <- 3
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "a"], "a")
+  expect_equal(arrays$alias[arrays$name == "b"], "a")
+  expect_equal(arrays$alias[arrays$name == "c"], "a")
+})
+
+
 test_that("multline array equations must be contiguous", {
   expect_error(
     odin_parse({

@@ -279,6 +279,21 @@ resolve_array_references <- function(arrays) {
       arrays$alias[i] <- res$alias
     }
   }
+
+  # Resolve case where
+  # dim(a) <- 1
+  # dim(b, c) <- dim(a)
+  # - here, c will be aliased to b, not a.
+
+  not_aliased <- arrays$name[arrays$name == arrays$alias]
+  while (TRUE) {
+    wrong <- arrays$name != arrays$alias & !(arrays$alias %in%  not_aliased)
+    if (!any(wrong)) {
+      break
+    }
+    arrays$alias[wrong] <- arrays$alias[arrays$name == arrays$alias[wrong]]
+  }
+
   arrays
 }
 
