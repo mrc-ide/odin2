@@ -174,13 +174,22 @@ dim(ay) <- c(nr, nc)
 
 where `y` is defined to be a 1-dimensional array of length 10 and `ay` is a matrix (2-dimensional array) with `nr` rows and `nc` columns.  The extents of arrays must be determined at the **first** system initialisation, and this is checked during parse.
 
-If you have different arrays with the same dimensons, you can also use `dim()` on the right-hand side, to copy from an array you have set the dimensions of elsewhere. For example:-
+If you have different arrays with the same dimensions, you can also use `dim()` on the right-hand side, to copy from an array you have set the dimensions of elsewhere. For example:-
 
 ```r
 dim(x1) <- c(5, 3, 2)
 dim(x2) <- dim(x1)
 dim(x3) <- dim(x1)
 ```
+
+You can also combine arrays on the left-hand side to group arrays with
+the same dimensions together. These 5 arrays will all have the same dimensions:-
+
+```r
+dim(x, y) <- c(5, 3, 2)
+dim(a, b, c) <- dim(x)
+```
+
 
 ## Special functions for arrays
 
