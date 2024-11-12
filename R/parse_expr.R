@@ -217,8 +217,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 
 parse_expr_assignment_rhs <- function(rhs, src, call) {
   if (rlang::is_call(rhs, "delay")) {
-    odin_parse_error("'delay()' is not implemented yet",
-                     "E0001", src, call)
+    parse_expr_assignment_rhs_delay(rhs, src, call)
   } else if (rlang::is_call(rhs, "parameter")) {
     parse_expr_assignment_rhs_parameter(rhs, src, call)
   } else if (rlang::is_call(rhs, "data")) {
@@ -594,6 +593,41 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
   list(type = "interpolate",
        expr = expr,
        depends = depends)
+}
+
+
+parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
+  result <- match_call(rhs, function(what, by) NULL)
+  if (!result$success) {
+    odin_parse_error(c("Invalid call to 'delay()'",
+                       x = conditionMessage(result$error)),
+                     "E1999", src, call)
+  }
+  is_missing <- vlapply(result$value, rlang::is_missing)
+  if (any(is_missing)) {
+    msg <- names(result$value)[is_missing]
+    odin_parse_error(c("Invalid call to 'delay()'",
+                       x = "Missing argument{?s} {squote(msg)}"),
+                     "E1999", src, call)
+  }
+
+  what <- result$value$what
+  if (!rlang::is_symbol(what)) {
+    odin_parse_error(
+      "Expected 'what' argument to 'delay()' to be a symbol",
+      "E1999", src, call)
+  }
+  what <- as.character(what)
+  by <- result$value$by
+  if (!rlang::is_symbol(by)) {
+    odin_parse_error(
+      "Expected 'by' argument to 'delay()' to be a number or symbol",
+      "E1999", src, call)
+  }
+
+  list(type = "delay",
+       expr = call("OdinDelay", what = what, by = by),
+       depends = list(functions = character(), variables = character()))
 }
 
 
