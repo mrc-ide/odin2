@@ -304,7 +304,7 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
                 value = rhs,
                 depends = list(
                   functions = character(0),
-                  variables = deparse(rhs[[2]]))))
+                  variables = depends$variables)))
   }
   allowed <- c("+", "-", "(", "length", "nrow", "ncol")
   err <- setdiff(depends$functions, allowed)

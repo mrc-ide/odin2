@@ -990,7 +990,7 @@ test_that("can generate system with aliased array", {
 
 test_that("can generate system with length and sum of aliased array", {
   dat <- odin_parse({
-    update(x) <- sb + lb
+    update(x) <- sb + lb + a[1]
     initial(x) <- 0
     dim(a) <- 5
     dim(b) <- dim(a)

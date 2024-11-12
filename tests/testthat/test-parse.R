@@ -450,6 +450,50 @@ test_that("can make dims_b alias of dims_a", {
 })
 
 
+test_that("can make dims_b alias of dims_a all with arrays", {
+  # See gh-issue 108
+  arrays <- odin_parse({
+    update(x[]) <- x[i] + a
+    initial(x[]) <- x0[i]
+    dim(x) <- n_x
+    dim(x0) <- dim(x)
+    x0 <- parameter()
+    n_x <- parameter()
+    a <- parameter()
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "x"], "x")
+  expect_equal(arrays$alias[arrays$name == "x0"], "x")
+
+  arrays <- odin_parse({
+    update(x[]) <- x[i] + a
+    initial(x[]) <- x0[i]
+
+    dim(x) <- dim(x0)
+    dim(x0) <- n_x
+    x0 <- parameter()
+    n_x <- parameter()
+    a <- parameter()
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "x"], "x0")
+  expect_equal(arrays$alias[arrays$name == "x0"], "x0")
+
+  arrays <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- sum(s)
+    s[] <- Normal(0, 1)
+    dim(x) <- 5
+    dim(s) <- dim(x)
+  })$storage$arrays
+
+  expect_equal(arrays$alias[arrays$name == "x"], "x")
+  expect_equal(arrays$alias[arrays$name == "s"], "x")
+
+})
+
+
+
 test_that("can do transitive alias", {
   arrays <- odin_parse({
     update(x) <- sum(a) + sum(b) + sum(c)
