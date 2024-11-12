@@ -281,9 +281,11 @@ resolve_array_references <- function(arrays) {
   }
 
   # Resolve case where
-  # dim(a) <- 1
-  # dim(b, c) <- dim(a)
-  # - here, c will be aliased to b, not a.
+  #   dim(a) <- 1
+  #   dim(b, c) <- dim(a)
+  # At this point, dim(c) will be aliased to dim(b), not dim(a),
+  # so find aliases that actually point to other aliases, and 
+  # resolve them to something that is not an alias.
 
   not_aliased <- arrays$name[arrays$name == arrays$alias]
   while (TRUE) {
