@@ -164,14 +164,9 @@ parse_system_overall <- function(exprs, call) {
     }
   }
 
-  arrays <- resolve_array_references(data_frame(
-    name = unlist(names),
-    rank = lengths(dims),
-    dims = I(dims),
-    size = I(sizes)))
-
-  if (any(duplicated(arrays$name))) {
-    dup_dim <- unique(arrays$name[duplicated(arrays$name)])[1]
+  names <- unlist(names)
+  if (any(duplicated(names))) {
+    dup_dim <- unique(names[duplicated(names)])[1]
     lines <- vlapply(exprs, function(x) {
       isTRUE(x$special == "dim" &
              dup_dim %in% c(x$lhs$name_data,
@@ -180,6 +175,12 @@ parse_system_overall <- function(exprs, call) {
     srcs <- lapply(exprs[lines], "[[", "src")
     throw_duplicate_dim(dup_dim, srcs)
   }
+
+  arrays <- resolve_array_references(data_frame(
+    name = names,
+    rank = lengths(dims),
+    dims = I(dims),
+    size = I(sizes)))
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
   data <- data_frame(
