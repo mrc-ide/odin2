@@ -178,7 +178,6 @@ parse_system_overall <- function(exprs, call) {
                             unlist(lapply(x$lhs$args, deparse))))
     })
     srcs <- lapply(exprs[lines], "[[", "src")
-    #eqs <- vcapply(which(lines), function(i) deparse(exprs[[i]]$src$value))
     throw_duplicate_dim(dup_dim, srcs)
   }
 
