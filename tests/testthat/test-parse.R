@@ -561,7 +561,6 @@ test_that("alias dim with ranked parameter", {
 })
 
 
-
 test_that("don't confuse compare statements for arrays (mrc-5866)", {
   dat <- odin_parse({
     a ~ Normal(0, 1)
