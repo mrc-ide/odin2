@@ -67,10 +67,10 @@ parse_system_overall <- function(exprs, call) {
       "E2014", src, call)
   }
 
-  throw_duplicate_dim <- function(name, places) {
+  throw_duplicate_dim <- function(name, src) {
     odin_parse_error(
       paste("The variable {name} was given dimensions multiple times."),
-      "E2021", places, call)
+      "E2021", src, call)
   }
 
   special <- vcapply(exprs, function(x) x$special %||% "")
