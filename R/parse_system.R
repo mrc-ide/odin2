@@ -40,6 +40,12 @@ parse_system_overall <- function(exprs, call) {
       "E2020", src, call)
   }
 
+  throw_discrete_using_delay <- function(src) {
+    odin_parse_error(
+      "Can't use 'delay()' in discrete time systems",
+      "E2999", src, call)
+  }
+
   throw_invalid_time_arg_interp <- function(nm_time, nm_result, rank_desc,
                                             src) {
     odin_parse_error(
@@ -75,10 +81,11 @@ parse_system_overall <- function(exprs, call) {
   is_compare <- vlapply(exprs, function(x) rlang::is_call(x$src$value, "~"))
   is_data <- special == "data"
   is_dim <- special == "dim"
+  is_delay <- special == "delay"
   is_parameter <- special == "parameter"
   is_print <- special == "print"
   is_browser <- special == "browser"
-  is_equation <- special %in% c("", "parameter", "dim") & !is_compare
+  is_equation <- special %in% c("", "parameter", "dim", "delay") & !is_compare
 
   ## We take initial as the set of variables:
   variables <- unique(vcapply(exprs[is_initial], function(x) x$lhs$name))
@@ -130,6 +137,16 @@ parse_system_overall <- function(exprs, call) {
     variables <- c(variables, output)
   } else {
     output <- NULL
+  }
+
+  if (any(is_delay)) {
+    if (!is_continuous) {
+      src <- lapply(exprs[is_delay], "[[", "src")
+      throw_discrete_using_delay(src)
+    }
+    delays <- vcapply(exprs[is_delay], function(x) x$lhs$name)
+  } else {
+    delays <- NULL
   }
 
   arrays <- build_array_table(exprs[is_dim], call)
@@ -221,6 +238,7 @@ parse_system_overall <- function(exprs, call) {
        parameters = parameters,
        arrays = arrays,
        data = data,
+       delays = delays,
        exprs = exprs)
 }
 

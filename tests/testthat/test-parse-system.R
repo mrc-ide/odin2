@@ -281,6 +281,18 @@ test_that("disallow output() in discrete time models", {
     }),
     "Can't use 'output()' in discrete time systems",
     fixed = TRUE)
+  })
+
+
+test_that("disallow delay() in discrete time models", {
+  expect_error(
+    odin_parse({
+      update(a) <- a + x
+      initial(a) <- 1
+      x <- delay(a, b)
+    }),
+    "Can't use 'delay()' in discrete time systems",
+    fixed = TRUE)
 })
 
 
