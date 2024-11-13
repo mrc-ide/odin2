@@ -1060,3 +1060,30 @@ test_that("don't duplicate offsets when boundary condition used in initial", {
   expect_equal(dat$variables, "x")
   expect_equal(nrow(dat$storage$packing$state), 1)
 })
+
+
+test_that("prevent use of arrays without braces", {
+  err <- expect_error(
+    odin_parse({
+      initial(x[]) <- 0
+      update(x[]) <- b
+      b[] <- x[i]
+      dim(x) <- 5
+      dim(b) <- 5
+    }),
+    "Trying to use vector 'b' without index")
+  expect_match(conditionMessage(err),
+               "Did you mean 'b[...]'", fixed = TRUE)
+
+  err <- expect_error(
+    odin_parse({
+      initial(x[]) <- 0
+      update(x[]) <- b
+      b[, ] <- 1
+      dim(x) <- 5
+      dim(b) <- c(5, 5)
+    }),
+    "Trying to use matrix 'b' without index")
+  expect_match(conditionMessage(err),
+               "Did you mean 'b[., .]'", fixed = TRUE)
+})

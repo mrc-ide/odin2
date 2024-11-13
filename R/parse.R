@@ -184,6 +184,19 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
       "E2019", src, call)
   }
 
+  throw_array_as_scalar <- function(var, rank) {
+    what <- rank_description(rank)
+    if (rank == 1) {
+      dummy_index <- "..."
+    } else {
+      dummy_index <- paste(rep(".", rank), collapse = ", ")
+    }
+    odin_parse_error(
+      c("Trying to use {what} '{var}' without index",
+        i = sprintf("Did you mean '{var}[%s]'", dummy_index)),
+      "E2022", src, call)
+  }
+
   fn_use_whole_array <- c("length", "nrow", "ncol", "OdinReduce",
                           "OdinInterpolate")
 
@@ -232,6 +245,11 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
         }
       } else {
         lapply(expr[-1], check)
+      }
+    } else if (is.symbol(expr)) {
+      nm <- as.character(expr)
+      if (nm %in% dat$storage$arrays$name) {
+        throw_array_as_scalar(nm, dim_ranks[[nm]])
       }
     }
   }
