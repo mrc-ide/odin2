@@ -133,7 +133,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     update = function(name) NULL,
     deriv = function(name) NULL,
     output = function(name) NULL,
-    dim = function(name, ...) NULL,
+    dim = function(...) NULL,
     config = function(name) NULL)
 
   args <- NULL
@@ -153,6 +153,24 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         "E1003", src, call)
     }
 
+    if (special == "dim") {
+      if (length(lhs) < 2) {
+        odin_parse_error(c("Invalid call to dim function; no variables given"),
+                         "E1003", src, call)
+      }
+      lhs <- vcapply(lhs, function(x) {
+        if (!is.symbol(x)) {
+          odin_parse_error("Invalid target '{x}' in dim declaration",
+                           "E1005", src, call)
+        }
+        deparse(x)})[-1]
+
+      return(list(
+        name = lhs[1],
+        names = lhs,
+        special = special))
+    }
+
     lhs <- lhs[[2]]
     if (length(m$value) > 2) {
       args <- as.list(m$value[-(1:2)])
@@ -163,6 +181,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
       }
     }
   }
+
 
   is_array <- rlang::is_call(lhs, "[")
   if (is_array) {
