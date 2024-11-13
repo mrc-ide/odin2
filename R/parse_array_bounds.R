@@ -18,7 +18,7 @@ parse_array_bounds <- function(dat, call) {
 
 
   ## At this point we still have lots of repetition among constraints
-  ## that we will jhave found; it's likely that we will have n <= EXPR
+  ## that we will have found; it's likely that we will have n <= EXPR
   ## all over the show, and we can collect these together.
   res <- constraint_finalise(rlang::inject(rbind(!!!unname(res))))
 
