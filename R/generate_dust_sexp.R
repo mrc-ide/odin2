@@ -190,9 +190,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## now all we need is information on where things are to be found (the
 ## location) but we'll need to cope with variable packing, array
 ## lengths and types soon.
-generate_dust_dat <- function(location, packing, type, arrays, rank, alias) {
-  list(location = location, packing = packing, type = type, arrays = arrays,
-       rank = rank, alias = alias)
+generate_dust_dat <- function(location, packing, type, arrays) {
+  list(location = location, packing = packing, type = type, arrays = arrays)
 }
 
 
