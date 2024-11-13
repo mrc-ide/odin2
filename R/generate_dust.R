@@ -656,11 +656,12 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
+      dim_name <- dat$storage$arrays$alias[i]
       if (isFALSE(options$shared_exists)) {
-        dim <- sprintf("dim.%s", name)
+        dim <- sprintf("dim.%s", dim_name)
         required <- "true"
       } else {
-        dim <- sprintf("shared.dim.%s", name)
+        dim <- sprintf("shared.dim.%s", dim_name)
         required <- "false"
       }
       dest <- generate_dust_sexp(name, dat$sexp_data, options)
