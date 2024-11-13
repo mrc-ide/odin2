@@ -1087,3 +1087,35 @@ test_that("prevent use of arrays without braces", {
   expect_match(conditionMessage(err),
                "Did you mean 'b[., .]'", fixed = TRUE)
 })
+
+
+test_that("can't reference data in print", {
+  expect_error(
+    odin_parse({
+      z <- x + a
+      update(x) <- x + z * 2 + p
+      a <- 1 * b
+      b <- parameter()
+      p <- parameter(constant = TRUE)
+      initial(x) <- 0
+      d <- data()
+      sd <- 1 / d
+      d ~ Normal(x, sd)
+      print("{sd}")
+    }),
+    "Can't yet reference data from 'print()'",
+    fixed = TRUE)
+})
+
+
+test_that("can't use browser twice in the same phase", {
+  expect_error(
+    odin_parse({
+      update(a) <- 1
+      initial(a) <- 0
+      browser("update")
+      browser("update")
+    }),
+    "Multiple calls to 'browser()' in phase 'update'",
+    fixed = TRUE)
+})

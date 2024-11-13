@@ -1108,6 +1108,19 @@ a[] <- b
 
 you would see this error, as you should have used `b[i]` on the right hand side (*probably!*; you might have meant `a[] <- b[1]`, too).
 
+# `E2023`
+
+Multiple calls to `browser()` targetting the same phase.  For example
+
+```r
+a <- time * 2
+browser("update")
+b <- a + 1
+browser("update")
+```
+
+Because the `browser` call is always put a the end of the phase, repeating `browser()` as above does not achieve anything.
+
 # `E3001`
 
 An array access would be out of bounds.  This error is thrown where your code would result in you reading or writing out of bounds on an array (or a dimension of an array).  Currently, we throw this error if we are certain that your access is invalid. For example, we would error if your code contains:

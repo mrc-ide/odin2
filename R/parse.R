@@ -24,7 +24,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   zero_every <- parse_zero_every(system$time, phases, equations,
                                  system$variables, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,
-                       system$data, phases, call)
+                       equations, system$data, phases, call)
   browser <- parse_browser(system$exprs$browser, system$time, system$variables,
                            system$data, phases, call)
   src <- lapply(exprs, "[[", "src")

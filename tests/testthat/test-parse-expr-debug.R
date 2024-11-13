@@ -11,6 +11,14 @@ test_that("can parse trivial print statement", {
 })
 
 
+test_that("print string matches call", {
+  expect_error(
+    parse_expr(quote(print("a string", TRUE, TRUE)), NULL, NULL),
+    "Failed to parse 'print()' statement",
+    fixed = TRUE)
+})
+
+
 test_that("print string requires at least one variable", {
   expect_error(
     parse_expr(quote(print("a string")), NULL, NULL),
@@ -53,4 +61,11 @@ test_that("error if glue string component is malformed", {
     parse_expr(quote(print("a {x; qqq}")), NULL, NULL),
     "Failed to parse print string 'a {x; qqq}': 'x; qqq' is not valid",
     fixed = TRUE)
+})
+
+
+test_that("can extract print format", {
+  res <- parse_expr(quote(print("a {x; d}")), NULL, NULL)
+  expect_equal(res$rhs$type, "print")
+  expect_equal(res$inputs, list(list(expr = quote(x), format = "d")))
 })
