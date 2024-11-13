@@ -684,6 +684,15 @@ parse_packing <- function(names, arrays, no_reorder, type) {
     packing <- arrays
   }
 
+  ## Resolve aliases to give us a full set of sizes:
+  is_alias <- packing$name != packing$alias
+  if (any(is_alias)) {
+    i <- match(packing$alias[is_alias], packing$name)
+    packing$size[is_alias] <- packing$size[i]
+    packing$dims[is_alias] <- packing$dims[i]
+  }
+  packing$alias <- NULL
+
   packing <- packing[match(names, packing$name), ]
   pack_first <- vlapply(packing$size, is.numeric) &
     !(packing$name %in% no_reorder)

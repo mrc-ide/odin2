@@ -231,7 +231,6 @@ test_that("pack system entirely composed of arrays", {
                rank = 1,
                dims = I(list(list(2), list(2))),
                size = I(list(2, 2)),
-               alias = c("x", "y"),
                offset = I(list(0, 2))))
 })
 
@@ -250,7 +249,25 @@ test_that("pack system of mixed arrays and scalars", {
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
                size = I(list(2, 1)),
-               alias = c("x", "y"),
+               offset = I(list(0, 2))))
+})
+
+
+test_that("resolve array aliases when building pack", {
+  d <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] * 2
+    initial(y[]) <- 1
+    update(y[]) <- y[i] / x[i]
+    dim(x) <- 2
+    dim(y) <- dim(x)
+  })
+  expect_equal(
+    d$storage$packing$state,
+    data_frame(name = c("x", "y"),
+               rank = c(1, 1),
+               dims = I(list(list(2), list(2))),
+               size = I(list(2, 2)),
                offset = I(list(0, 2))))
 })
 
