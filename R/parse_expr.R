@@ -182,7 +182,6 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     }
   }
 
-
   is_array <- rlang::is_call(lhs, "[")
   if (is_array) {
     name <- parse_expr_check_lhs_name(lhs[[2]], special, is_array, src, call)

@@ -618,8 +618,7 @@ parse_system_arrays <- function(exprs, call) {
   ## First, look for any array calls that do not have a corresponding
   ## dim()
   is_array <- !vlapply(exprs, function(x) is.null(x$lhs$array))
-  err <- !vlapply(exprs[is_array],
-                  function(x) x$lhs$name %in% dim_nms)
+  err <- !vlapply(exprs[is_array], function(x) x$lhs$name %in% dim_nms)
   if (any(err)) {
     src <- exprs[is_array][err]
     err_nms <- unique(vcapply(src, function(x) x$lhs$name))
