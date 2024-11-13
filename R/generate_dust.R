@@ -73,18 +73,14 @@ generate_dust_system_attributes <- function(dat) {
     has_adjoint <- "// [[dust2::has_adjoint()]]"
   }
   pars <- dat$parameters
-  if (!is.null(pars)) {
-    keep <- c("type", "rank", "required", "constant")
-    str <- matrix(
-      unlist0(lapply(pars[keep], vcapply, deparse, control = NULL)),
-      ncol = length(keep))
-    args <- apply(str, 1, function(el) {
-      paste(sprintf("%s = %s", keep, el), collapse = ", ")
-    })
-    parameters <- sprintf("// [[dust2::parameter(%s, %s)]]", pars$name, args)
-  } else {
-    parameters <- NULL
-  }
+  keep <- c("type", "rank", "required", "constant")
+  str <- matrix(
+    unlist0(lapply(pars[keep], vcapply, deparse, control = NULL)),
+    ncol = length(keep))
+  args <- apply(str, 1, function(el) {
+    paste(sprintf("%s = %s", keep, el), collapse = ", ")
+  })
+  parameters <- sprintf("// [[dust2::parameter(%s, %s)]]", pars$name, args)
   c(sprintf("// [[dust2::class(%s)]]", dat$class),
     sprintf("// [[dust2::time_type(%s)]]", dat$time),
     has_compare,
