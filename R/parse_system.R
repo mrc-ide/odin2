@@ -67,12 +67,6 @@ parse_system_overall <- function(exprs, call) {
       "E2014", src, call)
   }
 
-  throw_duplicate_dim <- function(name, src) {
-    odin_parse_error(
-      paste("The variable {name} was given dimensions multiple times."),
-      "E2021", src, call)
-  }
-
   special <- vcapply(exprs, function(x) x$special %||% "")
   is_update <- special == "update"
   is_deriv <- special == "deriv"
@@ -137,49 +131,10 @@ parse_system_overall <- function(exprs, call) {
     output <- NULL
   }
 
-  dims <- list()
-  names <- list()
-  sizes <- list()
-  n <- 1
-  for (i in which(is_dim)) {
-    expr <- exprs[[i]]
-    names_i <- expr$lhs$names
-    dims_i <- expr$rhs$value
-    if (rlang::is_call(dims_i, "dim")) {
-      size_i <- 1
-    } else {
-      size_i <- expr_prod(dims_i)
-      if (is.null(size_i)) {
-        size_i <- list(NULL)
-      }
-    }
-
-    first_dim <- call("dim", as.symbol(expr$lhs$names[1]))
-
-    for (j in seq_along(names_i)) {
-      dims[[n]] <- if (j == 1) dims_i else first_dim
-      names[[n]] <- names_i[j]
-      sizes[[n]] <- size_i
-      n <- n + 1
-    }
-  }
-
-  names <- unlist(names)
-  if (any(duplicated(names))) {
-    dup_dim <- unique(names[duplicated(names)])[1]
-    lines <- vlapply(exprs, function(x) {
-      isTRUE(x$special == "dim" &
-             dup_dim %in% c(x$lhs$name_data,
-                            unlist(lapply(x$lhs$args, deparse))))
-    })
-    srcs <- lapply(exprs[lines], "[[", "src")
-    throw_duplicate_dim(dup_dim, srcs)
-  }
-  arrays <- resolve_array_references(data_frame(
-    name = names,
-    rank = lengths(dims),
-    dims = I(dims),
-    size = I(sizes)))
+  arrays <- build_array_table(exprs[is_dim], call)
+  check_duplicate_dims(arrays, exprs, call)
+  arrays <- resolve_array_references(arrays)
+  arrays <- resolve_split_dependencies(arrays, call)
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
   data <- data_frame(
@@ -265,55 +220,6 @@ parse_system_overall <- function(exprs, call) {
        arrays = arrays,
        data = data,
        exprs = exprs)
-}
-
-
-resolve_array_references <- function(arrays) {
-  lookup_array <- function(name, copy_from, d) {
-    i <- which(d$name == copy_from)
-    if (length(i) == 0) {
-      return(NULL)
-    }
-    dim_i <- d$dims[i]
-    if (rlang::is_call(dim_i[[1]], "dim")) {
-      rhs_dim_var <- deparse(dim_i[[1]][[2]])
-      return(lookup_array(name, rhs_dim_var, d[-i, ]))
-    }
-    return(list(rank = d$rank[i], alias = d$name[i]))
-  }
-
-  arrays$alias <- arrays$name
-  is_ref <- vlapply(arrays$dims, rlang::is_call, "dim")
-
-  for (i in which(is_ref)) {
-    lhs_dim_var <- arrays$name[i]
-    rhs_dim_var <- deparse(arrays$dims[i][[1]][[2]])
-    res <- lookup_array(lhs_dim_var, rhs_dim_var, arrays[-i, ])
-    if (!is.null(res)) {
-      arrays$dims[i] <- list(NULL)
-      arrays$size[i] <- NA_integer_
-      arrays$rank[i] <- res$rank
-      arrays$alias[i] <- res$alias
-    }
-  }
-
-  # Resolve case where
-  #   dim(a) <- 1
-  #   dim(b, c) <- dim(a)
-  # At this point, dim(c) will be aliased to dim(b), not dim(a),
-  # so find aliases that actually point to other aliases, and
-  # resolve them to something that is not an alias.
-
-  not_aliased <- arrays$name[arrays$name == arrays$alias]
-  while (TRUE) {
-    wrong <- arrays$name != arrays$alias & !(arrays$alias %in%  not_aliased)
-    if (!any(wrong)) {
-      break
-    }
-    arrays$alias[wrong] <- arrays$alias[arrays$name == arrays$alias[wrong]]
-  }
-
-  arrays
 }
 
 parse_system_depends <- function(equations, variables, call) {
@@ -610,7 +516,6 @@ parse_zero_every <- function(time, phases, equations, variables, call) {
 
 
 parse_system_arrays <- function(exprs, call) {
-
   is_dim <- vlapply(exprs, function(x) identical(x$special, "dim"))
 
   dim_nms <- unlist(lapply(exprs[is_dim], function(x) x$lhs$names))
@@ -649,8 +554,9 @@ parse_system_arrays <- function(exprs, call) {
   }
 
 
-  name_dim_equation <- set_names(unlist(lapply(dim_nms, odin_dim_name)),
-                                 dim_nms)
+  name_dim_equation <- set_names(
+    unlist(lapply(dim_nms, odin_dim_name)),
+    dim_nms)
 
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
