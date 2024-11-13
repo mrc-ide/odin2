@@ -34,6 +34,7 @@ Some of these features were present in versions of `odin.dust` and many derive f
 * Built-in support for periodic variable resetting (e.g., for computing daily incidence)
 * Better (we hope) error messages
 * Better debugging tools (see `vignette("debugging")`)
+* Compile-time bounds checking of arrays, preventing many crashes
 
 ## Planned
 

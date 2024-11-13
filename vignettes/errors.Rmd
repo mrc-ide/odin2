@@ -46,6 +46,7 @@ The error numbers are arbitrary after the first digit.  The first digit will cor
 * `E0xxx` - general errors
 * `E1xxx` - errors during parsing of individual expressions
 * `E2xxx` - errors when considering the system as a whole
+* `E3xxx` - errors when during the analysis phase, after validating the code
 
 When an error is thrown you will be directed here, for example:
 
@@ -1088,3 +1089,16 @@ are both invalid.
 
 `output()` was used (on lhs) within a discrete-time system.  You can only use `output()` within systems that involve `deriv()` as it provides a way of computing variables for which you do not have derivatives.  If you are writing a discrete-time system, you should use `update()` with a corresponding `initial()` statement.
 
+# `E3001`
+
+An array access would be out of bounds.  This error is thrown where your code would result in you reading or writing out of bounds on an array (or a dimension of an array).  Currently, we throw this error if we are certain that your access is invalid. For example, we would error if your code contains:
+
+```r
+x[] <- a[i]
+dim(x) <- 5
+dim(a) <- 4
+```
+
+because we are accessing `a` at position 5 due to the loop over `x`, but `a` only has 4 elements.
+
+More complex errors are possible, and it may not be possible to obviously reverse odin's chain of logic for deciding an access would be out of bounds; please let us know if you find difficult-to-explain cases and we can use these to try and make it clearer.
