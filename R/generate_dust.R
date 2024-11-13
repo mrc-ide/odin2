@@ -50,7 +50,7 @@ generate_prepare <- function(dat) {
   dat$sexp_data <- generate_dust_dat(dat$storage$location,
                                      dat$storage$packing,
                                      dat$storage$type,
-                                     rank, alias)
+                                     dat$storage$arrays)
   dat
 }
 

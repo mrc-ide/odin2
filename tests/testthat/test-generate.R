@@ -2307,3 +2307,27 @@ test_that("can generate code for array parameter constraints", {
       '  dust2::r::check_max_array<real_type>(shared.r, 2, "r");',
       "}"))
 })
+
+
+test_that("Can read parameters into var with aliased dimension", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + a
+    initial(x[]) <- x0[i]
+
+    dim(x) <- dim(x0)
+    dim(x0) <- n_x
+    x0 <- parameter()
+    n_x <- parameter()
+    a <- parameter()
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x0.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + shared.a;",
+      "  }",
+      "}"))
+})
