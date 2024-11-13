@@ -172,7 +172,7 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
 
   throw_no_dim <- function(var) {
     odin_parse_error(
-      paste("Missing 'dim()' for expression{?s} assigned as an array:",
+      paste("Missing 'dim()' for expression{?s} used as an array:",
             "{squote(var)}"),
       "E2008", src, call)
   }
@@ -229,7 +229,7 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
           if (!is.null(index)) {
             dim_rank <- dim_ranks[[array_name]]
             if (length(index) != dim_rank) {
-              throw_mismatch(array_name, length(index), dim_rank)
+              throw_mismatch(array_name, dim_rank, length(index))
             }
           }
         } else {

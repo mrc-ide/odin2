@@ -861,6 +861,30 @@ test_that("Argument to update on LHS must use correct rank", {
 })
 
 
+test_that("Reduction expressions use correct rank", {
+  expect_error(
+    odin_parse({
+      update(x[, ]) <- sum(x[i])
+      initial(x[, ]) <- 0
+      dim(x) <- c(4, 3)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("Reduction expressions require arrays", {
+  expect_error(
+    odin_parse({
+      update(x[, ]) <- sum(a[i, ])
+      initial(x[, ]) <- 0
+      dim(x) <- c(4, 3)
+      a <- 10
+    }),
+    "Missing 'dim()' for expression used as an array: 'a'",
+    fixed = TRUE)
+})
+
+
 test_that("Argument to initial on LHS must use correct rank", {
   expect_error(
     odin_parse({
@@ -1005,7 +1029,7 @@ test_that("RHS array for non-dimensioned variable", {
       update(x) <- a[1]
       update(a) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression assigned as an array")
+    "Missing 'dim\\(\\)' for expression used as an array")
 })
 
 test_that("Invalid argument to func that expects an array", {
@@ -1045,7 +1069,7 @@ test_that("Non-array passed to func that expects an array", {
       initial(y) <- 0
       update(y) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression assigned as an array"
+    "Missing 'dim\\(\\)' for expression used as an array"
   )
 })
 
