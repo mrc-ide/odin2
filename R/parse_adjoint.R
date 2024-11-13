@@ -12,7 +12,7 @@ parse_adjoint <- function(dat) {
 
   ## Not sure what I will need to do here, but it's a bunch!
   if (nrow(dat$storage$arrays) > 0) {
-    stop("Implement differentiation with arrays")
+    stop("Implement differentiation with arrays") # nocov
   }
   arrays <- NULL
 

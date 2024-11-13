@@ -604,7 +604,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   location <- dat$storage$location[[name]]
   if (location == "stack") {
     if (is_array) {
-      stop("We don't have stack-allocated arrays")
+      stop("We don't have stack-allocated arrays") # nocov
     }
     sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
@@ -631,8 +631,10 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   } else if (location == "adjoint") {
     offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
-      stop("arrays in adjoint probably need checking carefully")
-      offset <- expr_plus(idx, offset)
+      ## Something like
+      ## > offset <- expr_plus(idx, offset)
+      ## but likely much more work needed
+      stop("arrays in adjoint probably need checking carefully") # nocov
     }
     sprintf("%s[%s]",
             name_state,
