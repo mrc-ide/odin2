@@ -852,11 +852,13 @@ generate_dust_browser <- function(dat, phase) {
                                 dat$sexp_data))
   env <- "odin_env"
   body$add(sprintf("auto %s = dust2::r::browser::create();", env))
-  if (phase == "compare") {
-    export <- names(dat$storage$location)
-  } else {
-    export <- names(dat$storage$location[dat$storage$location != "data"])
-  }
+  ## TODO: don't drop 'data' if using browser in compare, but think
+  ## about how probabilities might be surfaced.
+  type <- dat$storage$type
+  location <- dat$storage$type
+  export <- intersect(
+    names(location[location != "data"]),
+    names(type[type %in% c("real_type", "int", "bool")]))
   for (v in c("time", export)) {
     body$add(generate_dust_browser_to_env(v, dat, env))
   }
