@@ -327,5 +327,5 @@ test_that("parse a very simple delay", {
   expect_true(dat$delays$in_rhs)
   expect_false(dat$delays$in_output)
   expect_equal(dat$delays$by, I(list(1)))
-  expect_equal(dat$delays$value, I(list(variables = "x")))
+  expect_equal(dat$delays$value, I(list(list(variables = "x"))))
 })
