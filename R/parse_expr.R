@@ -60,6 +60,13 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     lhs$name_data <- lhs$name
     lhs$name <- paste0("interpolate_", lhs$name)
+  } else if (rhs$type == "delay") {
+    if (!is.null(special) || !is.null(lhs$array)) {
+      odin_parse_error(
+        "Calls to 'delay()' must be assigned to a symbol",
+        "E1999", src, call)
+    }
+    special <- "delay"
   } else {
     if (rlang::is_call(rhs$expr, "as.integer")) {
       lhs$storage_type <- "int"
@@ -556,14 +563,14 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
   if (!result$success) {
     odin_parse_error(c("Invalid call to 'interpolate()'",
                        x = conditionMessage(result$error)),
-                     "E1003", src, call)
+                     "E1035", src, call)
   }
   is_missing <- vlapply(result$value, rlang::is_missing)
   if (any(is_missing)) {
     msg <- names(result$value)[is_missing]
     odin_parse_error(c("Invalid call to 'interpolate()'",
                        x = "Missing argument{?s} {squote(msg)}"),
-                     "E1003", src, call)
+                     "E1035", src, call)
   }
 
   for (nm in c("time", "value")) {
