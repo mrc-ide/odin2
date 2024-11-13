@@ -311,3 +311,21 @@ test_that("work out correct print phase", {
   })
   expect_equal(names(res$print), "deriv")
 })
+
+
+test_that("parse a very simple delay", {
+  dat <- odin_parse({
+    deriv(x) <- x - a
+    initial(x) <- 0
+    a <- delay(x, 1)
+  })
+  expect_equal(dat$phases$deriv$equations, "a")
+  expect_s3_class(dat$delays, "data.frame")
+  expect_equal(nrow(dat$delays), 1)
+  expect_equal(dat$delays$name, "a")
+  expect_equal(dat$delays$type, "variable")
+  expect_true(dat$delays$in_rhs)
+  expect_false(dat$delays$in_output)
+  expect_equal(dat$delays$by, I(list(1)))
+  expect_equal(dat$delays$value, I(list(variables = "x")))
+})

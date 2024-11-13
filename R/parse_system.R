@@ -829,3 +829,69 @@ parse_system_overall_parameters <- function(exprs, arrays) {
     differentiate = is_differentiable,
     constant = is_constant)
 }
+
+
+parse_system_delays <- function(equations, phases, variables, arrays,
+                                call) {
+  is_delay <- vcapply(equations, function(x) x$special %||% "") == "delay"
+  if (!any(is_delay)) {
+    return(NULL)
+  }
+
+  ## Now, consider the dependencies of the delay equation; we should
+  ## actually do this in the
+  dat <- lapply(unname(equations[is_delay]), parse_system_delay,
+                phases, variables, arrays, call)
+
+  data_frame(
+    name = vcapply(dat, "[[", "name"),
+    type = vcapply(dat, "[[", "type"),
+    in_rhs = vlapply(dat, "[[", "in_rhs"),
+    in_output = vlapply(dat, "[[", "in_output"),
+    by = I(lapply(dat, "[[", "by")),
+    value = I(lapply(dat, "[[", "value")))
+}
+
+
+## TODO: Consider the effect of a delayed delay, and at least prevent
+## that here for now.  I have a feeling the malaria model does this.
+parse_system_delay <- function(eq, phases, variables, arrays, call) {
+  name <- eq$lhs$name
+
+  err <- setdiff(
+    eq$rhs$depends$variables,
+    setdiff(phases$build_shared$equations, phases$update_shared$equations))
+  if (length(err)) {
+    odin_parse_error("Invalid 'by', not constant!",
+                     "E2999", src, call)
+  }
+
+  ## We need *just* the ODE variables here, as nothing else is really
+  ## delayed directly.  Once we support mixed models we will likely
+  ## need to prevent access of those variables or think about how to
+  ## delay them carefully.
+  ode_variables <- vcapply(phases$deriv$variables, function(x) x$lhs$name)
+
+  what <- eq$rhs$expr$what
+  type <- if (what %in% ode_variables) "variable" else "expression"
+
+  ret <- list(name = name,
+              type = type,
+              by = eq$rhs$expr$by,
+              in_rhs = name %in% phases$deriv$equations,
+              in_output = name %in% phases$output$equations)
+
+  if (type == "variable") {
+    ret$value <- list(variables = what)
+  } else { # expression
+    odin_parse_error("Delayed expressions are not yet supported",
+                     "E0001", eq, call)
+    ## Here, list the variables, and work out how we will unpack them
+    ## if more than one is listed.
+    ##
+    ## Then find all time-varying equations and list them in sorted
+    ## order
+  }
+
+  ret
+}

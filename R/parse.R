@@ -20,6 +20,8 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$parameters,
     system$data$name, call)
+  delays <- parse_system_delays(equations, phases, system$variables,
+                                system$arrays, call)
   storage <- parse_storage(
     equations, phases, system$variables, system$output, system$arrays,
     system$parameters, system$data, call)
@@ -37,6 +39,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               output = system$output,
               parameters = system$parameters,
               equations = equations,
+              delays = delays,
               phases = phases,
               storage = storage,
               zero_every = zero_every,
