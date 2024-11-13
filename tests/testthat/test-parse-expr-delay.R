@@ -1,10 +1,20 @@
-test_that("can parse delay expression", {
+test_that("can parse delay expression with literal time delay", {
+  res <- parse_expr(quote(a <- delay(b, 1)), NULL, NULL)
+  expect_equal(res$special, "delay")
+  expect_equal(res$rhs$type, "delay")
+  expect_equal(res$rhs$expr, quote(OdinDelay(what = "b", by = 1)))
+  expect_equal(res$rhs$depends,
+               list(functions = character(), variables = character()))
+})
+
+
+test_that("can parse delay expression with symbolic delay", {
   res <- parse_expr(quote(a <- delay(b, c)), NULL, NULL)
   expect_equal(res$special, "delay")
   expect_equal(res$rhs$type, "delay")
   expect_equal(res$rhs$expr, quote(OdinDelay(what = "b", by = c)))
   expect_equal(res$rhs$depends,
-               list(functions = character(), variables = character()))
+               list(functions = character(), variables = "c"))
 })
 
 

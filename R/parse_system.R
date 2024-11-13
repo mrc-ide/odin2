@@ -144,9 +144,6 @@ parse_system_overall <- function(exprs, call) {
       src <- lapply(exprs[is_delay], "[[", "src")
       throw_discrete_using_delay(src)
     }
-    delays <- vcapply(exprs[is_delay], function(x) x$lhs$name)
-  } else {
-    delays <- NULL
   }
 
   arrays <- build_array_table(exprs[is_dim], call)
@@ -238,7 +235,6 @@ parse_system_overall <- function(exprs, call) {
        parameters = parameters,
        arrays = arrays,
        data = data,
-       delays = delays,
        exprs = exprs)
 }
 
@@ -325,6 +321,8 @@ parse_system_stage <- function(equations, variables, parameters, data, call) {
     } else if (isTRUE(rhs$is_stochastic) || any(vars %in% implicit)) {
       stage[[i]] <- "time"
     } else if (rlang::is_call(rhs$expr, "OdinInterpolateEval")) {
+      stage[[i]] <- "time"
+    } else if (rlang::is_call(rhs$expr, "OdinDelay")) {
       stage[[i]] <- "time"
     } else {
       stage_i <- stage[names(equations) %in% vars]

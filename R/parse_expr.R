@@ -626,15 +626,17 @@ parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
   }
   what <- as.character(what)
   by <- result$value$by
-  if (!rlang::is_symbol(by)) {
+  if (!(rlang::is_symbol(by) || is.numeric(by))) {
     odin_parse_error(
       "Expected 'by' argument to 'delay()' to be a number or symbol",
       "E1999", src, call)
   }
 
+  depends <- find_dependencies(by)
+
   list(type = "delay",
        expr = call("OdinDelay", what = what, by = by),
-       depends = list(functions = character(), variables = character()))
+       depends = depends)
 }
 
 
