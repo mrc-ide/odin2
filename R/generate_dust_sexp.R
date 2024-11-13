@@ -14,19 +14,21 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       return(generate_dust_array_access(expr, dat, options))
     } else if (fn == "OdinDim") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      name <- dat$alias[[expr[[2]]]]
-      if (dat$rank[[name]] == 1) {
+      name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
+      rank <- dat$arrays$rank[[match(name, dat$arrays$name)]]
+      if (rank == 1) {
         return(sprintf("%s%s.size", dim, name))
       } else {
         return(sprintf("%s%s.dim[%d]", dim, name, expr[[3]] - 1))
       }
     } else if (fn == "OdinLength") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      return(sprintf("%s%s.size", dim, dat$alias[[expr[[2]]]]))
+      name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
+      return(sprintf("%s%s.size", dim, name))
     } else if (fn == "OdinMult") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      return(sprintf("%s%s.mult[%d]", dim, dat$alias[[expr[[2]]]],
-                     expr[[3]] - 1))
+      name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
+      return(sprintf("%s%s.mult[%d]", dim, name, expr[[3]] - 1))
     } else if (fn == "OdinOffset") {
       where <- expr[[2]]
       what <- expr[[3]]
@@ -66,7 +68,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (fn == "OdinInterpolateEval") {
       src <- generate_dust_sexp(expr[[2]], dat, options)
       target <- expr[[3]]
-      if (target %in% names(dat$rank)) {
+      if (target %in% dat$arrays$name) {
         return(sprintf("%s.eval(time, %s)", src,
                        generate_dust_sexp(target, dat, options)))
       } else {
@@ -188,9 +190,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
 ## now all we need is information on where things are to be found (the
 ## location) but we'll need to cope with variable packing, array
 ## lengths and types soon.
-generate_dust_dat <- function(location, packing, type, rank, alias) {
-  list(location = location, packing = packing, type = type, rank = rank,
-       alias = alias)
+generate_dust_dat <- function(location, packing, type, arrays, rank, alias) {
+  list(location = location, packing = packing, type = type, arrays = arrays,
+       rank = rank, alias = alias)
 }
 
 
@@ -227,7 +229,7 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   index <- expr$index
   dim <- paste0(
     if (isFALSE(options$shared_exists)) "dim." else "shared.dim.",
-    dat$alias[[target]])
+    dat$arrays$alias[match(target, dat$arrays$name)])
   stopifnot(fn %in% c("sum", "prod", "min", "max"))
   if (is.null(index)) {
     sprintf("dust2::array::%s<real_type>(%s, %s)", fn, target_str, dim)
