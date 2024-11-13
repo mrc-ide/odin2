@@ -2358,7 +2358,7 @@ test_that("cast integers to sizes", {
 test_that("can generate system with output", {
   dat <- odin_parse({
     initial(x[]) <- 0
-    deriv(x[]) <- x * r[i]
+    deriv(x[]) <- x[i] * r[i]
     r <- parameter()
     n <- 3
     dim(x) <- n
@@ -2384,7 +2384,7 @@ test_that("can generate system with output", {
     c(method_args$rhs,
       "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_deriv[i - 1 + 0] = x * shared.r[i - 1];",
+      "    state_deriv[i - 1 + 0] = x[i - 1] * shared.r[i - 1];",
       "  }",
       "}"))
 

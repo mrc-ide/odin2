@@ -888,7 +888,7 @@ test_that("LHS of assignment with [] on sum is accepted", {
   expect_error(
     odin_parse({
       initial(x) <- 0
-      update(x) <- a_tot
+      update(x) <- sum(a_tot)
       dim(a) <- c(4, 4)
       dim(a_tot) <- 4
       a[, ] <- 3
@@ -1054,7 +1054,7 @@ test_that("don't duplicate offsets when boundary condition used in initial", {
   dat <- odin_parse({
     initial(x[]) <- 0
     initial(x[1]) <- 1
-    update(x[]) <- x + 1
+    update(x[]) <- x[i] + 1
     dim(x) <- 4
   })
   expect_equal(dat$variables, "x")
