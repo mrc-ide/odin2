@@ -110,3 +110,27 @@ resolve_split_dependencies <- function(arrays, call) {
 
   arrays
 }
+
+
+add_alias_dependency <- function(exprs, arrays) {
+  is_alias <- arrays$alias != arrays$name
+  if (!any(is_alias)) {
+    return(exprs)
+  }
+
+  remap <- set_names(
+    odin_dim_name(arrays$alias[is_alias]),
+    odin_dim_name(arrays$name[is_alias]))
+
+  update_alias_dependency <- function(eq) {
+    i <- eq$rhs$depends$variables %in% names(remap)
+    if (any(i)) {
+      eq$rhs$depends$variables <- union(
+        eq$rhs$depends$variables,
+        unname(remap[eq$rhs$depends$variables[i]]))
+    }
+    eq
+  }
+
+  lapply(exprs, update_alias_dependency)
+}

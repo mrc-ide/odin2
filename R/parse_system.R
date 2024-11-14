@@ -136,6 +136,7 @@ parse_system_overall <- function(exprs, call) {
   check_duplicate_dims(arrays, exprs, call)
   arrays <- resolve_array_references(arrays)
   arrays <- resolve_split_dependencies(arrays, call)
+  exprs <- add_alias_dependency(exprs, arrays)
 
   parameters <- parse_system_overall_parameters(exprs, arrays)
   data <- data_frame(
