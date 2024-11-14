@@ -401,7 +401,7 @@ test_that("error if arrays have non-constant dimension", {
     "Dimensions of arrays are not determined at initial creation")
   expect_match(
     err$body[[1]],
-    "'a' is determined at stage 'parameter_update', it depends on 'n'",
+    "'a' is determined when parameters are updated, it depends on 'n'",
     fixed = TRUE)
   expect_match(
     err$body[[2]],
@@ -422,7 +422,7 @@ test_that("error if arrays have non-constant dimension", {
     "Dimensions of arrays are not determined at initial creation")
   expect_match(
     err$body[[1]],
-    "'a' is determined at stage 'time', it depends on 'n' (time)",
+    "'a' is determined by time, it depends on 'n' (time)",
     fixed = TRUE)
   expect_length(err$body, 1)
 })
@@ -842,8 +842,8 @@ test_that("n + b for non-constant b is not constant", {
     "Dimensions of arrays are not determined at initial creation")
   expect_equal(
     err$body[[1]],
-    paste("'x' is determined at stage 'parameter_update', it depends on",
-          "'n' (system_create), 'b' (parameter_update)"))
+    paste("'x' is determined when parameters are updated, it depends on",
+          "'n' (create), 'b' (modify)"))
   expect_equal(
     err$body[[2]],
     "Try adding `constant = TRUE` into the 'parameter()' call for 'b'")

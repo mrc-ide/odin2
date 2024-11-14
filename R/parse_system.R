@@ -279,20 +279,17 @@ parse_system_depends <- function(equations, variables, call) {
 }
 
 
-## Next step, make phase (again) a property of a name, not an id.  I
-## don't think the alternative is interesting enough to warrant the
-## effort.  Then things simplify back out quite nicely again....
-parse_system_phases <- function(exprs, equations, variables, parameters, data,
-                                call) {
+parse_system_stage <- function(equations, variables, parameters, data, call) {
   ## First compute the 'stage' that things occur in; there are only
-  ## three of these, but "time" covers a multitude of sins and
-  ## includes things like the compare function as well as deriv/update
-  ## (and in the case of mixed models *both* deriv/update are
-  ## considered time).
-  stages <- c(system_create = 1,
-              parameter_update = 2,
-              time = 3,
-              data = 4)
+  ## four of these, but "time" covers a multitude of sins and includes
+  ## things like the compare function as well as deriv/update (and in
+  ## the case of mixed models *both* deriv/update are considered
+  ## time).
+  stages <- c(
+    create = 1,
+    modify = 2,
+    time = 3,
+    data = 4)
   implicit <- c(variables, "time", "dt")
 
   stage <- rep(NA_character_, length(equations))
@@ -304,7 +301,7 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
     if (identical(rhs$type, "parameter")) {
       is_constant <- isTRUE(
         parameters$constant[match(eq$lhs$name, parameters$name)])
-      stage[[i]] <- if (is_constant) "system_create" else "parameter_update"
+      stage[[i]] <- if (is_constant) "create" else "modify"
     } else if (any(vars %in% data)) {
       stage[[i]] <- "data"
     } else if (isTRUE(rhs$is_stochastic) || any(vars %in% implicit)) {
@@ -314,7 +311,7 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
     } else {
       stage_i <- stage[names(equations) %in% vars]
       if (length(stage_i) == 0) {
-        stage[[i]] <- "system_create"
+        stage[[i]] <- "create"
       } else {
         stage[[i]] <- names(stages)[[max(stages[stage_i])]]
       }
@@ -330,11 +327,15 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
 
   is_dim <- vlapply(equations, function(x) identical(x$special, "dim"))
   stage_dim <- stage[names(which(is_dim))]
-  is_err <- stage_dim != "system_create"
+  is_err <- stage_dim != "create"
   if (any(is_err)) {
     err <- equations[is_dim][is_err]
     err_nms <- vcapply(err, function(x) x$lhs$name_data)
     err_stage <- stage_dim[is_err]
+    err_when <- unname(c(
+      modify = "when parameters are updated",
+      time = "by time",
+      data = "by data")[err_stage])
     err_deps <- vcapply(err, function(x) {
       deps <- x$rhs$depends$variables_recursive
       stage_deps <- stage[deps]
@@ -342,18 +343,18 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
       paste(sprintf("'%s' (%s)", deps, stage_deps), collapse = ", ")
     })
     detail <- sprintf(
-      "'%s' is determined at stage '%s', it depends on %s",
-      err_nms, err_stage, err_deps)
+      "'%s' is determined %s, it depends on %s",
+      err_nms, err_when, err_deps)
     src <- unname(lapply(err, "[[", "src"))
     hint <- NULL
 
-    if (any(err_stage == "parameter_update")) {
-      deps <- unlist0(lapply(err[err_stage == "parameter_update"],
+    if (any(err_stage == "modify")) {
+      deps <- unlist0(lapply(err[err_stage == "modify"],
                              function(x) x$rhs$depends$variables_recursive))
       deps_pars <- deps[vlapply(equations[deps], function(eq) {
         identical(eq$special, "parameter") &&
           eq$lhs$name %in% names(stage) &&
-          stage[[eq$lhs$name]] == "parameter_update"
+          stage[[eq$lhs$name]] == "modify"
       })]
       if (length(deps_pars) > 0) {
         hint <- paste(
@@ -368,9 +369,23 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
       "E2011", src, call)
   }
 
+  for (i in seq_along(equations)) {
+    equations[[i]]$stage <- stage[[names(equations)[[i]]]]
+  }
+
+  equations
+}
+
+
+## Next step, make phase (again) a property of a name, not an id.  I
+## don't think the alternative is interesting enough to warrant the
+## effort.  Then things simplify back out quite nicely again....
+parse_system_phases <- function(exprs, equations, variables, parameters, data,
+                                call) {
+  stage <- vcapply(equations, "[[", "stage")
+
   ## Now, we try and work out which parts of the graph are needed at
   ## different "phases".  These roughly correspond to dust functions.
-
   deps_recursive <- collapse_dependencies(lapply(equations, function(x) {
     x$rhs$depends$variables_recursive
   }))
@@ -437,7 +452,7 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
-    equations = eqs_shared[stage[eqs_shared] == "parameter_update"])
+    equations = eqs_shared[stage[eqs_shared] == "modify"])
 
   phases
 }
