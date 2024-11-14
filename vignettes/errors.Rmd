@@ -1119,7 +1119,7 @@ b <- a + 1
 browser("update")
 ```
 
-Because the `browser` call is always put a the end of the phase, repeating `browser()` as above does not achieve anything.
+Because the `browser` call is always put at the end of the phase, repeating `browser()` as above does not achieve anything.
 
 # `E3001`
 

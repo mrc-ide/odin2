@@ -1029,7 +1029,7 @@ test_that("RHS array for non-dimensioned variable", {
       update(x) <- a[1]
       update(a) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression used as an array")
+    "Missing 'dim()' for expression used as an array", fixed = TRUE)
 })
 
 test_that("Invalid argument to func that expects an array", {
@@ -1069,7 +1069,7 @@ test_that("Non-array passed to func that expects an array", {
       initial(y) <- 0
       update(y) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression used as an array"
+    "Missing 'dim()' for expression used as an array", fixed = TRUE
   )
 })
 
