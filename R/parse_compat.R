@@ -313,7 +313,7 @@ parse_compat_fix_assign_dt <- function(expr, call) {
       ## might look.  For now, this is not allowed.
       odin_parse_error(
         c("Don't assign to 'dt'",
-          i = "'dt' is now provided to {.help dust::dust_system_create}'",
+          i = "'dt' is now provided to {.fun dust::dust_system_create}'",
           x = paste(
             "Your odin code contains an assignment to 'dt' that we can't",
             "automatically migrate"),
