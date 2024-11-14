@@ -1,4 +1,5 @@
 test_that("can compute gradient", {
+  skip_on_covr()
   sir <- odin({
     p_IR <- 1 - exp(-gamma * dt)
     S0 <- 1000

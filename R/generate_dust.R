@@ -7,9 +7,6 @@ generate_dust_system <- function(dat) {
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
   body$add(sprintf("  %s() = delete;", dat$class))
-  if (dat$time == "continuous") {
-    body$add("  using mixed_time = std::false_type;")
-  }
   body$add("  using real_type = double;")
   body$add("  using rng_state_type = monty::random::generator<real_type>;")
   parts <- generate_dust_parts()

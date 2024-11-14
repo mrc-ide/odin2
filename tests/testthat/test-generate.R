@@ -515,6 +515,14 @@ test_that("generate adjoint", {
     d ~ Poisson(p)
   })
 
+  expect_equal(
+    generate_dust_system_attributes(dat),
+    c("// [[dust2::class(odin)]]",
+      "// [[dust2::time_type(discrete)]]",
+      "// [[dust2::has_compare()]]",
+      "// [[dust2::has_adjoint()]]",
+      '// [[dust2::parameter(a, type = "real_type", rank = 0, required = TRUE, constant = FALSE)]]'))
+
   dat <- generate_prepare(dat)
 
   expect_equal(
@@ -560,6 +568,12 @@ test_that("generate adjoint", {
     c(method_args$update_shared,
       '  shared.a = dust2::r::read_real(parameters, "a", shared.a);',
       "}"))
+
+  expect_equal(
+    generate_dust_system_adjoint(dat),
+    c(generate_dust_system_adjoint_update(dat),
+      generate_dust_system_adjoint_compare_data(dat),
+      generate_dust_system_adjoint_initial(dat)))
 })
 
 
