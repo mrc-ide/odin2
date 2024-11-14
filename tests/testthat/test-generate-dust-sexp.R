@@ -1,5 +1,5 @@
 test_that("can generate basic literal values", {
-  dat <- generate_dust_dat(NULL, NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   options <- list()
 
   expect_equal(generate_dust_sexp(TRUE, dat, options), "true")
@@ -15,7 +15,7 @@ test_that("can generate basic literal values", {
 
 
 test_that("can generate min/max expressions", {
-  dat <- generate_dust_dat(c(a = "shared", b = "stack"), NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(c(a = "shared", b = "stack"), NULL, NULL, NULL)
   options <- list()
   expect_equal(generate_dust_sexp(quote(min(a, b)), dat, options),
                "monty::math::min(shared.a, b)")
@@ -27,7 +27,7 @@ test_that("can generate min/max expressions", {
 
 
 test_that("can cast types", {
-  dat <- generate_dust_dat(c(a = "shared"), NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(c(a = "shared"), NULL, NULL, NULL)
   options <- list()
   expect_equal(generate_dust_sexp(quote(as.integer(1)), dat, options),
                "static_cast<int>(1)")
@@ -41,7 +41,7 @@ test_that("can cast types", {
 
 
 test_that("time and dt are always available", {
-  dat <- generate_dust_dat(NULL, NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   options <- list()
   expect_equal(generate_dust_sexp("time", dat, options), "time")
   expect_equal(generate_dust_sexp("dt", dat, options), "dt")
@@ -57,8 +57,7 @@ test_that("can generate simple expressions involving arithmetic", {
       e = "data"),
     packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
-    rank = NULL,
-    alias = NULL)
+    arrays = NULL)
   options <- list()
 
   expect_equal(
@@ -83,7 +82,7 @@ test_that("can generate simple expressions involving arithmetic", {
 
 
 test_that("can use functions from the library", {
-  dat <- generate_dust_dat(NULL, NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
@@ -106,8 +105,7 @@ test_that("can coerce to different types", {
       e = "data"),
     packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
-    rank = NULL,
-    alias = NULL)
+    arrays = NULL)
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(a + as.integer(b)), dat, NULL),
@@ -130,8 +128,7 @@ test_that("can generate min/max", {
       e = "data"),
     packing = list(state = parse_packing("a", NULL, NULL, "state")),
     type = NULL,
-    rank = NULL,
-    alias = NULL)
+    arrays = NULL)
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
@@ -146,7 +143,7 @@ test_that("can generate min/max", {
 
 
 test_that("unsupported functions are bugs", {
-  dat <- generate_dust_dat(NULL, NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   expect_error(
     generate_dust_sexp(quote(fn(1)), dat, list()),
     "Unhandled function 'fn'",
@@ -155,7 +152,7 @@ test_that("unsupported functions are bugs", {
 
 
 test_that("unsupported types are bugs", {
-  dat <- generate_dust_dat(NULL, NULL, NULL, NULL, NULL)
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   expect_error(
     generate_dust_sexp(NULL, dat, list()),
     "Unhandled data type while generating expression",

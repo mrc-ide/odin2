@@ -53,7 +53,7 @@ test_that("All variables with initial() require a target", {
       initial(x) <- 1
       initial(y) <- 1
     }),
-    "Did not find any call to 'deriv()' or 'initial()'",
+    "Did not find any call to 'deriv()' or 'update()'",
     fixed = TRUE)
   expect_error(
     odin_parse({
@@ -269,4 +269,16 @@ test_that("correct storage type when coersion used", {
   })
   expect_mapequal(dat$storage$type,
                   c(x = "real_type", a = "int", b = "bool"))
+})
+
+
+test_that("disallow output() in discrete time models", {
+  expect_error(
+    odin_parse({
+      update(a) <- 1
+      initial(a) <- 1
+      output(a) <- 1
+    }),
+    "Can't use 'output()' in discrete time systems",
+    fixed = TRUE)
 })

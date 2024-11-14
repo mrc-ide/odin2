@@ -1238,6 +1238,34 @@ test_that("can generate system with 2-d aliased parameterised array", {
 })
 
 
+test_that("Can read parameters into var with aliased dimension", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + a
+    initial(x[]) <- x0[i]
+
+    dim(x) <- n_x
+    dim(x0) <- dim(x)
+    x0 <- parameter()
+    n_x <- parameter()
+    a <- parameter()
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_build_shared(dat),
+    c("static shared_state build_shared(cpp11::list parameters) {",
+      "  shared_state::dim_type dim;",
+      '  const int n_x = dust2::r::read_int(parameters, "n_x");',
+      '  const real_type a = dust2::r::read_real(parameters, "a");',
+      "  dim.x.set({static_cast<size_t>(n_x)});",
+      "  std::vector<real_type> x0(dim.x.size);",
+      '  dust2::r::read_real_array(parameters, dim.x, x0.data(), "x0", true);',
+      "  shared_state::offset_type offset;",
+      "  offset.state.x = 0;",
+      "  return shared_state{dim, offset, n_x, a, x0};",
+      "}"))
+})
+
 
 test_that("can generate system with simple variable sized array", {
   dat <- odin_parse({
@@ -2425,5 +2453,29 @@ test_that("can generate code for array parameter constraints", {
     c(method_args$update_shared,
       '  dust2::r::read_real_array(parameters, shared.dim.r, shared.r.data(), "r", false);',
       '  dust2::r::check_max_array<real_type>(shared.r, 2, "r");',
+      "}"))
+})
+
+
+test_that("Can read parameters into var with aliased dimension", {
+  dat <- odin_parse({
+    update(x[]) <- x[i] + a
+    initial(x[]) <- x0[i]
+
+    dim(x) <- dim(x0)
+    dim(x0) <- n_x
+    x0 <- parameter()
+    n_x <- parameter()
+    a <- parameter()
+  })
+
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x0.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + shared.a;",
+      "  }",
       "}"))
 })

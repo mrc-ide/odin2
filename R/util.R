@@ -18,6 +18,11 @@ viapply <- function(...) {
 }
 
 
+vnapply <- function(...) {
+  vapply(..., FUN.VALUE = 1)
+}
+
+
 vcapply <- function(...) {
   vapply(..., FUN.VALUE = "")
 }

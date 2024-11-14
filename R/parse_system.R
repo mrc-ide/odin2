@@ -5,33 +5,33 @@ parse_system_overall <- function(exprs, call) {
       "E2001", NULL, call)
   }
 
-  throw_both_update_deriv <- function() {
+  throw_both_update_deriv <- function(src) {
     odin_parse_error(
       "Can't use both 'update()' and 'deriv()' within a single model yet",
       "E0001", src, call)
   }
 
-  throw_no_deriv_initial <- function() {
+  throw_no_deriv_update <- function(src) {
     odin_parse_error(
-      "Did not find any call to 'deriv()' or 'initial()'",
-      "E2002", NULL, call)
+      "Did not find any call to 'deriv()' or 'update()'",
+      "E2002", src, call)
   }
 
-  throw_missing_initial <- function(target, msg_initial) {
+  throw_missing_initial <- function(target, msg_initial, src) {
     odin_parse_error(
       c("Variables used in '{target}()' do not have 'initial()' calls",
         x = "Did not find 'initial()' calls for {squote(msg_initial)}"),
       "E2003", src, call)
   }
 
-  throw_missing_target <- function(target, msg_target) {
+  throw_missing_target <- function(target, msg_target, src) {
     odin_parse_error(
       c("Variables defined with 'initial()' do not have '{target}()' calls",
         x = "Did not find '{target}()' calls for {squote(msg_target)}"),
       "E2004", src, call)
   }
 
-  throw_discrete_using_output <- function() {
+  throw_discrete_using_output <- function(src) {
     odin_parse_error(
       c("Can't use 'output()' in discrete time systems",
         i = paste("You should be able to do what you need using 'update()'.",
@@ -41,26 +41,26 @@ parse_system_overall <- function(exprs, call) {
   }
 
   throw_invalid_time_arg_interp <- function(nm_time, nm_result, rank_desc,
-                                            eq_src = src) {
+                                            src) {
     odin_parse_error(
       c(paste("Expected time argument '{nm_time}' to 'interpolate()' for",
               "'{nm_result}' to be a vector"),
         i = "{nm_time} was a {rank_desc}"),
-      "E2015", eq_src, call)
+      "E2015", src, call)
   }
 
   throw_invalid_value_rank_interp <- function(nm_value, nm_result,
                                               rank_value_expected_desc,
-                                              rank_desc, eq_src = src) {
+                                              rank_desc, src) {
     odin_parse_error(
       c(paste("Expected value argument '{nm_value}' to 'interpolate()' for",
               "'{nm_result}' to be a",
               "{rank_value_expected_desc}"),
         i = "{nm_value} was a {rank_desc}"),
-      "E2015", eq_src, call)
+      "E2015", src, call)
   }
 
-  throw_eq_using_borrowed_name <- function(err) {
+  throw_eq_using_borrowed_name <- function(err, src) {
     odin_parse_error(
       paste("{?Equation uses name/Equations use names} belonging to",
             "variable{?s}: {squote(err)}"),
@@ -91,7 +91,7 @@ parse_system_overall <- function(exprs, call) {
   is_discrete <- any(is_update)
   if (is_continuous && is_discrete) {
     src <- lapply(exprs[is_deriv | is_update], "[[", "src")
-    throw_both_update_deriv()
+    throw_both_update_deriv(src)
   }
 
   target <- if (is_continuous) "deriv" else "update"
@@ -99,7 +99,7 @@ parse_system_overall <- function(exprs, call) {
 
   if (!any(is_target)) {
     src <- lapply(exprs[is_initial], "[[", "src")
-    throw_no_deriv_initial()
+    throw_no_deriv_update(src)
   }
 
   variables_target <- vcapply(exprs[is_target], function(x) x$lhs$name)
@@ -109,20 +109,21 @@ parse_system_overall <- function(exprs, call) {
     if (length(msg_initial) > 0) {
       err <- which(is_target)[variables_target %in% msg_initial]
       src <- lapply(exprs[err], "[[", "src")
-      throw_missing_initial(target, msg_initial)
+      throw_missing_initial(target, msg_initial, src)
     }
 
     msg_target <- setdiff(variables, variables_target)
     if (length(msg_target) > 0) {
       err <- which(is_initial)[variables %in% msg_target]
       src <- lapply(exprs[err], "[[", "src")
-      throw_missing_target(target, msg_target)
+      throw_missing_target(target, msg_target, src)
     }
   }
 
   if (any(is_output)) {
     if (!is_continuous) {
-      throw_discrete_using_output()
+      src <- lapply(exprs[is_output], "[[", "src")
+      throw_discrete_using_output(src)
     }
 
     output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))
@@ -210,7 +211,7 @@ parse_system_overall <- function(exprs, call) {
   err <- intersect(nms, variables)
   if (length(err) > 0) {
     src <- lapply(exprs$equations[nms %in% err], "[[", "src")
-    throw_eq_using_borrowed_name(err)
+    throw_eq_using_borrowed_name(err, src)
   }
 
   list(time = if (is_continuous) "continuous" else "discrete",
@@ -640,6 +641,15 @@ parse_packing <- function(names, arrays, no_reorder, type) {
   } else {
     packing <- arrays
   }
+
+  ## Resolve aliases to give us a full set of sizes:
+  is_alias <- packing$name != packing$alias
+  if (any(is_alias)) {
+    i <- match(packing$alias[is_alias], packing$name)
+    packing$size[is_alias] <- packing$size[i]
+    packing$dims[is_alias] <- packing$dims[i]
+  }
+  packing$alias <- NULL
 
   packing <- packing[match(names, packing$name), ]
   pack_first <- vlapply(packing$size, is.numeric) &
