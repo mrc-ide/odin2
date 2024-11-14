@@ -93,13 +93,7 @@ resolve_split_dependencies <- function(arrays, call) {
   # resolve them to something that is not an alias.
 
   find_non_alias <- function(current, original = current, visited = NULL) {
-    # I don't think below is actually possible to get to
-
-    if (any(duplicated(visited))) {
-      odin_parse_error(
-       c("Cyclic dependency detected for array {original}."),
-         "E2005", NULL, call)
-    }
+    stopifnot(!any(duplicated(visited)))
 
     array <- arrays[arrays$name == current, ]
     if (array$alias == array$name) {

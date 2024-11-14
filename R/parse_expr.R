@@ -158,12 +158,13 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
         odin_parse_error(c("Invalid call to dim function; no variables given"),
                          "E1003", src, call)
       }
-      lhs <- vcapply(lhs, function(x) {
+      lhs <- vcapply(lhs[-1], function(x) {
         if (!is.symbol(x)) {
           odin_parse_error("Invalid target '{x}' in dim declaration",
                            "E1005", src, call)
         }
-        deparse(x)})[-1]
+        deparse(x)
+      })
 
       return(list(
         name = lhs[1],
