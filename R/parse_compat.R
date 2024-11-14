@@ -290,7 +290,7 @@ parse_compat_fix_assign_time <- function(expr, call) {
           x = paste(
             "Your code contains an assignment to 'time' that we can't",
             "automatically migrate"),
-          i = "Please see {.vignette migrating} for guidance"),
+          i = "Please see {.vignette odin2::migrating} for guidance"),
         "E1048", expr, call)
     }
   }
@@ -317,7 +317,7 @@ parse_compat_fix_assign_dt <- function(expr, call) {
           x = paste(
             "Your odin code contains an assignment to 'dt' that we can't",
             "automatically migrate"),
-          i = "Please see {.vignette migrating} for guidance"),
+          i = "Please see {.vignette odin2::migrating} for guidance"),
         "E1049", expr, call)
     }
   }
@@ -345,7 +345,7 @@ parse_compat_fix_use_step <- function(expr, call) {
       c("Use of 'step' is no longer allowed",
         i = paste("Previously, discrete-time models used 'step' as a measure",
                   "of time, but we have removed this in odin2"),
-        i = "Please see {.vignette migrating} for guidance"),
+        i = "Please see {.vignette odin2::migrating} for guidance"),
       "E1050", expr, call)
   }
   expr
