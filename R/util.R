@@ -245,7 +245,6 @@ counter <- function() {
 }
 
 
-odin_dim_name <- function(n) {
-  assert_scalar_character(n)
-  sprintf("dim_%s", n)
+odin_dim_name <- function(name) {
+  sprintf("dim_%s", name)
 }
