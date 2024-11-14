@@ -133,7 +133,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
     update = function(name) NULL,
     deriv = function(name) NULL,
     output = function(name) NULL,
-    dim = function(name) NULL,
+    dim = function(...) NULL,
     config = function(name) NULL)
 
   args <- NULL
@@ -151,6 +151,25 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
           i = paste("Missing target for '{special}()', typically the first",
                     "(unnamed) argument")),
         "E1003", src, call)
+    }
+
+    if (special == "dim") {
+      if (length(lhs) < 2) {
+        odin_parse_error(c("Invalid call to dim function; no variables given"),
+                         "E1003", src, call)
+      }
+      lhs <- vcapply(lhs[-1], function(x) {
+        if (!is.symbol(x)) {
+          odin_parse_error("Invalid target '{x}' in dim declaration",
+                           "E1005", src, call)
+        }
+        deparse(x)
+      })
+
+      return(list(
+        name = lhs[1],
+        names = lhs,
+        special = special))
     }
 
     lhs <- lhs[[2]]
