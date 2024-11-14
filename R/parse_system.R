@@ -36,7 +36,7 @@ parse_system_overall <- function(exprs, call) {
       c("Can't use 'output()' in discrete time systems",
         i = paste("You should be able to do what you need using 'update()'.",
                   "If you are migrating from odin 1.x.x, you might find",
-                  'some advice in {.vignette "migrating"}')),
+                  'some advice in {.vignette odin2::migrating}')),
       "E2020", src, call)
   }
 

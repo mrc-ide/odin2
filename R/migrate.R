@@ -75,7 +75,8 @@ odin_migrate <- function(path, dest) {
       "{cli::qty(sum(is_error))}{?This statement has/These statements have}",
       "been preserved in the migrated code at '{dest}'"))
     cli::cli_alert_info(
-      "See {.vignette migrating} for information on updating these issues")
+      paste("See {.vignette odin2::migrating} for information on updating",
+            "these issues"))
   }
 
   if (!any(is_migratable) && identical(path, dest)) {

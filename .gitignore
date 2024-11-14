@@ -14,4 +14,3 @@ docs
 *.gcov
 .valgrind_ignore
 inst/doc
-pkgdown

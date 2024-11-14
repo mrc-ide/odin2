@@ -1,7 +1,7 @@
-# odin2 <img src='man/figures/logo.png' align="right" height="139" />
+# odin2 <a href="https://mrc-ide.github.io/odin2/"><img src="man/figures/logo.png" align="right" height="139" alt="odin2 website" /></a>
 
 <!-- badges: start -->
-[![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
+[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![R build status](https://github.com/mrc-ide/odin2/workflows/R-CMD-check/badge.svg)](https://github.com/mrc-ide/odin2/actions)
 [![codecov.io](https://codecov.io/github/mrc-ide/odin2/coverage.svg?branch=main)](https://codecov.io/github/mrc-ide/odin2?branch=main)
 <!-- badges: end -->
