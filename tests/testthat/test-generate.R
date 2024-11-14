@@ -2568,3 +2568,26 @@ test_that("Can read parameters into var with aliased dimension", {
       "  }",
       "}"))
 })
+
+
+test_that("correct packing with aliased arrays", {
+  dat <- odin_parse({
+    dim(a, b) <- c(x, y)
+    x <- 2
+    y <- 3
+    initial(a[, ]) <- 0
+    initial(b[, ]) <- 0
+    update(a[, ]) <- 1
+    update(b[, ]) <- 1
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      "  return dust2::packing{",
+      '    {"a", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())},',
+      '    {"b", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())}',
+      "  };",
+      "}"))
+})

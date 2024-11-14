@@ -1143,3 +1143,34 @@ test_that("can't use browser twice in the same phase", {
     "Multiple calls to 'browser()' in phase 'update'",
     fixed = TRUE)
 })
+
+
+test_that("correctly resolve dependency order with aliased parameter dims", {
+  dat <- odin_parse({
+    deriv(S) <- -beta * I * S / N + gamma * I
+    deriv(I) <-  beta * I * S / N - gamma * I
+    initial(S) <- N - I0
+    initial(I) <- I0
+    I0 <- parameter(10)
+    N <- parameter(1000)
+    beta0 <- parameter(0.2)
+    schools <- interpolate(schools_time, schools_open, "constant")
+    schools_time <- parameter(constant = TRUE)
+    schools_open <- parameter(constant = TRUE)
+    dim(schools_time, schools_open) <- parameter(rank = 1)
+    schools_modifier <- parameter(0.6)
+    beta <- ((1 - schools) * (1 - schools_modifier) + schools) * beta0
+    gamma <- 0.1
+  })
+  ## schools_time is the real one:
+  expect_equal(
+    dat$storage$arrays[c("name", "alias")],
+    data_frame(name = c("schools_time", "schools_open"),
+               alias = "schools_time"))
+  ## dim_schools_time resoplved before schools_time, schools_time
+  ## before schools_open:
+  expect_equal(
+    dat$phases$build_shared$equations
+    c("I0", "N", "beta0", "dim_schools_time", "schools_modifier",
+      "gamma", "schools_time", "schools_open", "interpolate_schools"))
+})
