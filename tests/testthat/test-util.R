@@ -99,3 +99,25 @@ test_that("tell user about changes to files", {
     writelines_if_changed(text2, workdir, "myfile", FALSE),
     "Wrote 'myfile'")
 })
+
+
+test_that("can find near matches", {
+  expect_equal(near_match("a", character()), character())
+  expect_equal(near_match("aaa", c("aaaa", "bbbb", "cccc")),
+               "aaaa")
+  expect_equal(near_match("aaa", c("aaaa", "aaab", "aaac", "bbbb", "cccc")),
+               c("aaaa", "aaab", "aaac"))
+  expect_equal(near_match("aaa", paste0("aaa", letters)),
+               c("aaaa", "aaab", "aaac", "aaad", "aaae"))
+  expect_equal(near_match("aaaB", paste0("aaa", letters)),
+               "aaab")
+})
+
+
+test_that("describe ranks", {
+  expect_equal(rank_description(0), "scalar")
+  expect_equal(rank_description(1), "vector")
+  expect_equal(rank_description(2), "matrix")
+  expect_equal(rank_description(3), "3-dimensional array")
+  expect_equal(rank_description(300), "300-dimensional array")
+})

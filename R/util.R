@@ -212,11 +212,15 @@ last <- function(x) {
 
 
 rank_description <- function(rank) {
-  switch(rank + 1L,
-         "scalar",
-         "vector",
-         "matrix",
-         sprintf("%d-dimensional array", rank))
+  if (rank == 0) {
+    "scalar"
+  } else if (rank == 1) {
+    "vector"
+  } else if (rank == 2) {
+    "matrix"
+  } else {
+    sprintf("%d-dimensional array", rank)
+  }
 }
 
 

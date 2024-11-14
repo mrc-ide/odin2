@@ -515,6 +515,14 @@ test_that("generate adjoint", {
     d ~ Poisson(p)
   })
 
+  expect_equal(
+    generate_dust_system_attributes(dat),
+    c("// [[dust2::class(odin)]]",
+      "// [[dust2::time_type(discrete)]]",
+      "// [[dust2::has_compare()]]",
+      "// [[dust2::has_adjoint()]]",
+      '// [[dust2::parameter(a, type = "real_type", rank = 0, required = TRUE, constant = FALSE)]]'))
+
   dat <- generate_prepare(dat)
 
   expect_equal(
@@ -560,6 +568,12 @@ test_that("generate adjoint", {
     c(method_args$update_shared,
       '  shared.a = dust2::r::read_real(parameters, "a", shared.a);',
       "}"))
+
+  expect_equal(
+    generate_dust_system_adjoint(dat),
+    c(generate_dust_system_adjoint_update(dat),
+      generate_dust_system_adjoint_compare_data(dat),
+      generate_dust_system_adjoint_initial(dat)))
 })
 
 
@@ -2025,6 +2039,44 @@ test_that("Generate conditional print", {
 })
 
 
+test_that("print with format", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x_next
+    x_next <- x * 2
+    print("x_next: {as.integer(x_next)} {1 + 1} {x * 100; g}")
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type x_next = x * 2;",
+      "  state_next[0] = x_next;",
+      '  Rprintf("[%f] x_next: %d %f %g\\n", time, static_cast<int>(x_next), 1 + 1, x * 100);',
+      "}"))
+})
+
+
+test_that("print integers", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + a
+    a <- as.integer(x / 2)
+    print("a: {a}")
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const int a = static_cast<int>(x / 2);",
+      "  state_next[0] = x + a;",
+      '  Rprintf("[%f] a: %d\\n", time, a);',
+      "}"))
+})
+
+
 test_that("support min/max", {
   dat <- odin_parse({
     update(x) <- min(a) + max(b, c)
@@ -2178,6 +2230,43 @@ test_that("can generate nontrivial debug", {
       "  }",
       "}"))
 })
+
+
+test_that("browse with arrays", {
+  dat <- odin_parse({
+    initial(x[]) <- 0
+    update(x[]) <- b[i]
+    a[] <- x[i] * 2
+    b[] <- a[i] / x[i]
+    dim(x) <- 5
+    dim(a) <- 5
+    dim(b) <- 5
+    browser(phase = "update")
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = x[i - 1] * 2;",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.b.size; ++i) {",
+      "    internal.b[i - 1] = internal.a[i - 1] / x[i - 1];",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = internal.b[i - 1];",
+      "  }",
+      "  auto odin_env = dust2::r::browser::create();",
+      '  dust2::r::browser::save(time, "time", odin_env);',
+      '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
+      '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
+      '  dust2::r::browser::save(internal.b.data(), shared.dim.b, "b", odin_env);',
+      '  dust2::r::browser::enter(odin_env, "update", time);',
+      "}"))
+})
+
 
 test_that("can generate pi", {
   dat <- odin_parse({

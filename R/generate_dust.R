@@ -7,9 +7,6 @@ generate_dust_system <- function(dat) {
   body$add(sprintf("class %s {", dat$class))
   body$add("public:")
   body$add(sprintf("  %s() = delete;", dat$class))
-  if (dat$time == "continuous") {
-    body$add("  using mixed_time = std::false_type;")
-  }
   body$add("  using real_type = double;")
   body$add("  using rng_state_type = monty::random::generator<real_type>;")
   parts <- generate_dust_parts()
@@ -73,18 +70,14 @@ generate_dust_system_attributes <- function(dat) {
     has_adjoint <- "// [[dust2::has_adjoint()]]"
   }
   pars <- dat$parameters
-  if (!is.null(pars)) {
-    keep <- c("type", "rank", "required", "constant")
-    str <- matrix(
-      unlist0(lapply(pars[keep], vcapply, deparse, control = NULL)),
-      ncol = length(keep))
-    args <- apply(str, 1, function(el) {
-      paste(sprintf("%s = %s", keep, el), collapse = ", ")
-    })
-    parameters <- sprintf("// [[dust2::parameter(%s, %s)]]", pars$name, args)
-  } else {
-    parameters <- NULL
-  }
+  keep <- c("type", "rank", "required", "constant")
+  str <- matrix(
+    unlist0(lapply(pars[keep], vcapply, deparse, control = NULL)),
+    ncol = length(keep))
+  args <- apply(str, 1, function(el) {
+    paste(sprintf("%s = %s", keep, el), collapse = ", ")
+  })
+  parameters <- sprintf("// [[dust2::parameter(%s, %s)]]", pars$name, args)
   c(sprintf("// [[dust2::class(%s)]]", dat$class),
     sprintf("// [[dust2::time_type(%s)]]", dat$time),
     has_compare,
@@ -604,7 +597,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   location <- dat$storage$location[[name]]
   if (location == "stack") {
     if (is_array) {
-      stop("We don't have stack-allocated arrays")
+      stop("We don't have stack-allocated arrays") # nocov
     }
     sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
@@ -631,8 +624,10 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   } else if (location == "adjoint") {
     offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
-      stop("arrays in adjoint probably need checking carefully")
-      offset <- expr_plus(idx, offset)
+      ## Something like
+      ## > offset <- expr_plus(idx, offset)
+      ## but likely much more work needed
+      stop("arrays in adjoint probably need checking carefully") # nocov
     }
     sprintf("%s[%s]",
             name_state,
@@ -796,7 +791,11 @@ generate_dust_print_statement <- function(eq, dat) {
       "%f"
     } else {
       nm <- as.character(p$expr)
-      if (dat$storage$type[[nm]] %in% c("bool", "int")) "%d" else "%f"
+      if (dat$storage$type[[nm]] %in% c("bool", "int")) {
+        "%d"
+      } else {
+        "%f"
+      }
     }
   })
 
@@ -857,11 +856,13 @@ generate_dust_browser <- function(dat, phase) {
                                 dat$sexp_data))
   env <- "odin_env"
   body$add(sprintf("auto %s = dust2::r::browser::create();", env))
-  if (phase == "compare") {
-    export <- names(dat$storage$location)
-  } else {
-    export <- names(dat$storage$location[dat$storage$location != "data"])
-  }
+  ## TODO: don't drop 'data' if using browser in compare, but think
+  ## about how probabilities might be surfaced.
+  type <- dat$storage$type
+  location <- dat$storage$type
+  export <- intersect(
+    names(location[location != "data"]),
+    names(type[type %in% c("real_type", "int", "bool")]))
   for (v in c("time", export)) {
     body$add(generate_dust_browser_to_env(v, dat, env))
   }

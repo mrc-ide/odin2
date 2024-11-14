@@ -26,6 +26,16 @@ test_that("can generate min/max expressions", {
 })
 
 
+test_that("can generate integer maths functions", {
+  dat <- generate_dust_dat(c(a = "shared", b = "stack"), NULL, NULL, NULL)
+  options <- list()
+  expect_equal(generate_dust_sexp(quote(a %% b), dat, options),
+               "std::fmod(shared.a, b)")
+  expect_equal(generate_dust_sexp(quote(a %/% b), dat, options),
+               "monty::math::fintdiv(shared.a, b)")
+})
+
+
 test_that("can cast types", {
   dat <- generate_dust_dat(c(a = "shared"), NULL, NULL, NULL)
   options <- list()

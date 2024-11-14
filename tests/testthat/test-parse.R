@@ -861,6 +861,30 @@ test_that("Argument to update on LHS must use correct rank", {
 })
 
 
+test_that("Reduction expressions use correct rank", {
+  expect_error(
+    odin_parse({
+      update(x[, ]) <- sum(x[i])
+      initial(x[, ]) <- 0
+      dim(x) <- c(4, 3)
+    }),
+    "Array rank in expression differs from the rank")
+})
+
+
+test_that("Reduction expressions require arrays", {
+  expect_error(
+    odin_parse({
+      update(x[, ]) <- sum(a[i, ])
+      initial(x[, ]) <- 0
+      dim(x) <- c(4, 3)
+      a <- 10
+    }),
+    "Missing 'dim()' for expression used as an array: 'a'",
+    fixed = TRUE)
+})
+
+
 test_that("Argument to initial on LHS must use correct rank", {
   expect_error(
     odin_parse({
@@ -1005,7 +1029,7 @@ test_that("RHS array for non-dimensioned variable", {
       update(x) <- a[1]
       update(a) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression assigned as an array")
+    "Missing 'dim()' for expression used as an array", fixed = TRUE)
 })
 
 test_that("Invalid argument to func that expects an array", {
@@ -1045,7 +1069,7 @@ test_that("Non-array passed to func that expects an array", {
       initial(y) <- 0
       update(y) <- 1
     }),
-    "Missing 'dim\\(\\)' for expression assigned as an array"
+    "Missing 'dim()' for expression used as an array", fixed = TRUE
   )
 })
 
@@ -1086,4 +1110,36 @@ test_that("prevent use of arrays without braces", {
     "Trying to use matrix 'b' without index")
   expect_match(conditionMessage(err),
                "Did you mean 'b[., .]'", fixed = TRUE)
+})
+
+
+test_that("can't reference data in print", {
+  expect_error(
+    odin_parse({
+      z <- x + a
+      update(x) <- x + z * 2 + p
+      a <- 1 * b
+      b <- parameter()
+      p <- parameter(constant = TRUE)
+      initial(x) <- 0
+      d <- data()
+      sd <- 1 / d
+      d ~ Normal(x, sd)
+      print("{sd}")
+    }),
+    "Can't yet reference data from 'print()'",
+    fixed = TRUE)
+})
+
+
+test_that("can't use browser twice in the same phase", {
+  expect_error(
+    odin_parse({
+      update(a) <- 1
+      initial(a) <- 0
+      browser("update")
+      browser("update")
+    }),
+    "Multiple calls to 'browser()' in phase 'update'",
+    fixed = TRUE)
 })

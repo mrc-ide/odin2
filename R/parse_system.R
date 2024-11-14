@@ -590,9 +590,12 @@ parse_system_arrays <- function(exprs, call) {
       "compare:",
       vcapply(exprs[is_compare], function(x) as.character(x$rhs$args[[1]])))
   }
-
-  if (anyDuplicated(id)) {
-    for (i in unique(id[duplicated(id)])) {
+  ## Need to treat browser here, as the error we get below is poor if
+  ## we have multiple browser calls.
+  is_browser <- vlapply(exprs, function(x) identical(x$special, "browser"))
+  err <- duplicated(id) & !is_browser
+  if (any(err)) {
+    for (i in unique(id[err])) {
       parse_system_arrays_check_duplicated(id == i, exprs, call)
     }
   }
@@ -681,16 +684,19 @@ parse_packing <- function(names, arrays, no_reorder, type) {
 }
 
 
-parse_print <- function(print, time_type, variables, data, phases, call) {
+parse_print <- function(print, time_type, variables, equations, data, phases,
+                        call) {
   if (length(print) == 0) {
     return(NULL)
   }
 
   phase <- vcapply(print, function(eq) {
     deps <- eq$depends$variables
-    if (any(data$name)) {
-      ## This is not actually enough - it's also all recursive deps
-      ## of data...
+    used <- equations[names(equations) %in% deps]
+    deps <- union(
+      deps,
+      unlist0(lapply(used, function(x) x$rhs$depends$variables_recursive)))
+    if (any(deps %in% data$name)) {
       odin_parse_error("Can't yet reference data from 'print()'",
                        "E0001", eq$src, call)
     }
@@ -718,7 +724,11 @@ parse_browser <- function(browser, time_type, variables, data, phases, call) {
 
   phase <- vcapply(browser, "[[", "phase")
   if (anyDuplicated(phase)) {
-    stop("duplicated phase")
+    err <- phase[duplicated(phase)][[1]]
+    src <- lapply(browser[phase == err], "[[", "src")
+    odin_parse_error(
+      "Multiple calls to 'browser()' in phase '{err}'",
+      "E2023", src, call)
   }
 
   names(browser) <- phase

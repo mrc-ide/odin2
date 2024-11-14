@@ -490,9 +490,44 @@ test_that("require a rank argument if arrays are user sized", {
 })
 
 
+test_that("require that a rank is a size if given", {
+  expect_error(
+    parse_expr(quote(dim(x) <- parameter(rank = a)), NULL, NULL),
+    "'rank' must be a scalar size, if given")
+})
+
+
+test_that("calls to dim require at least one arg", {
+  expect_error(
+    parse_expr(quote(dim() <- 1), NULL, NULL),
+    "Invalid call to 'dim()' on lhs; no variables given",
+    fixed = TRUE)
+})
+
+
+test_that("calls to dim require symbolic args", {
+  expect_error(
+    parse_expr(quote(dim(1) <- 1), NULL, NULL),
+    "Invalid call to 'dim()' on lhs; '1' is not a symbol",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(dim(a, 1, b) <- 1), NULL, NULL),
+    "Invalid call to 'dim()' on lhs; '1' is not a symbol",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(dim(a, "b", c) <- 1), NULL, NULL),
+    "Invalid call to 'dim()' on lhs; '\"b\"' is not a symbol",
+    fixed = TRUE)
+})
+
+
 test_that("require that rank argument is missing generally for parameters", {
   expect_error(
     parse_expr(quote(a <- parameter(rank = 4)), NULL, NULL),
+    "Invalid use of 'rank' argument in 'parameter()'",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(a <- parameter(rank = a)), NULL, NULL),
     "Invalid use of 'rank' argument in 'parameter()'",
     fixed = TRUE)
 })

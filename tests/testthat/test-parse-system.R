@@ -282,3 +282,20 @@ test_that("disallow output() in discrete time models", {
     "Can't use 'output()' in discrete time systems",
     fixed = TRUE)
 })
+
+
+test_that("work out correct print phase", {
+  res <- odin_parse({
+    update(a) <- 1
+    initial(a) <- 1
+    print("{a}")
+  })
+  expect_equal(names(res$print), "update")
+
+  res <- odin_parse({
+    deriv(a) <- 1
+    initial(a) <- 1
+    print("{a}")
+  })
+  expect_equal(names(res$print), "deriv")
+})

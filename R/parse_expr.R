@@ -155,13 +155,15 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 
     if (special == "dim") {
       if (length(lhs) < 2) {
-        odin_parse_error(c("Invalid call to dim function; no variables given"),
-                         "E1003", src, call)
+        odin_parse_error(
+          "Invalid call to 'dim()' on lhs; no variables given",
+          "E1003", src, call)
       }
       lhs <- vcapply(lhs[-1], function(x) {
         if (!is.symbol(x)) {
-          odin_parse_error("Invalid target '{x}' in dim declaration",
-                           "E1005", src, call)
+          odin_parse_error(
+            "Invalid call to 'dim()' on lhs; '{deparse1(x)}' is not a symbol",
+            "E1005", src, call)
         }
         deparse(x)
       })
@@ -287,6 +289,12 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
       "E1056", src, call)
   }
 
+  throw_bad_rank_arg <- function() {
+    odin_parse_error(
+      "'rank' must be a scalar size, if given",
+      "E1057", src, call)
+  }
+
   throw_bad_dim_arg <- function() {
     odin_parse_error(
       "When using 'dim()' on the right-hand-side, it takes only an array name",
@@ -297,6 +305,9 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
   if (is_user_sized) {
     if (is.null(rhs$rank)) {
       throw_rank_needed()
+    }
+    if (!is_scalar_size(rhs$rank)) {
+      throw_bad_rank_arg()
     }
     value <- vector("list", rhs$rank)
   } else if (rlang::is_call(rhs, "c")) {
@@ -492,14 +503,6 @@ parse_expr_assignment_rhs_parameter <- function(rhs, src, call) {
       paste("Differentiable parameters must have 'type = \"real\"'",
             "not 'type = \"{args$type}\"'"),
       "E1032", src, call)
-  }
-
-  if (!is.null(args$rank)) {
-    if (!is_scalar_size(args$rank)) {
-      odin_parse_error(
-        "'rank' must be a scalar size, if given",
-        "E1057", src, call)
-    }
   }
 
   for (nm in c("min", "max")) {
