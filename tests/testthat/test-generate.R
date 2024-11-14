@@ -2058,6 +2058,25 @@ test_that("print with format", {
 })
 
 
+test_that("print integers", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    update(x) <- x + a
+    a <- as.integer(x / 2)
+    print("a: {a}")
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const int a = static_cast<int>(x / 2);",
+      "  state_next[0] = x + a;",
+      '  Rprintf("[%f] a: %d\\n", time, a);',
+      "}"))
+})
+
+
 test_that("support min/max", {
   dat <- odin_parse({
     update(x) <- min(a) + max(b, c)

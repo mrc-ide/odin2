@@ -791,7 +791,11 @@ generate_dust_print_statement <- function(eq, dat) {
       "%f"
     } else {
       nm <- as.character(p$expr)
-      if (dat$storage$type[[nm]] %in% c("bool", "int")) "%d" else "%f"
+      if (dat$storage$type[[nm]] %in% c("bool", "int")) {
+        "%d"
+      } else {
+        "%f"
+      }
     }
   })
 
