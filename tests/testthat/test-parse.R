@@ -1170,7 +1170,7 @@ test_that("correctly resolve dependency order with aliased parameter dims", {
   ## dim_schools_time resoplved before schools_time, schools_time
   ## before schools_open:
   expect_equal(
-    dat$phases$build_shared$equations
+    dat$phases$build_shared$equations,
     c("I0", "N", "beta0", "dim_schools_time", "schools_modifier",
       "gamma", "schools_time", "schools_open", "interpolate_schools"))
 })
