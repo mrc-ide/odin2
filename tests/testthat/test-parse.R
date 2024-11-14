@@ -888,7 +888,7 @@ test_that("LHS of assignment with [] on sum is accepted", {
   expect_error(
     odin_parse({
       initial(x) <- 0
-      update(x) <- a_tot
+      update(x) <- sum(a_tot)
       dim(a) <- c(4, 4)
       dim(a_tot) <- 4
       a[, ] <- 3
@@ -1054,9 +1054,36 @@ test_that("don't duplicate offsets when boundary condition used in initial", {
   dat <- odin_parse({
     initial(x[]) <- 0
     initial(x[1]) <- 1
-    update(x[]) <- x + 1
+    update(x[]) <- x[i] + 1
     dim(x) <- 4
   })
   expect_equal(dat$variables, "x")
   expect_equal(nrow(dat$storage$packing$state), 1)
+})
+
+
+test_that("prevent use of arrays without braces", {
+  err <- expect_error(
+    odin_parse({
+      initial(x[]) <- 0
+      update(x[]) <- b
+      b[] <- x[i]
+      dim(x) <- 5
+      dim(b) <- 5
+    }),
+    "Trying to use vector 'b' without index")
+  expect_match(conditionMessage(err),
+               "Did you mean 'b[...]'", fixed = TRUE)
+
+  err <- expect_error(
+    odin_parse({
+      initial(x[]) <- 0
+      update(x[]) <- b
+      b[, ] <- 1
+      dim(x) <- 5
+      dim(b) <- c(5, 5)
+    }),
+    "Trying to use matrix 'b' without index")
+  expect_match(conditionMessage(err),
+               "Did you mean 'b[., .]'", fixed = TRUE)
 })
