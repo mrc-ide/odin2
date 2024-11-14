@@ -171,10 +171,12 @@ generate_dust_system_packing_gradient <- function(dat) {
 
 generate_dust_system_packing <- function(name, dat) {
   packing <- dat$storage$packing[[name]]
+  arrays <- dat$storage$arrays
   args <- c("const shared_state&" = "shared")
   fmt <- "std::vector<size_t>(shared.dim.%s.dim.begin(), shared.dim.%s.dim.end())"
+  dim_name <- arrays$alias[match(packing$name, arrays$name)]
   dims <- ifelse(packing$rank == 0, "{}",
-                 sprintf(fmt, packing$name, packing$name))
+                 sprintf(fmt, dim_name, dim_name))
   els <- sprintf('{"%s", %s}', packing$name, dims)
   ## trailing comma if needed
   els[-length(els)] <- sprintf("%s,", els[-length(els)])

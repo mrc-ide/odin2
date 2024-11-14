@@ -1022,8 +1022,8 @@ test_that("can generate system with aliased arrays dimmed together", {
       "      size_t x;",
       "    } state;",
       "  } offset;",
-      "  std::vector<real_type> b;",
       "  std::vector<real_type> a;",
+      "  std::vector<real_type> b;",
       "};"))
 
   expect_equal(
@@ -1031,17 +1031,17 @@ test_that("can generate system with aliased arrays dimmed together", {
     c(method_args$build_shared,
       "  shared_state::dim_type dim;",
       "  dim.a.set({static_cast<size_t>(1)});",
-      "  std::vector<real_type> b(dim.a.size);",
-      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
-      "    b[i - 1] = 2;",
-      "  }",
       "  std::vector<real_type> a(dim.a.size);",
       "  for (size_t i = 1; i <= dim.a.size; ++i) {",
       "    a[i - 1] = 1;",
       "  }",
+      "  std::vector<real_type> b(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    b[i - 1] = 2;",
+      "  }",
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
-      "  return shared_state{dim, offset, b, a};",
+      "  return shared_state{dim, offset, a, b};",
       "}"))
 })
 
@@ -1120,8 +1120,8 @@ test_that("can generate system with dependent-arrays dimmed together", {
       "      size_t x;",
       "    } state;",
       "  } offset;",
-      "  std::vector<real_type> c;",
       "  std::vector<real_type> a;",
+      "  std::vector<real_type> c;",
       "  std::vector<real_type> b;",
       "};"))
 
@@ -1130,13 +1130,13 @@ test_that("can generate system with dependent-arrays dimmed together", {
     c(method_args$build_shared,
       "  shared_state::dim_type dim;",
       "  dim.a.set({static_cast<size_t>(1)});",
-      "  std::vector<real_type> c(dim.a.size);",
-      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
-      "    c[i - 1] = 3;",
-      "  }",
       "  std::vector<real_type> a(dim.a.size);",
       "  for (size_t i = 1; i <= dim.a.size; ++i) {",
       "    a[i - 1] = 1;",
+      "  }",
+      "  std::vector<real_type> c(dim.a.size);",
+      "  for (size_t i = 1; i <= dim.a.size; ++i) {",
+      "    c[i - 1] = 3;",
       "  }",
       "  std::vector<real_type> b(dim.a.size);",
       "  for (size_t i = 1; i <= dim.a.size; ++i) {",
@@ -1144,7 +1144,7 @@ test_that("can generate system with dependent-arrays dimmed together", {
       "  }",
       "  shared_state::offset_type offset;",
       "  offset.state.x = 0;",
-      "  return shared_state{dim, offset, c, a, b};",
+      "  return shared_state{dim, offset, a, c, b};",
       "}"))
 })
 
@@ -2566,5 +2566,28 @@ test_that("Can read parameters into var with aliased dimension", {
       "  for (size_t i = 1; i <= shared.dim.x0.size; ++i) {",
       "    state_next[i - 1 + 0] = x[i - 1] + shared.a;",
       "  }",
+      "}"))
+})
+
+
+test_that("correct packing with aliased arrays", {
+  dat <- odin_parse({
+    dim(a, b) <- c(x, y)
+    x <- 2
+    y <- 3
+    initial(a[, ]) <- 0
+    initial(b[, ]) <- 0
+    update(a[, ]) <- 1
+    update(b[, ]) <- 1
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_packing_state(dat),
+    c(method_args$packing_state,
+      "  return dust2::packing{",
+      '    {"a", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())},',
+      '    {"b", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())}',
+      "  };",
       "}"))
 })
