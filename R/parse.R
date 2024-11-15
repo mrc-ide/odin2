@@ -15,6 +15,8 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   system <- parse_system_overall(exprs, call)
   equations <- parse_system_depends(
     system$exprs$equations, system$variables, call)
+  equations <- parse_system_stage(
+    equations, system$variables, system$parameters, system$data$name, call)
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$parameters,
     system$data$name, call)
