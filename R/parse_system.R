@@ -863,7 +863,7 @@ parse_system_delay <- function(eq, phases, variables, arrays, call) {
     setdiff(phases$build_shared$equations, phases$update_shared$equations))
   if (length(err)) {
     odin_parse_error("Invalid 'by', not constant!",
-                     "E2999", src, call)
+                     "E2999", eq$src, call)
   }
 
   ## We need *just* the ODE variables here, as nothing else is really

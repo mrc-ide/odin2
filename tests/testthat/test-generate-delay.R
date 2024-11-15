@@ -12,7 +12,7 @@ test_that("can generate a very simple delay", {
       "  std::vector<size_t> odin_index_a;",
       "  odin_index_a.push_back(0);",
       "  const dust2::ode::delay<real_type> a{1, odin_index_a};",
-      "  dust2::ode::delays<real_type>({a});",
+      "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
   expect_equal(

@@ -441,7 +441,7 @@ generate_dust_system_delays <- function(dat) {
                      nm, by, index))
   }
 
-  body$add(sprintf("dust2::ode::delays<real_type>({%s});",
+  body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
                    paste(dat$delays$name, collapse = ", ")))
 
   cpp_function("auto", "delays", args, body$get(), static = TRUE)
