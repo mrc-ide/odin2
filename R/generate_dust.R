@@ -663,10 +663,9 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   location <- dat$storage$location[[name]]
   if (location == "stack") {
     if (is_array) {
-      stop("We don't have writable stack-allocated arrays") # nocov
-    } else {
-      sprintf("const %s %s", dat$storage$type[[name]], name)
+      stop("We don't have stack-allocated arrays") # nocov
     }
+    sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
     if (is_array) {
       stopifnot(!(name %in% dat$parameters$name))
