@@ -43,7 +43,7 @@ parse_system_overall <- function(exprs, call) {
   throw_discrete_using_delay <- function(src) {
     odin_parse_error(
       "Can't use 'delay()' in discrete time systems",
-      "E2999", src, call)
+      "E2024", src, call)
   }
 
   throw_invalid_time_arg_interp <- function(nm_time, nm_result, rank_desc,
@@ -875,7 +875,7 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
     by_str <- deparse(eq$rhs$expr$by)
     odin_parse_error(
       "Delay time '{by_str}' is not constant",
-      "E2999", eq$src, call)
+      "E2025", eq$src, call)
   }
 
   ## We need *just* the ODE variables here, as nothing else is really

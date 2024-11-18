@@ -64,7 +64,7 @@ parse_expr_assignment <- function(expr, src, call) {
     if (!is.null(special) || !is.null(lhs$array)) {
       odin_parse_error(
         "Calls to 'delay()' must be assigned to a symbol",
-        "E1999", src, call)
+        "E1070", src, call)
     }
     special <- "delay"
   } else {
@@ -608,28 +608,28 @@ parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
   if (!result$success) {
     odin_parse_error(c("Invalid call to 'delay()'",
                        x = conditionMessage(result$error)),
-                     "E1999", src, call)
+                     "E1067", src, call)
   }
   is_missing <- vlapply(result$value, rlang::is_missing)
   if (any(is_missing)) {
     msg <- names(result$value)[is_missing]
     odin_parse_error(c("Invalid call to 'delay()'",
                        x = "Missing argument{?s} {squote(msg)}"),
-                     "E1999", src, call)
+                     "E1067", src, call)
   }
 
   what <- result$value$what
   if (!rlang::is_symbol(what)) {
     odin_parse_error(
       "Expected 'what' argument to 'delay()' to be a symbol",
-      "E1999", src, call)
+      "E1068", src, call)
   }
   what <- as.character(what)
   by <- result$value$by
   if (!(rlang::is_symbol(by) || is.numeric(by))) {
     odin_parse_error(
       "Expected 'by' argument to 'delay()' to be a number or symbol",
-      "E1999", src, call)
+      "E1069", src, call)
   }
 
   depends <- find_dependencies(by)
