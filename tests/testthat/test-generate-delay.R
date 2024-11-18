@@ -18,7 +18,7 @@ test_that("can generate a very simple delay", {
   expect_equal(
     generate_dust_system_rhs(dat),
     c(method_args$rhs_delays,
-      "  const real_type a = delays[0][0];",
+      "  const auto a = delays[0][0];",
       "  const auto x = state[0];",
       "  state_deriv[0] = x - a;",
       "}"))
