@@ -874,8 +874,7 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
   if (length(err)) {
     by_str <- deparse(eq$rhs$expr$by)
     odin_parse_error(
-      c("Delay time '{by_str}' is not constant",
-        hint),
+      "Delay time '{by_str}' is not constant",
       "E2999", eq$src, call)
   }
 
