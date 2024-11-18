@@ -873,11 +873,6 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
     intersect(by_uses, variables))
   if (length(err)) {
     by_str <- deparse(eq$rhs$expr$by)
-    if (identical(by_str, err)) {
-      hint <- NULL
-    } else {
-      hint <- c(x = "'{by_str}' uses {squote(err)}")
-    }
     odin_parse_error(
       c("Delay time '{by_str}' is not constant",
         hint),
