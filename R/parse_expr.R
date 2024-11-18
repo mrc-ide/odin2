@@ -60,6 +60,13 @@ parse_expr_assignment <- function(expr, src, call) {
     }
     lhs$name_data <- lhs$name
     lhs$name <- paste0("interpolate_", lhs$name)
+  } else if (rhs$type == "delay") {
+    if (!is.null(special) || !is.null(lhs$array)) {
+      odin_parse_error(
+        "Calls to 'delay()' must be assigned to a symbol",
+        "E1070", src, call)
+    }
+    special <- "delay"
   } else {
     if (rlang::is_call(rhs$expr, "as.integer")) {
       lhs$storage_type <- "int"
@@ -217,8 +224,7 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
 
 parse_expr_assignment_rhs <- function(rhs, src, call) {
   if (rlang::is_call(rhs, "delay")) {
-    odin_parse_error("'delay()' is not implemented yet",
-                     "E0001", src, call)
+    parse_expr_assignment_rhs_delay(rhs, src, call)
   } else if (rlang::is_call(rhs, "parameter")) {
     parse_expr_assignment_rhs_parameter(rhs, src, call)
   } else if (rlang::is_call(rhs, "data")) {
@@ -557,14 +563,14 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
   if (!result$success) {
     odin_parse_error(c("Invalid call to 'interpolate()'",
                        x = conditionMessage(result$error)),
-                     "E1003", src, call)
+                     "E1035", src, call)
   }
   is_missing <- vlapply(result$value, rlang::is_missing)
   if (any(is_missing)) {
     msg <- names(result$value)[is_missing]
     odin_parse_error(c("Invalid call to 'interpolate()'",
                        x = "Missing argument{?s} {squote(msg)}"),
-                     "E1003", src, call)
+                     "E1035", src, call)
   }
 
   for (nm in c("time", "value")) {
@@ -593,6 +599,43 @@ parse_expr_assignment_rhs_interpolate <- function(rhs, src, call) {
 
   list(type = "interpolate",
        expr = expr,
+       depends = depends)
+}
+
+
+parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
+  result <- match_call(rhs, function(what, by) NULL)
+  if (!result$success) {
+    odin_parse_error(c("Invalid call to 'delay()'",
+                       x = conditionMessage(result$error)),
+                     "E1067", src, call)
+  }
+  is_missing <- vlapply(result$value, rlang::is_missing)
+  if (any(is_missing)) {
+    msg <- names(result$value)[is_missing]
+    odin_parse_error(c("Invalid call to 'delay()'",
+                       x = "Missing argument{?s} {squote(msg)}"),
+                     "E1067", src, call)
+  }
+
+  what <- result$value$what
+  if (!rlang::is_symbol(what)) {
+    odin_parse_error(
+      "Expected 'what' argument to 'delay()' to be a symbol",
+      "E1068", src, call)
+  }
+  what <- as.character(what)
+  by <- result$value$by
+  if (!(rlang::is_symbol(by) || is.numeric(by))) {
+    odin_parse_error(
+      "Expected 'by' argument to 'delay()' to be a number or symbol",
+      "E1069", src, call)
+  }
+
+  depends <- find_dependencies(by)
+
+  list(type = "delay",
+       expr = call("OdinDelay", what = what, by = by),
        depends = depends)
 }
 

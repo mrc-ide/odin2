@@ -34,6 +34,7 @@ generate_dust_parts <- function() {
     update = generate_dust_system_update,
     rhs = generate_dust_system_rhs,
     output = generate_dust_system_output,
+    delays = generate_dust_system_delays,
     size_output = generate_dust_system_size_output,
     zero_every = generate_dust_system_zero_every,
     compare_data = generate_dust_system_compare_data,
@@ -344,12 +345,22 @@ generate_dust_system_rhs <- function(dat) {
   if (dat$time == "discrete") {
     return(NULL)
   }
+
   args <- c("real_type" = "time",
             "const real_type*" = "state",
             "const shared_state&" = "shared",
             "internal_state&" = "internal",
             "real_type*" = "state_deriv")
+
   body <- collector()
+
+  if (any(dat$delays$in_rhs)) {
+    arg_delays <- c(
+      "const dust2::ode::delay_result_type<real_type>&" = "delays")
+    args <- append(args, arg_delays, after = 4)
+    body$add(generate_dust_system_delay_equations("rhs", dat))
+  }
+
   unpack <- intersect(dat$variables, dat$phases$deriv$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
@@ -371,7 +382,16 @@ generate_dust_system_output <- function(dat) {
             "real_type*" = "state",
             "const shared_state&" = "shared",
             "internal_state&" = "internal")
+
   body <- collector()
+
+  if (any(dat$delays$in_output)) {
+    arg_delays <- c(
+      "const dust2::ode::delay_result_type<real_type>&" = "delays")
+    args <- c(args, arg_delays)
+    body$add(generate_dust_system_delay_equations("output", dat))
+  }
+
   unpack <- intersect(dat$variables, dat$phases$output$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
@@ -382,6 +402,50 @@ generate_dust_system_output <- function(dat) {
   }
 
   cpp_function("void", "output", args, body$get(), static = TRUE)
+}
+
+
+generate_dust_system_delays <- function(dat) {
+  if (is.null(dat$delays)) {
+    return(NULL)
+  }
+  args <- c("const shared_state&" = "shared")
+  body <- collector()
+
+  packing <- dat$storage$packing$state
+  arrays <- dat$storage$arrays
+
+  push_back_index <- function(nm, into) {
+    i <- match(nm, packing$name)
+    stopifnot(!is.na(i))
+    offset <- generate_dust_sexp(packing$offset[[i]], dat$sexp_data)
+    if (nm %in% arrays$name) {
+      size <- generate_dust_sexp(packing$size[[i]], dat$sexp_data)
+      c(sprintf("for (size_t i = %s; i < %s + %s; ++i) {",
+                offset, offset, size),
+        sprintf("  %s.push_back(i);", into),
+        "}")
+    } else {
+      sprintf("%s.push_back(%s);", into, offset)
+    }
+  }
+
+  for (i in seq_len(nrow(dat$delays))) {
+    nm <- dat$delays$name[[i]]
+    by <- generate_dust_sexp(dat$delays$by[[i]], dat$sexp_data)
+    index <- sprintf("odin_index_%s", nm)
+    body$add(sprintf("std::vector<size_t> %s;", index))
+    for (v in dat$delays$value[[i]]$variables) {
+      body$add(push_back_index(v, index))
+    }
+    body$add(sprintf("const dust2::ode::delay<real_type> %s{%s, %s};",
+                     nm, by, index))
+  }
+
+  body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
+                   paste(dat$delays$name, collapse = ", ")))
+
+  cpp_function("auto", "delays", args, body$get(), static = TRUE)
 }
 
 
@@ -719,6 +783,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     ## think.
     res <- sprintf("%s;",
                    generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options))
+  } else if (identical(eq$rhs$type, "delay")) {
+    ## The equation will be generated separately
+    res <- NULL
   } else {
     lhs <- generate_dust_lhs(eq$lhs, dat, name_state, options)
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
@@ -893,4 +960,31 @@ generate_dust_browser_to_env <- function(name, dat, env) {
   } else {
     sprintf('dust2::r::browser::save(%s, "%s", %s);', data, name, env)
   }
+}
+
+
+generate_dust_system_delay_equations <- function(phase, dat) {
+  delays <- dat$delays$name[dat$delays[[sprintf("in_%s", phase)]]]
+  unlist0(lapply(delays, generate_dust_system_delay_equation, dat))
+}
+
+
+generate_dust_system_delay_equation <- function(nm, dat) {
+  i <- match(nm, dat$delays)
+  delay_type <- dat$delays$type[[i]]
+  is_array <- nm %in% dat$storage$arrays$name
+
+  if (delay_type == "variable") {
+    if (is_array) {
+      ret <- sprintf("const auto& %s = delays[%d];",
+                     nm, i - 1)
+    } else {
+      ret <- sprintf("const auto %s = delays[%d][0];",
+                     nm, i - 1)
+    }
+  } else {
+    stop("not yet implemented") # nocov
+  }
+
+  ret
 }

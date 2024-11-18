@@ -499,7 +499,7 @@ a <- interpolate(at, ay, "wiggly")
 
 # `E1037`
 
-Calls to interpolate must be assigned to a symbol, because they affect the **whole** structure.  This is academic until we support interpolation of several series at the same time, but rather than writing:
+Calls to interpolate must be assigned to a symbol, because they affect the **whole** structure.  Rather than writing:
 
 ```
 a[] <- interpolate(at, ay, "linear")
@@ -509,7 +509,7 @@ dim(a) <- 10
 we expect to see
 
 ```
-a <- interpolate(a, y, "linear")
+a <- interpolate(at, ay, "linear")
 dim(a) <- 10
 ```
 
@@ -837,6 +837,65 @@ dim(a) <- dim(a * 2)
 dim(a) <- dim(a + 5)
 ```
 
+# `E1067`
+
+Invalid call top the to `delay()` function, used on the rhs of an assignment.  If this error is thrown then we have failed to parse the arguments of your call to `delay`.  The full prototype of `delay()` is:
+
+```r
+delay(what, by)
+```
+
+with both arguments required and typically unnamed.
+
+We will fail to parse your call if:
+
+* You provide any number other than two arguments
+* You provide named arguments that do not match the two above (`what` and `by`)
+
+# `E1068`
+
+The first (`what`) argument to `delay()` must be a symbol; the name of a variable or derived quantity to delay.  It cannot (currently at least) be a complex expression, though we may relax this in future, and it cannot be a number.
+
+Examples that would cause this error:
+
+```r
+delay(a + 1, tau)
+delay(1, tau)
+```
+
+# `E1069`
+
+The second (`by`) argument to `delay()` must be a symbol or a number.  It cannot be a complex expression.  An example that would cause this error:
+
+```r
+delay(a, b + 1)
+```
+
+You can fix this by writing:
+
+```r
+delay(a, b1)
+b1 <- b + 1
+```
+
+# `E1070`
+
+Calls to delay must be assigned to a symbol, because they affect the **whole** structure.  Rather than writing:
+
+```
+a[] <- delay(b, tau)
+dim(a) <- 10
+```
+
+we expect to see
+
+```
+a <- delay(b, tau)
+dim(a) <- 10
+```
+
+This is similar to the requirement that array-valued parameters are assigned at once (in contrast to odin version 1).
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
@@ -1120,6 +1179,14 @@ browser("update")
 ```
 
 Because the `browser` call is always put at the end of the phase, repeating `browser()` as above does not achieve anything.
+
+# `E2024`
+
+Cannot use `delay()` within a discrete-time system.  We can only support delay differential equation models; delays in discrete-time systems need to be handled very differently.  Let us know if you need this, but we removed this feature from odin1 in ~2017 and it does not seem to have been missed.
+
+# `E2025`
+
+The delay time (`by` or second argument to `delay()`) is not constant, i.e., determined at system creation.  If you are taking this as a parameter, ensure that you have specified `constant = TRUE` (this disallows changing the parameter via `dust2::dust_system_update_pars()`).  This requirement stems from our current design of the delay differential equation solver in dust and we may relax this if it causes difficulty.
 
 # `E3001`
 
