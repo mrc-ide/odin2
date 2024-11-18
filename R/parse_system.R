@@ -475,17 +475,21 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
 
 
 parse_storage <- function(equations, phases, variables, output, arrays,
-                          parameters, data, call) {
+                          parameters, data, delays, call) {
+  stopifnot(all(delays$type == "variable")) # affects usedness below
   used <- unique(unlist0(lapply(phases, "[[", "equations")))
   unused <- setdiff(names(equations), used)
+
+  delayed_variables <- delays$name[delays$type == "variable"]
 
   dim <- names(which(
     vlapply(equations[used], function(x) identical(x$special, "dim"))))
   shared <- setdiff(
     intersect(used, phases$build_shared$equations),
     dim)
-  stack <- setdiff(used, c(shared, dim, arrays$name))
-  internal <- setdiff(intersect(used, arrays$name), shared)
+  stack <- union(setdiff(used, c(shared, dim, arrays$name)),
+                 delayed_variables)
+  internal <- setdiff(intersect(used, arrays$name), c(shared, stack))
 
   packing <- list(
     state = parse_packing(variables, arrays, output, "state"))
@@ -572,7 +576,9 @@ parse_system_arrays <- function(exprs, call) {
   for (nm in dim_nms) {
     i <- nms == nm & !is_dim
     err <- vlapply(exprs[i], function(x) {
-      is.null(x$lhs$array) && !identical(x$special, "parameter")
+      is.null(x$lhs$array) &&
+        !identical(x$special, "parameter") &&
+        !identical(x$special, "delay")
     })
     if (any(err)) {
       src <- lapply(exprs[i][err], "[[", "src")
@@ -841,7 +847,7 @@ parse_system_delays <- function(equations, phases, variables, arrays,
   ## Now, consider the dependencies of the delay equation; we should
   ## actually do this in the
   dat <- lapply(unname(equations[is_delay]), parse_system_delay,
-                phases, variables, arrays, call)
+                equations, phases, variables, arrays, call)
 
   data_frame(
     name = vcapply(dat, "[[", "name"),
@@ -855,15 +861,27 @@ parse_system_delays <- function(equations, phases, variables, arrays,
 
 ## TODO: Consider the effect of a delayed delay, and at least prevent
 ## that here for now.  I have a feeling the malaria model does this.
-parse_system_delay <- function(eq, phases, variables, arrays, call) {
+parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
   name <- eq$lhs$name
 
-  err <- setdiff(
-    eq$rhs$depends$variables,
-    setdiff(phases$build_shared$equations, phases$update_shared$equations))
+  ## Check that 'by' looks constant:
+  by_uses <- eq$rhs$depends$variables
+  by_uses_eqs_stage <- vcapply(equations[names(equations) %in% by_uses],
+                               "[[", "stage")
+  err <- c(
+    names(by_uses_eqs_stage)[by_uses_eqs_stage != "create"],
+    intersect(by_uses, variables))
   if (length(err)) {
-    odin_parse_error("Invalid 'by', not constant!",
-                     "E2999", eq$src, call)
+    by_str <- deparse(eq$rhs$expr$by)
+    if (identical(by_str, err)) {
+      hint <- NULL
+    } else {
+      hint <- c(x = "'{by_str}' uses {squote(err)}")
+    }
+    odin_parse_error(
+      c("Delay time '{by_str}' is not constant",
+        hint),
+      "E2999", eq$src, call)
   }
 
   ## We need *just* the ODE variables here, as nothing else is really
@@ -885,7 +903,7 @@ parse_system_delay <- function(eq, phases, variables, arrays, call) {
     ret$value <- list(variables = what)
   } else { # expression
     odin_parse_error("Delayed expressions are not yet supported",
-                     "E0001", eq, call)
+                     "E0001", eq$src, call)
     ## Here, list the variables, and work out how we will unpack them
     ## if more than one is listed.
     ##

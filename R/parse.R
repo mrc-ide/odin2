@@ -24,7 +24,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
                                 system$arrays, call)
   storage <- parse_storage(
     equations, phases, system$variables, system$output, system$arrays,
-    system$parameters, system$data, call)
+    system$parameters, system$data, delays, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
                                  system$variables, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,

@@ -413,12 +413,13 @@ generate_dust_system_delays <- function(dat) {
   body <- collector()
 
   packing <- dat$storage$packing$state
+  arrays <- dat$storage$arrays
 
   push_back_index <- function(nm, into) {
     i <- match(nm, packing$name)
     stopifnot(!is.na(i))
     offset <- generate_dust_sexp(packing$offset[[i]], dat$sexp_data)
-    if (nm %in% dat$arrays$name) {
+    if (nm %in% arrays$name) {
       size <- generate_dust_sexp(packing$size[[i]], dat$sexp_data)
       c(sprintf("for (size_t i = %s; i < %s + %s; ++i) {",
                 offset, offset, size),
@@ -662,9 +663,10 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   location <- dat$storage$location[[name]]
   if (location == "stack") {
     if (is_array) {
-      stop("We don't have stack-allocated arrays") # nocov
+      stop("We don't have writable stack-allocated arrays") # nocov
+    } else {
+      sprintf("const %s %s", dat$storage$type[[name]], name)
     }
-    sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
     if (is_array) {
       stopifnot(!(name %in% dat$parameters$name))
@@ -971,18 +973,18 @@ generate_dust_system_delay_equations <- function(phase, dat) {
 generate_dust_system_delay_equation <- function(nm, dat) {
   i <- match(nm, dat$delays)
   delay_type <- dat$delays$type[[i]]
-  is_array <- nm %in% dat$arrays$name
+  is_array <- nm %in% dat$storage$arrays$name
 
   if (delay_type == "variable") {
     if (is_array) {
-      ret <- sprintf("const real_type* %s = delays[%d].data();",
+      ret <- sprintf("const auto& %s = delays[%d];",
                      nm, i - 1)
     } else {
-      ret <- sprintf("const real_type %s = delays[%d][0];",
+      ret <- sprintf("const auto %s = delays[%d][0];",
                      nm, i - 1)
     }
   } else {
-    stop("not yet implemented")
+    stop("not yet implemented") # nocov
   }
 
   ret
