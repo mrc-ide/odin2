@@ -104,15 +104,16 @@ adjoint_uses <- function(phase, equations, deps) {
 
 adjoint_phase <- function(eqs, dat) {
   uses <- unique(
-    unlist0(lapply(eqs, function(x) find_dependencies(x)$variables)))
+    unlist0(lapply(eqs, function(x) find_dependencies(x$rhs$expr)$variables)))
 
   ## This is a bit gross; we need to find all variables referenced in
   ## all equations referenced in all adjoint calculations!
   uses_in_equations <- unlist0(
     lapply(dat$equations[intersect(names(dat$equations), uses)],
            function(x) x$rhs$depends$variables))
+  uses <- union(uses, uses_in_equations)
 
-  unpack <- intersect(dat$variables, union(uses, uses_in_equations))
+  unpack <- intersect(dat$variables, uses)
   ## Alternatively, filter *to* things in stack/internal?
   ignore <- c(dat$storage$contents$shared,
               dat$storage$contents$data,
@@ -120,13 +121,14 @@ adjoint_phase <- function(eqs, dat) {
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
   location <- set_names(vcapply(eqs, function(x) x$lhs$location),
                         vcapply(eqs, function(x) x$lhs$name))
+  include_adjoint <- names(location) %in% uses
 
   unpack_adjoint <- intersect(names(location)[location == "adjoint"], uses)
   list(unpack = unpack,
        unpack_adjoint = unpack_adjoint,
        equations = equations,
-       adjoint = eqs,
-       location = location)
+       adjoint = eqs[include_adjoint],
+       location = location[include_adjoint])
 }
 
 

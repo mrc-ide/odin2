@@ -568,6 +568,7 @@ generate_dust_system_adjoint_update <- function(dat) {
             "internal_state&" = "internal",
             "real_type*" = "adjoint_next")
   body <- collector()
+  options <- list(stochastic_expectation = TRUE)
 
   unpack <- intersect(dat$variables, dat$adjoint$update$unpack)
   body$add(
@@ -580,8 +581,9 @@ generate_dust_system_adjoint_update <- function(dat) {
                          "adjoint"))
   eqs <- c(get_phase_equations("update", dat, adjoint = TRUE),
            dat$adjoint$update$adjoint)
+
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat, options))
   }
 
   cpp_function("void", "adjoint_update", args, body$get(), static = TRUE)
@@ -597,6 +599,7 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
             "internal_state&" = "internal",
             "real_type*" = "adjoint_next")
   body <- collector()
+  options <- list(stochastic_expectation = TRUE)
 
   unpack <- intersect(dat$variables, dat$adjoint$compare$unpack)
   body$add(
@@ -611,7 +614,7 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
   eqs <- c(get_phase_equations("compare", dat, adjoint = TRUE),
            dat$adjoint$compare$adjoint)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat, options))
   }
 
   cpp_function("void", "adjoint_compare_data", args, body$get(), static = TRUE)
@@ -626,6 +629,7 @@ generate_dust_system_adjoint_initial <- function(dat) {
             "internal_state&" = "internal",
             "real_type*" = "adjoint_next")
   body <- collector()
+  options <- list(stochastic_expectation = TRUE)
 
   unpack <- intersect(dat$variables, dat$adjoint$initial$unpack)
   body$add(
@@ -640,7 +644,7 @@ generate_dust_system_adjoint_initial <- function(dat) {
   eqs <- c(get_phase_equations("initial", dat, adjoint = TRUE),
            dat$adjoint$initial$adjoint)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "adjoint_next", dat))
+    body$add(generate_dust_assignment(eq, "adjoint_next", dat, options))
   }
 
   cpp_function("void", "adjoint_initial", args, body$get(), static = TRUE)
