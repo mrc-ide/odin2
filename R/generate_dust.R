@@ -133,7 +133,7 @@ generate_dust_system_shared_state <- function(dat) {
     "    struct {",
     sprintf("      std::array<size_t, %d> state;",
             nrow(dat$storage$packing$state)),
-    "    offset;",
+    "    } offset;",
     "  } odin;",
     sprintf("  %s", dims),
     sprintf("  %s %s;", type, nms),
