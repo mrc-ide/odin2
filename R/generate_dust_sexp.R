@@ -2,6 +2,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
   if (is.recursive(expr)) {
     is_stochastic_call <- rlang::is_call(expr[[1]], "OdinStochasticCall")
     if (is_stochastic_call) {
+      if (isTRUE(options$stochastic_expectation)) {
+        return(generate_dust_sexp(expr[[1]]$mean, dat, options))
+      }
       fn <- expr[[1]]$sample
     } else {
       fn <- as.character(expr[[1]])
