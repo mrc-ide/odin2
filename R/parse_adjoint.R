@@ -104,15 +104,16 @@ adjoint_uses <- function(phase, equations, deps) {
 
 adjoint_phase <- function(eqs, dat) {
   uses <- unique(
-    unlist0(lapply(eqs, function(x) find_dependencies(x)$variables)))
+    unlist0(lapply(eqs, function(x) find_dependencies(x$rhs$expr)$variables)))
 
   ## This is a bit gross; we need to find all variables referenced in
   ## all equations referenced in all adjoint calculations!
   uses_in_equations <- unlist0(
     lapply(dat$equations[intersect(names(dat$equations), uses)],
            function(x) x$rhs$depends$variables))
+  uses <- union(uses, uses_in_equations)
 
-  unpack <- intersect(dat$variables, union(uses, uses_in_equations))
+  unpack <- intersect(dat$variables, uses)
   ## Alternatively, filter *to* things in stack/internal?
   ignore <- c(dat$storage$contents$shared,
               dat$storage$contents$data,
