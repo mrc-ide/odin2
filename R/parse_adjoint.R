@@ -121,13 +121,14 @@ adjoint_phase <- function(eqs, dat) {
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
   location <- set_names(vcapply(eqs, function(x) x$lhs$location),
                         vcapply(eqs, function(x) x$lhs$name))
+  include_adjoint <- names(location) %in% uses
 
   unpack_adjoint <- intersect(names(location)[location == "adjoint"], uses)
   list(unpack = unpack,
        unpack_adjoint = unpack_adjoint,
        equations = equations,
-       adjoint = eqs,
-       location = location)
+       adjoint = eqs[include_adjoint],
+       location = location[include_adjoint])
 }
 
 

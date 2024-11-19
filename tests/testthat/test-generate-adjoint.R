@@ -95,7 +95,6 @@ test_that("can generate adjoint model", {
       "  const real_type noise = 1 / shared.exp_noise;",
       "  const real_type lambda = cases_inc + noise;",
       "  const real_type adj_lambda = data.incidence / lambda - 1;",
-      "  const real_type adj_noise = adj_lambda;",
       "  adjoint_next[0] = adj_S;",
       "  adjoint_next[1] = adj_I;",
       "  adjoint_next[2] = adj_R;",
