@@ -52,11 +52,14 @@ test_that("generate trivial types for trivial system", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
-      "  struct offset_type {",
+      "  struct odin_internals_type {",
       "    struct {",
-      "      size_t x;",
-      "    } state;",
-      "  } offset;",
+      "      dust2::packing state;",
+      "    } packing;",
+      "    struct {",
+      "      std::array<size_t, 1> state;",
+      "    offset;",
+      "  } odin;",
       "};"))
   expect_equal(
     generate_dust_system_internal_state(dat),
@@ -1410,7 +1413,7 @@ test_that("can store arrays in state", {
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
       "  struct odin_internals_type {",
-      "    struct {"
+      "    struct {",
       "      dust2::packing state;",
       "    } packing;",
       "    struct {",
@@ -2524,9 +2527,12 @@ test_that("can generate code for array parameter constraints", {
       "  std::vector<real_type> r(dim.r.size);",
       '  dust2::r::read_real_array(parameters, dim.r, r.data(), "r", true);',
       '  dust2::r::check_max_array<real_type>(r, 2, "r");',
-      "  shared_state::offset_type offset;",
-      "  offset.state.y = 0;",
-      "  return shared_state{dim, offset, r};",
+      "  shared_state::odin_internals_type odin;",
+      "  odin.packing.state = dust2::packing{",
+      '    {"y", {}}',
+      "  };",
+      "  odin.packing.state.copy_offset(odin.offset.state.begin());",
+      "  return shared_state{odin, dim, r};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -2553,9 +2559,9 @@ test_that("Can read parameters into var with aliased dimension", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + 0;",
+      "  const auto * x = state + shared.odin.offset.state[0];",
       "  for (size_t i = 1; i <= shared.dim.x0.size; ++i) {",
-      "    state_next[i - 1 + 0] = x[i - 1] + shared.a;",
+      "    state_next[i - 1 + shared.odin.offset.state[0]] = x[i - 1] + shared.a;",
       "  }",
       "}"))
 })
@@ -2574,11 +2580,18 @@ test_that("correct packing with aliased arrays", {
   dat <- generate_prepare(dat)
 
   expect_equal(
-    generate_dust_system_packing_state(dat),
-    c(method_args$packing_state,
-      "  return dust2::packing{",
-      '    {"a", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())},',
-      '    {"b", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())}',
+    generate_dust_system_build_shared(dat),
+    c(method_args$build_shared,
+      "  shared_state::dim_type dim;",
+      "  const real_type x = 2;",
+      "  const real_type y = 3;",
+      "  dim.a.set({static_cast<size_t>(x), static_cast<size_t>(y)});",
+      "  shared_state::odin_internals_type odin;",
+      "  odin.packing.state = dust2::packing{",
+      '    {"a", std::vector<size_t>(dim.a.dim.begin(), dim.a.dim.end())},',
+      '    {"b", std::vector<size_t>(dim.a.dim.begin(), dim.a.dim.end())}',
       "  };",
+      "  odin.packing.state.copy_offset(odin.offset.state.begin());",
+      "  return shared_state{odin, dim, x, y};",
       "}"))
 })
