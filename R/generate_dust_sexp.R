@@ -37,12 +37,8 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       what <- expr[[3]]
       packing <- dat$packing[[where]]
       i <- match(what, packing$name)
-      if (is.numeric(packing$offset[[i]])) {
-        return(as.character(packing$offset[[i]]))
-      } else {
-        shared <- if (isFALSE(options$shared_exists)) "" else "shared."
-        return(sprintf("%soffset.%s.%s", shared, where, what))
-      }
+      shared <- if (isFALSE(options$shared_exists)) "" else "shared."
+      return(sprintf("%sodin.offset.%s[%d]", shared, where, i - 1))
     } else if (fn == "length") {
       return(generate_dust_sexp(call("OdinLength", as.character(expr[[2]])),
                                 dat, options))

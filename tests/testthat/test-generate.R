@@ -617,7 +617,7 @@ test_that("can generate nontrivial zero_every method", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {1}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[1]}}};",
       "}"))
 })
 
@@ -633,7 +633,7 @@ test_that("can generate duplicated zero_every method", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {0}}, {4, {1}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[0]}}, {4, {shared.odin.offset.state[1]}}};",
       "}"))
 })
 
@@ -649,7 +649,7 @@ test_that("can generate duplicated zero_every method with different freq", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {0}}, {3, {1}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[0]}}, {3, {shared.odin.offset.state[1]}}};",
       "}"))
 })
 
@@ -664,11 +664,7 @@ test_that("can generate zero_every for array variable", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  std::vector<size_t> zero_every_x;",
-      "  for (size_t i = 0; i < 4; ++i) {",
-      "    zero_every_x.push_back(i);",
-      "  }",
-      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}};",
+      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, shared.odin.offset.state[0])}}};",
       "}"))
 })
 
@@ -685,11 +681,7 @@ test_that("can generate zero_every for array variable with scalar", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  std::vector<size_t> zero_every_x;",
-      "  for (size_t i = 0; i < 4; ++i) {",
-      "    zero_every_x.push_back(i);",
-      "  }",
-      "  return dust2::zero_every_type<real_type>{{4, zero_every_x}, {2, {4}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, shared.odin.offset.state[0])}}, {2, {shared.odin.offset.state[1]}}};",
       "}"))
 })
 
@@ -1393,6 +1385,7 @@ test_that("can generate system with variable size array that needs saving", {
 })
 
 
+## TEST CASE...
 test_that("can store arrays in state", {
   ## In this test case we need to generate offsets, which for now
   ## we'll do without generating any special variables
@@ -1416,20 +1409,20 @@ test_that("can store arrays in state", {
   expect_equal(
     generate_dust_system_shared_state(dat),
     c("struct shared_state {",
+      "  struct odin_internals_type {",
+      "    struct {"
+      "      dust2::packing state;",
+      "    } packing;",
+      "    struct {",
+      "      std::array<size_t, 4> state;",
+      "    offset;",
+      "  } odin;",
       "  struct dim_type {",
       "    dust2::array::dimensions<1> a;",
       "    dust2::array::dimensions<1> b;",
       "    dust2::array::dimensions<1> c;",
       "    dust2::array::dimensions<1> d;",
       "  } dim;",
-      "  struct offset_type {",
-      "    struct {",
-      "      size_t a;",
-      "      size_t b;",
-      "      size_t c;",
-      "      size_t d;",
-      "    } state;",
-      "  } offset;",
       "  real_type n;",
       "};"))
   expect_equal(
@@ -1444,12 +1437,15 @@ test_that("can store arrays in state", {
       "  dim.b.set({static_cast<size_t>(n + 1)});",
       "  dim.c.set({static_cast<size_t>(n + 2)});",
       "  dim.d.set({static_cast<size_t>(n + 3)});",
-      "  shared_state::offset_type offset;",
-      "  offset.state.a = 0;",
-      "  offset.state.b = dim.a.size;",
-      "  offset.state.c = offset.state.b + dim.b.size;",
-      "  offset.state.d = offset.state.c + dim.c.size;",
-      "  return shared_state{dim, offset, n};",
+      "  shared_state::odin_internals_type odin;",
+      "  odin.packing.state = dust2::packing{",
+      '    {"a", std::vector<size_t>(dim.a.dim.begin(), dim.a.dim.end())},',
+      '    {"b", std::vector<size_t>(dim.b.dim.begin(), dim.b.dim.end())},',
+      '    {"c", std::vector<size_t>(dim.c.dim.begin(), dim.c.dim.end())},',
+      '    {"d", std::vector<size_t>(dim.d.dim.begin(), dim.d.dim.end())}',
+      "  };",
+      "  odin.packing.state.copy_offset(odin.offset.state.begin());",
+      "  return shared_state{odin, dim, n};",
       "}"))
   expect_equal(
     generate_dust_system_update_shared(dat),
@@ -1463,32 +1459,27 @@ test_that("can store arrays in state", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * a = state + 0;",
-      "  const auto * b = state + shared.offset.state.b;",
-      "  const auto * c = state + shared.offset.state.c;",
-      "  const auto * d = state + shared.offset.state.d;",
+      "  const auto * a = state + shared.odin.offset.state[0];",
+      "  const auto * b = state + shared.odin.offset.state[1];",
+      "  const auto * c = state + shared.odin.offset.state[2];",
+      "  const auto * d = state + shared.odin.offset.state[3];",
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
-      "    state_next[i - 1 + 0] = a[i - 1] + 1;",
+      "    state_next[i - 1 + shared.odin.offset.state[0]] = a[i - 1] + 1;",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.b.size; ++i) {",
-      "    state_next[i - 1 + shared.offset.state.b] = b[i - 1] + 2;",
+      "    state_next[i - 1 + shared.odin.offset.state[1]] = b[i - 1] + 2;",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.c.size; ++i) {",
-      "    state_next[i - 1 + shared.offset.state.c] = c[i - 1] + 3;",
+      "    state_next[i - 1 + shared.odin.offset.state[2]] = c[i - 1] + 3;",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.d.size; ++i) {",
-      "    state_next[i - 1 + shared.offset.state.d] = d[i - 1] + 4;",
+      "    state_next[i - 1 + shared.odin.offset.state[3]] = d[i - 1] + 4;",
       "  }",
       "}"))
   expect_equal(
     generate_dust_system_packing_state(dat),
     c(method_args$packing_state,
-      "  return dust2::packing{",
-      '    {"a", std::vector<size_t>(shared.dim.a.dim.begin(), shared.dim.a.dim.end())},',
-      '    {"b", std::vector<size_t>(shared.dim.b.dim.begin(), shared.dim.b.dim.end())},',
-      '    {"c", std::vector<size_t>(shared.dim.c.dim.begin(), shared.dim.c.dim.end())},',
-      '    {"d", std::vector<size_t>(shared.dim.d.dim.begin(), shared.dim.d.dim.end())}',
-      "  };",
+      "  return shared.odin.packing.state;",
       "}"))
 })
 
