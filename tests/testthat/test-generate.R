@@ -96,6 +96,18 @@ test_that("generate basic attributes for system with compare", {
 })
 
 
+test_that("don't generate packing gradient where not used", {
+  dat <- odin_parse({
+    update(x) <- 1
+    initial(x) <- 1
+    d <- data()
+    d ~ Normal(x, 1)
+  })
+  dat <- generate_prepare(dat)
+  expect_null(generate_dust_system_packing_gradient(dat))
+})
+
+
 test_that("generate data type where used", {
   dat <- odin_parse({
     update(x) <- 1

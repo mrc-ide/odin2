@@ -121,18 +121,21 @@ generate_dust_system_shared_state <- function(dat) {
     dims <- NULL
   }
 
+  has_adjoint <- !is.null(dat$adjoint)
+  packing_type <- c("state", if (has_adjoint) c("adjoint", "gradient"))
+  packing_size <- viapply(dat$storage$packing[packing_type], nrow)
+
   c("struct shared_state {",
     "  struct odin_internals_type {",
     ## TODO: decide if we want this here too, could move from the main
     ## struct if so, with some advantages.
     ## sprintf("    %s", dims),
     "    struct {",
-    ## TODO: we'll add gradient here too, once things are working?
-    "      dust2::packing state;",
+    sprintf("      dust2::packing %s;", packing_type),
     "    } packing;",
     "    struct {",
-    sprintf("      std::array<size_t, %d> state;",
-            nrow(dat$storage$packing$state)),
+    sprintf("      std::array<size_t, %d> %s;",
+            packing_size, packing_type),
     "    } offset;",
     "  } odin;",
     sprintf("  %s", dims),
@@ -174,7 +177,12 @@ generate_dust_system_packing_state <- function(dat) {
 
 
 generate_dust_system_packing_gradient <- function(dat) {
-  generate_dust_system_packing("gradient", dat)
+  if (is.null(dat$adjoint)) {
+    return(NULL)
+  }
+  args <- c("const shared_state&" = "shared")
+  body <- "return shared.odin.packing.gradient;"
+  cpp_function("dust2::packing", "packing_gradient", args, body, static = TRUE)
 }
 
 
@@ -234,21 +242,16 @@ generate_dust_system_build_shared <- function(dat) {
     nms_return <- c("odin", dat$phases$build_shared$equations)
   }
 
-  ## We move the packing here, and generate this immediately from the
-  ## dimensions, then pack that offset into the object?  That avoids
-  ## duplicating the logic around creating the packing and means we
-  ## have a nice fast location to get the offsets from.  We could even
-  ## store it as a static array easily.
-
   body$add("shared_state::odin_internals_type odin;")
-  ## TODO: this needs doing for gradient too, for models that have it,
-  ## but this obviously partitions over name easily.
-  body$add(generate_dust_system_packing_body(
-    "state", dat, "odin.packing.state =", FALSE))
+  has_adjoint <- !is.null(dat$adjoint)
+  packing_type <- c("state", if (has_adjoint) c("adjoint", "gradient"))
+  for (type in packing_type) {
+    body$add(generate_dust_system_packing_body(
+      type, dat, sprintf("odin.packing.%s =", type), FALSE))
+  }
   body$add(sprintf(
     "odin.packing.%s.copy_offset(odin.offset.%s.begin());",
-    "state", "state"))
-
+    packing_type, packing_type))
   body$add(sprintf("return shared_state{%s};",
                    paste(nms_return, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")

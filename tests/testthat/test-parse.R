@@ -4,7 +4,7 @@ test_that("can parse trivial system", {
     update(x) <- 0
   })
   expect_equal(res$time, "discrete")
-  expect_equal(res$class, "odin")
+  expect_equal(res$class, "odin_system")
   expect_equal(res$variables, "x")
   expect_equal(nrow(res$parameters), 0)
   expect_equal(nrow(res$data), 0)
@@ -27,7 +27,7 @@ test_that("can parse dust MVP system", {
   })
 
   expect_equal(res$time, "discrete")
-  expect_equal(res$class, "odin")
+  expect_equal(res$class, "odin_system")
   expect_equal(res$variables, "x")
   expect_equal(res$parameters,
                data_frame(name = c("b", "p"),
