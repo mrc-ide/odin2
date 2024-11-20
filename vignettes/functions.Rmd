@@ -279,9 +279,10 @@ The currently supported distributions are (alphabetically):
 * `Hypergeometric` -- the [hypergeometric distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution) with parameters `m` (number of white balls), `n` (number of black balls), and `k` (number of samples), and we return the number of *white* balls.  We may support alternative parametrisations of this distribution in future (this version is the same parametrisation as `rhyper`)
 * `NegativeBinomial` -- the [negative binomial distribution](https://en.wikipedia.org/wiki/Negative_binomial_distribution) with two forms:
   - `size`, `prob` (**default**)
-  - `size`, `mu` (the mean)`
+  - `size`, `mu` (the mean)
 * `Normal` -- the [normal distribution](https://en.wikipedia.org/wiki/Normal_distribution) with parameters `mean`, `sd`
 * `Poisson` -- the [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution) with parameter `lambda` (the mean)
+* `TruncatedNormal` -- the [truncated normal distribution](https://en.wikipedia.org/wiki/Truncated_normal_distribution) with parameters `mean`, `sd`, `min` and `max`. For a one-sided truncated normal distribution, you can set `min = -Inf` or `max = Inf`. Note that `mean` and `sd` are not the mean and standard deviation of the truncated normal distribution, but are the mean and standard deviation of the normal distribution that has been truncated.
 * `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
 
 In the future, we plan support for additional distributions, please let us know if we are missing any that you need.  The support for these functions comes from `monty` and we will link here to the docs in that package once they exist for additional details.
