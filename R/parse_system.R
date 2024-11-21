@@ -676,7 +676,6 @@ parse_packing <- function(names, arrays, no_reorder, type) {
   if (length(scalar) > 0) {
     packing_scalar <- data_frame(
       name = scalar, rank = 0, dims = I(vector("list", length(scalar))),
-      size = I(rep(list(1), length(scalar))),
       alias = scalar)
     packing <- rbind(packing_scalar, arrays)
   } else {
@@ -687,17 +686,28 @@ parse_packing <- function(names, arrays, no_reorder, type) {
   is_alias <- packing$name != packing$alias
   if (any(is_alias)) {
     i <- match(packing$alias[is_alias], packing$name)
-    packing$size[is_alias] <- packing$size[i]
     packing$dims[is_alias] <- packing$dims[i]
   }
   packing$alias <- NULL
 
   packing <- packing[match(names, packing$name), ]
-  pack_first <- vlapply(packing$size, is.numeric) &
-    !(packing$name %in% no_reorder)
-  packing <- packing[order(!pack_first), ]
-  rownames(packing) <- NULL
 
+  ## This is a bit crude, and we might push harder here; we can use
+  ## the same trick as in the constraints to find everything known at
+  ## compile time.  The code for this is at constraints, and we might
+  ## apply that generally?  I think it makes the most sense to do this
+  ## by applying it at the end of the array parsing - we can try and
+  ## resolve the dimensions to real numbers where possible and then
+  ## the size will drop out here just like it currently does, so
+  ## changes will be elsewhere?
+  size <- vnapply(packing$dims, function(x) {
+    if (all(vlapply(x, is.numeric))) prod(unlist(x)) else NA_real_
+  })
+  pack_first <- !is.na(size) & !(packing$name %in% no_reorder)
+  i <- order(!pack_first)
+  packing <- packing[i, ]
+  packing$offset <- c(0, cumsum(size[i][-nrow(packing)]))
+  rownames(packing) <- NULL
   packing
 }
 
