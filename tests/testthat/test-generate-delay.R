@@ -9,7 +9,7 @@ test_that("can generate a very simple delay", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  const dust2::ode::delay<real_type> a{1, {shared.odin.offset.state[0]}};",
+      "  const dust2::ode::delay<real_type> a{1, {0}};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
@@ -17,8 +17,8 @@ test_that("can generate a very simple delay", {
     generate_dust_system_rhs(dat),
     c(method_args$rhs_delays,
       "  const auto a = delays[0][0];",
-      "  const auto x = state[shared.odin.offset.state[0]];",
-      "  state_deriv[shared.odin.offset.state[0]] = x - a;",
+      "  const auto x = state[0];",
+      "  state_deriv[0] = x - a;",
       "}"))
 })
 
@@ -35,7 +35,7 @@ test_that("can generate a delayed array", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  const dust2::ode::delay<real_type> a{1, dust2::tools::integer_sequence(shared.dim.x.size, shared.odin.offset.state[0])};",
+      "  const dust2::ode::delay<real_type> a{1, dust2::tools::integer_sequence(shared.dim.x.size, 0)};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
@@ -43,9 +43,9 @@ test_that("can generate a delayed array", {
     generate_dust_system_rhs(dat),
     c(method_args$rhs_delays,
       "  const auto& a = delays[0];",
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_deriv[i - 1 + shared.odin.offset.state[0]] = x[i - 1] - a[i - 1];",
+      "    state_deriv[i - 1 + 0] = x[i - 1] - a[i - 1];",
       "  }",
       "}"))
 })
@@ -64,21 +64,21 @@ test_that("can generate delay in output", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  const dust2::ode::delay<real_type> a{1, {shared.odin.offset.state[0]}};",
+      "  const dust2::ode::delay<real_type> a{1, {0}};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
   expect_equal(
     generate_dust_system_rhs(dat),
     c(method_args$rhs,
-      "  state_deriv[shared.odin.offset.state[0]] = 1;",
+      "  state_deriv[0] = 1;",
       "}"))
 
   expect_equal(
     generate_dust_system_output(dat),
     c(method_args$output_delays,
       "  const auto a = delays[0][0];",
-      "  const auto x = state[shared.odin.offset.state[0]];",
-      "  state[shared.odin.offset.state[1]] = x - a;",
+      "  const auto x = state[0];",
+      "  state[1] = x - a;",
       "}"))
 })

@@ -316,7 +316,7 @@ test_that("generate trivial discrete time initial conditions", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  state[shared.odin.offset.state[0]] = 1;",
+      "  state[0] = 1;",
       "}"))
 })
 
@@ -330,7 +330,7 @@ test_that("generate trivial continuous time initial conditions", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_continuous,
-      "  state[shared.odin.offset.state[0]] = 1;",
+      "  state[0] = 1;",
       "}"))
 })
 
@@ -344,7 +344,7 @@ test_that("can generate simple update method", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[shared.odin.offset.state[0]] = 1;",
+      "  state_next[0] = 1;",
       "}"))
   expect_null(generate_dust_system_rhs(dat))
 })
@@ -359,7 +359,7 @@ test_that("can generate simple deriv method", {
   expect_equal(
     generate_dust_system_rhs(dat),
     c(method_args$rhs,
-      "  state_deriv[shared.odin.offset.state[0]] = 1;",
+      "  state_deriv[0] = 1;",
       "}"))
   expect_null(generate_dust_system_update(dat))
 })
@@ -376,7 +376,7 @@ test_that("can build simple compare function", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  if (!std::isnan(data.d)) {",
       "    odin_ll += monty::density::normal(data.d, x, 1, true);",
@@ -398,7 +398,7 @@ test_that("can build more complex compare function", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type a = x / data.d;",
       "  if (!std::isnan(data.d)) {",
@@ -419,9 +419,9 @@ test_that("generate stack equations during update", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type a = 1 / x;",
-      "  state_next[shared.odin.offset.state[0]] = x + a;",
+      "  state_next[0] = x + a;",
       "}"))
 })
 
@@ -440,7 +440,7 @@ test_that("can look up lhs for bits of data", {
     "const real a")
   expect_equal(
     generate_dust_lhs(list(name = "b"), dat, "state", list()),
-    "state[shared.odin.offset.state[2]]")
+    "state[2]")
   expect_error(
     generate_dust_lhs(list(name = "c"), dat, "state", list()),
     "Unsupported location")
@@ -460,7 +460,7 @@ test_that("variables involving data are computed within compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type a = data.d1 / data.d2;",
       "  if (!std::isnan(data.d1) && !std::isnan(data.d2)) {",
@@ -520,7 +520,7 @@ test_that("pull recursive dependencies into compare_data", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type p = monty::math::exp(x);",
       "  if (!std::isnan(data.d)) {",
@@ -578,31 +578,31 @@ test_that("generate adjoint", {
   expect_equal(
     generate_dust_system_adjoint_update(dat),
     c(method_args$adjoint_update,
-      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
-      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
-      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_x;",
-      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_x + adj_a;",
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
+      "  adjoint_next[0] = adj_x;",
+      "  adjoint_next[1] = adj_x + adj_a;",
       "}"))
 
   expect_equal(
     generate_dust_system_adjoint_compare_data(dat),
     c(method_args$adjoint_compare_data,
-      "  const auto x = state[shared.odin.offset.state[0]];",
-      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
-      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
+      "  const auto x = state[0];",
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
       "  const real_type p = monty::math::exp(x);",
       "  const real_type adj_p = data.d / p - 1;",
-      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_p * monty::math::exp(x) + adj_x;",
-      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_a;",
+      "  adjoint_next[0] = adj_p * monty::math::exp(x) + adj_x;",
+      "  adjoint_next[1] = adj_a;",
       "}"))
 
   expect_equal(
     generate_dust_system_adjoint_initial(dat),
     c(method_args$adjoint_initial,
-      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
-      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
-      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_x;",
-      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_a;",
+      "  const auto adj_x = adjoint[0];",
+      "  const auto adj_a = adjoint[1];",
+      "  adjoint_next[0] = adj_x;",
+      "  adjoint_next[1] = adj_a;",
       "}"))
 
   expect_equal(
@@ -628,8 +628,8 @@ test_that("can generate simple stochastic system", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
-      "  state_next[shared.odin.offset.state[0]] = monty::random::normal<real_type>(rng_state, x, 1);",
+      "  const auto x = state[0];",
+      "  state_next[0] = monty::random::normal<real_type>(rng_state, x, 1);",
       "}"))
 })
 
@@ -659,7 +659,7 @@ test_that("can generate nontrivial zero_every method", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[1]}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {1}}};",
       "}"))
 })
 
@@ -675,7 +675,7 @@ test_that("can generate duplicated zero_every method", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[0]}}, {4, {shared.odin.offset.state[1]}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {4, {1}}};",
       "}"))
 })
 
@@ -691,7 +691,7 @@ test_that("can generate duplicated zero_every method with different freq", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {shared.odin.offset.state[0]}}, {3, {shared.odin.offset.state[1]}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {0}}, {3, {1}}};",
       "}"))
 })
 
@@ -706,7 +706,7 @@ test_that("can generate zero_every for array variable", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, shared.odin.offset.state[0])}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, 0)}}};",
       "}"))
 })
 
@@ -723,7 +723,7 @@ test_that("can generate zero_every for array variable with scalar", {
   expect_equal(
     generate_dust_system_zero_every(dat),
     c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, shared.odin.offset.state[0])}}, {2, {shared.odin.offset.state[1]}}};",
+      "  return dust2::zero_every_type<real_type>{{4, {dust2::tools::integer_sequence(shared.dim.x.size, 0)}}, {2, {4}}};",
       "}"))
 })
 
@@ -766,11 +766,11 @@ test_that("can generate models with commonly used mathematical functions", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type a = monty::math::log(x);",
       "  const real_type b = monty::math::ceil(a);",
       "  const real_type c = monty::math::pow(a, b);",
-      "  state_next[shared.odin.offset.state[0]] = c;",
+      "  state_next[0] = c;",
       "}"))
 })
 
@@ -789,7 +789,7 @@ test_that("can generate a simple array equation", {
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0] + internal.a[1];",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
   expect_equal(
     generate_dust_system_internal_state(dat),
@@ -816,7 +816,7 @@ test_that("can generate a simple array within shared", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[shared.odin.offset.state[0]] = shared.a[0] + shared.a[1] + shared.a[2];",
+      "  state_next[0] = shared.a[0] + shared.a[1] + shared.a[2];",
       "}"))
 
   expect_equal(
@@ -876,7 +876,7 @@ test_that("can generate non-range access to arrays", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  internal.a[0] = monty::random::normal<real_type>(rng_state, 0, 1);",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0];",
+      "  state_next[0] = internal.a[0];",
       "}"))
 })
 
@@ -909,8 +909,8 @@ test_that("can generate stochastic initial conditions", {
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
       "  const real_type a0 = monty::random::poisson<real_type>(rng_state, shared.N / 100);",
-      "  state[shared.odin.offset.state[0]] = a0;",
-      "  state[shared.odin.offset.state[1]] = shared.N - a0;",
+      "  state[0] = a0;",
+      "  state[1] = shared.N - a0;",
       "}"))
 })
 
@@ -940,20 +940,20 @@ test_that("can generate system with array variable", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + shared.odin.offset.state[0];",
-      "  const auto y = state[shared.odin.offset.state[1]];",
+      "  const auto * x = state + 0;",
+      "  const auto y = state[3];",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = x[i - 1];",
+      "    state_next[i - 1 + 0] = x[i - 1];",
       "  }",
-      "  state_next[shared.odin.offset.state[1]] = y;",
+      "  state_next[3] = y;",
       "}"))
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state[i - 1 + shared.odin.offset.state[0]] = 0;",
+      "    state[i - 1 + 0] = 0;",
       "  }",
-      "  state[shared.odin.offset.state[1]] = 0;",
+      "  state[3] = 0;",
       "}"))
   expect_equal(
     generate_dust_system_packing_state(dat),
@@ -977,8 +977,8 @@ test_that("can generate system with array variable used in compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
-      "  const auto * x = state + shared.odin.offset.state[0];",
-      "  const auto y = state[shared.odin.offset.state[1]];",
+      "  const auto * x = state + 0;",
+      "  const auto y = state[2];",
       "  real_type odin_ll = 0;",
       "  if (!std::isnan(data.d)) {",
       "    odin_ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
@@ -1444,7 +1444,7 @@ test_that("can generate system with simple variable sized array", {
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0] + internal.a[1];",
+      "  state_next[0] = internal.a[0] + internal.a[1];",
       "}"))
 })
 
@@ -1510,15 +1510,12 @@ test_that("can generate system with variable size array that needs saving", {
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0] + internal.a[1] + internal.a[2];",
+      "  state_next[0] = internal.a[0] + internal.a[1] + internal.a[2];",
       "}"))
 })
 
 
-## TEST CASE...
 test_that("can store arrays in state", {
-  ## In this test case we need to generate offsets, which for now
-  ## we'll do without generating any special variables
   dat <- odin_parse({
     n <- 2
     initial(a[]) <- 1
@@ -1589,12 +1586,12 @@ test_that("can store arrays in state", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * a = state + shared.odin.offset.state[0];",
+      "  const auto * a = state + 0;",
       "  const auto * b = state + shared.odin.offset.state[1];",
       "  const auto * c = state + shared.odin.offset.state[2];",
       "  const auto * d = state + shared.odin.offset.state[3];",
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = a[i - 1] + 1;",
+      "    state_next[i - 1 + 0] = a[i - 1] + 1;",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.b.size; ++i) {",
       "    state_next[i - 1 + shared.odin.offset.state[1]] = b[i - 1] + 2;",
@@ -1673,7 +1670,7 @@ test_that("generate variable sized array from parameters", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[shared.odin.offset.state[0]] = shared.a[0] + shared.a[1];",
+      "  state_next[0] = shared.a[0] + shared.a[1];",
       "}"))
 })
 
@@ -1765,7 +1762,7 @@ test_that("can generate a simple multidimensional array equation", {
       "      internal.a[i - 1 + (j - 1) * shared.dim.a.mult[1]] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "    }",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * shared.dim.a.mult[1]] / internal.a[1 + 2 * shared.dim.a.mult[1]];",
+      "  state_next[0] = internal.a[0] / internal.a[1] + internal.a[shared.dim.a.mult[1]] / internal.a[1 + shared.dim.a.mult[1]] + internal.a[2 * shared.dim.a.mult[1]] / internal.a[1 + 2 * shared.dim.a.mult[1]];",
       "}"))
 })
 
@@ -1780,9 +1777,9 @@ test_that("can use length() on the rhs", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = x[i - 1] + shared.dim.x.size;",
+      "    state_next[i - 1 + 0] = x[i - 1] + shared.dim.x.size;",
       "  }",
       "}"))
 })
@@ -1798,10 +1795,10 @@ test_that("can use nrow() and ncol() on the rhs", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.dim[0]; ++i) {",
       "    for (size_t j = 1; j <= shared.dim.x.dim[1]; ++j) {",
-      "      state_next[i - 1 + (j - 1) * shared.dim.x.mult[1] + shared.odin.offset.state[0]] = x[i - 1 + (j - 1) * shared.dim.x.mult[1]] + shared.dim.x.dim[0] / shared.dim.x.dim[1];",
+      "      state_next[i - 1 + (j - 1) * shared.dim.x.mult[1] + 0] = x[i - 1 + (j - 1) * shared.dim.x.mult[1]] + shared.dim.x.dim[0] / shared.dim.x.dim[1];",
       "    }",
       "  }",
       "}"))
@@ -1822,7 +1819,7 @@ test_that("can generate complete sums over arrays", {
       "  for (size_t i = 1; i <= shared.dim.y.size; ++i) {",
       "    internal.y[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y);",
       "}"))
 })
 
@@ -1845,7 +1842,7 @@ test_that("can generate partial sums over arrays", {
       "    }",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y, {i - 1, i - 1}, {0, shared.dim.y.dim[1] - 1});",
+      "    state_next[i - 1 + 0] = dust2::array::sum<real_type>(internal.y.data(), shared.dim.y, {i - 1, i - 1}, {0, shared.dim.y.dim[1] - 1});",
       "  }",
       "}"))
 })
@@ -1868,7 +1865,7 @@ test_that("can add interpolation", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const real_type y = shared.interpolate_y.eval(time);",
-      "  state_next[shared.odin.offset.state[0]] = y;",
+      "  state_next[0] = y;",
       "}"))
 
   expect_equal(
@@ -1932,7 +1929,7 @@ test_that("can generate multi-part array", {
       "  internal.a[0] = 1;",
       "  internal.a[1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  const real_type b = internal.a[0] + internal.a[1];",
-      "  state_next[shared.odin.offset.state[0]] = b;",
+      "  state_next[0] = b;",
       "}"))
   expect_equal(
     generate_dust_system_build_shared(dat),
@@ -1967,8 +1964,8 @@ test_that("can generate multi-part array in variables", {
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[0];",
-      "  state_next[1 + shared.odin.offset.state[0]] = internal.a[1];",
+      "  state_next[0] = internal.a[0];",
+      "  state_next[1 + 0] = internal.a[1];",
       "}"))
 })
 
@@ -2103,9 +2100,9 @@ test_that("can interpolate arrays", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  shared.interpolate_a.eval(time, internal.a);",
-      "  state_next[shared.odin.offset.state[0]] = x + dust2::array::sum<real_type>(internal.a.data(), shared.dim.a);",
+      "  state_next[0] = x + dust2::array::sum<real_type>(internal.a.data(), shared.dim.a);",
       "}"))
 })
 
@@ -2171,9 +2168,9 @@ test_that("can generate print strings", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type x_next = x * 2;",
-      "  state_next[shared.odin.offset.state[0]] = x_next;",
+      "  state_next[0] = x_next;",
       '  Rprintf("[%f] x_next: %f\\n", time, x_next);',
       "}"))
 })
@@ -2189,8 +2186,8 @@ test_that("can generate print that requires additional unpack", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[shared.odin.offset.state[0]] = time;",
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  state_next[0] = time;",
+      "  const auto x = state[0];",
       '  Rprintf("[%f] x: %f\\n", time, x);',
       "}"))
 })
@@ -2207,9 +2204,9 @@ test_that("Generate conditional print", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type x_next = x * 2;",
-      "  state_next[shared.odin.offset.state[0]] = x_next;",
+      "  state_next[0] = x_next;",
       "  if (x > 10) {",
       '    Rprintf("[%f] x_next: %f\\n", time, x_next);',
       "  }",
@@ -2228,9 +2225,9 @@ test_that("print with format", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type x_next = x * 2;",
-      "  state_next[shared.odin.offset.state[0]] = x_next;",
+      "  state_next[0] = x_next;",
       '  Rprintf("[%f] x_next: %d %f %g\\n", time, static_cast<int>(x_next), 1 + 1, x * 100);',
       "}"))
 })
@@ -2247,9 +2244,9 @@ test_that("print integers", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const int a = static_cast<int>(x / 2);",
-      "  state_next[shared.odin.offset.state[0]] = x + a;",
+      "  state_next[0] = x + a;",
       '  Rprintf("[%f] a: %d\\n", time, a);',
       "}"))
 })
@@ -2268,7 +2265,7 @@ test_that("support min/max", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + monty::math::max(shared.b, shared.c);",
+      "  state_next[0] = dust2::array::min<real_type>(shared.a.data(), shared.dim.a) + monty::math::max(shared.b, shared.c);",
       "}"))
 })
 
@@ -2288,7 +2285,7 @@ test_that("cast index variables to int when compared to integers", {
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = (static_cast<int>(i) == shared.n ? 0 : time);",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.a[shared.n - 1];",
+      "  state_next[0] = internal.a[shared.n - 1];",
       "}"))
 })
 
@@ -2338,10 +2335,10 @@ test_that("can generate browser code", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto x = state[shared.odin.offset.state[0]];",
+      "  const auto x = state[0];",
       "  const real_type a = x * 2;",
       "  const real_type b = a / x;",
-      "  state_next[shared.odin.offset.state[0]] = b;",
+      "  state_next[0] = b;",
       "  if (time > 2) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
@@ -2383,16 +2380,16 @@ test_that("can generate nontrivial debug", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto S = state[shared.odin.offset.state[0]];",
-      "  const auto I = state[shared.odin.offset.state[1]];",
-      "  const auto R = state[shared.odin.offset.state[2]];",
+      "  const auto S = state[0];",
+      "  const auto I = state[1];",
+      "  const auto R = state[2];",
       "  const real_type p_IR = 1 - monty::math::exp(-shared.gamma * dt);",
       "  const real_type p_SI = 1 - monty::math::exp(-(shared.beta * I / shared.N * dt));",
       "  const real_type n_SI = monty::random::binomial<real_type>(rng_state, S, p_SI);",
       "  const real_type n_IR = monty::random::binomial<real_type>(rng_state, I, p_IR);",
-      "  state_next[shared.odin.offset.state[0]] = S - n_SI;",
-      "  state_next[shared.odin.offset.state[1]] = I + n_SI - n_IR;",
-      "  state_next[shared.odin.offset.state[2]] = R + n_IR;",
+      "  state_next[0] = S - n_SI;",
+      "  state_next[1] = I + n_SI - n_IR;",
+      "  state_next[2] = R + n_IR;",
       "  if (I < 10 && time > 20) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
@@ -2429,7 +2426,7 @@ test_that("browse with arrays", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
       "    internal.a[i - 1] = x[i - 1] * 2;",
       "  }",
@@ -2437,7 +2434,7 @@ test_that("browse with arrays", {
       "    internal.b[i - 1] = internal.a[i - 1] / x[i - 1];",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = internal.b[i - 1];",
+      "    state_next[i - 1 + 0] = internal.b[i - 1];",
       "  }",
       "  auto odin_env = dust2::r::browser::create();",
       '  dust2::r::browser::save(time, "time", odin_env);',
@@ -2459,7 +2456,7 @@ test_that("can generate pi", {
   expect_equal(
     generate_dust_system_initial(dat),
     c(method_args$initial_discrete,
-      "  state[shared.odin.offset.state[0]] = M_PI;",
+      "  state[0] = M_PI;",
       "}"))
 })
 
@@ -2485,7 +2482,7 @@ test_that("Array assignment with index on lhs and rhs (1)", {
       "    const size_t i = shared.seed_age_band;",
       "    internal.x[shared.seed_age_band - 1] = internal.x[i - 1] + 1;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
       "}")
   )
 })
@@ -2518,7 +2515,7 @@ test_that("Array assignment with index on lhs and rhs (1)", {
       "    const size_t i = shared.seed_age_band;",
       "    internal.x[shared.seed_age_band - 1] = internal.x[i - 1] + 1 + shared.seed_age_band * 0;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
       "}")
   )
 })
@@ -2546,7 +2543,7 @@ test_that("Array assigment lhs: integer index, rhs: i", {
       "    const size_t i = 4;",
       "    internal.x[3] = internal.x[i - 1] + 1;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
       "}")
   )
 })
@@ -2573,7 +2570,7 @@ test_that("Array assigment lhs: expression index, rhs: i", {
       "    const size_t i = shared.seed_age_band + 1;",
       "    internal.x[shared.seed_age_band + 1 - 1] = internal.x[i - 1] + 1;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
       "}")
   )
 })
@@ -2599,7 +2596,7 @@ test_that("Array assigment lhs: length index, rhs: i", {
       "    const size_t i = shared.dim.x.size;",
       "    internal.x[shared.dim.x.size - 1] = internal.x[i - 1] + 1;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.x.data(), shared.dim.x);",
       "}")
   )
 })
@@ -2620,7 +2617,7 @@ test_that("cast integers to sizes", {
       "  for (size_t i = 1; i <= static_cast<size_t>(shared.n); ++i) {",
       "    internal.x[i - 1] = time;",
       "  }",
-      "  state_next[shared.odin.offset.state[0]] = internal.x[0];",
+      "  state_next[0] = internal.x[0];",
       "}"))
 })
 
@@ -2645,23 +2642,23 @@ test_that("can generate system with output", {
     generate_dust_system_initial(dat),
     c(method_args$initial_continuous,
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state[i - 1 + shared.odin.offset.state[0]] = 0;",
+      "    state[i - 1 + 0] = 0;",
       "  }",
       "}"))
 
   expect_equal(
     generate_dust_system_rhs(dat),
     c(method_args$rhs,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
-      "    state_deriv[i - 1 + shared.odin.offset.state[0]] = x[i - 1] * shared.r[i - 1];",
+      "    state_deriv[i - 1 + 0] = x[i - 1] * shared.r[i - 1];",
       "  }",
       "}"))
 
   expect_equal(
     generate_dust_system_output(dat),
     c(method_args$output,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  state[shared.odin.offset.state[1]] = dust2::array::sum<real_type>(x, shared.dim.x);",
       "}"))
 
@@ -2749,9 +2746,9 @@ test_that("Can read parameters into var with aliased dimension", {
   expect_equal(
     generate_dust_system_update(dat),
     c(method_args$update,
-      "  const auto * x = state + shared.odin.offset.state[0];",
+      "  const auto * x = state + 0;",
       "  for (size_t i = 1; i <= shared.dim.x0.size; ++i) {",
-      "    state_next[i - 1 + shared.odin.offset.state[0]] = x[i - 1] + shared.a;",
+      "    state_next[i - 1 + 0] = x[i - 1] + shared.a;",
       "  }",
       "}"))
 })
