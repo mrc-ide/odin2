@@ -45,9 +45,6 @@ generate_dust_parts <- function() {
 generate_prepare <- function(dat) {
   rank <- set_names(dat$storage$arrays$rank, dat$storage$arrays$name)
   alias <- set_names(dat$storage$arrays$alias, dat$storage$arrays$name)
-  ## We will try and resolve the constant packing here, but perhaps
-  ## first let's tryt and rip out the offsets (and possibly size) from
-  ## that table.
   dat$sexp_data <- generate_dust_dat(dat$storage$location,
                                      dat$storage$packing,
                                      dat$storage$type,
@@ -130,9 +127,6 @@ generate_dust_system_shared_state <- function(dat) {
 
   c("struct shared_state {",
     "  struct odin_internals_type {",
-    ## TODO: decide if we want this here too, could move from the main
-    ## struct if so, with some advantages.
-    ## sprintf("    %s", dims),
     "    struct {",
     sprintf("      dust2::packing %s;", packing_type),
     "    } packing;",
@@ -172,7 +166,6 @@ generate_dust_system_data_type <- function(dat) {
 }
 
 
-## TODO: a bit of refactoring to do here:
 generate_dust_system_packing_state <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- "return shared.odin.packing.state;"
@@ -191,26 +184,15 @@ generate_dust_system_packing_gradient <- function(dat) {
 
 
 generate_dust_system_packing <- function(name, dat) {
-  args <- c("const shared_state&" = "shared")
-  body <- generate_dust_system_packing_body(name, dat, "return", TRUE)
-  cpp_function("dust2::packing", sprintf("packing_%s", name), args, body,
-               static = TRUE)
-}
-
-
-generate_dust_system_packing_body <- function(name, dat, prefix,
-                                              shared_exists) {
   packing <- dat$storage$packing[[name]]
   arrays <- dat$storage$arrays
-  location <- if (shared_exists) "shared.dim" else "dim"
-  fmt <- "std::vector<size_t>(%s.%s.dim.begin(), %s.%s.dim.end())"
+  fmt <- "std::vector<size_t>(dim.%s.dim.begin(), dim.%s.dim.end())"
   dim_name <- arrays$alias[match(packing$name, arrays$name)]
-  dims <- ifelse(packing$rank == 0, "{}",
-                 sprintf(fmt, location, dim_name, location, dim_name))
+  dims <- ifelse(packing$rank == 0, "{}", sprintf(fmt, dim_name, dim_name))
   els <- sprintf('{"%s", %s}', packing$name, dims)
   ## trailing comma if needed
   els[-length(els)] <- sprintf("%s,", els[-length(els)])
-  c(sprintf("%s dust2::packing{", prefix),
+  c(sprintf("odin.packing.%s = dust2::packing{", name),
     sprintf("  %s", els),
     "};")
 }
@@ -250,8 +232,7 @@ generate_dust_system_build_shared <- function(dat) {
   has_adjoint <- !is.null(dat$adjoint)
   packing_type <- c("state", if (has_adjoint) c("adjoint", "gradient"))
   for (type in packing_type) {
-    body$add(generate_dust_system_packing_body(
-      type, dat, sprintf("odin.packing.%s =", type), FALSE))
+    body$add(generate_dust_system_packing(type, dat))
   }
   body$add(sprintf(
     "odin.packing.%s.copy_offset(odin.offset.%s.begin());",
@@ -481,34 +462,32 @@ generate_dust_system_size_output <- function(dat) {
 
 
 generate_dust_system_zero_every <- function(dat) {
-  args <- c("const shared_state&" = "shared")
   if (is.null(dat$zero_every)) {
-    ## I think we can return NULL now?
-    body <- "return dust2::zero_every_type<real_type>();"
-  } else {
-    packing <- dat$storage$packing$state
-    every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
-                     USE.NAMES = FALSE)
-    i <- match(names(dat$zero_every), packing$name)
-    is_array <- packing$rank[i] > 0
-    nms <- sprintf("zero_every_%s", packing$name[i])
-
-    offset <- lapply(nms, function(name) {
-      call("OdinOffset", "state", packing$name[i])
-    })
-    index <- vcapply(packing$name[i], function(name) {
-      offset <- generate_dust_sexp(call("OdinOffset", "state", name),
-                                   dat$sexp_data)
-      if (name %in% dat$storage$arrays$name) {
-        size <- generate_dust_sexp(call("OdinLength", name), dat$sexp_data)
-        sprintf("{dust2::tools::integer_sequence(%s, %s)}", size, offset)
-      } else {
-        sprintf("{%s}", offset)
-      }
-    })
-    str <- paste(sprintf("{%s, %s}", every, index), collapse = ", ")
-    body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
+    return(NULL)
   }
+  args <- c("const shared_state&" = "shared")
+  packing <- dat$storage$packing$state
+  every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
+                   USE.NAMES = FALSE)
+  i <- match(names(dat$zero_every), packing$name)
+  is_array <- packing$rank[i] > 0
+  nms <- sprintf("zero_every_%s", packing$name[i])
+
+  offset <- lapply(nms, function(name) {
+    call("OdinOffset", "state", packing$name[i])
+  })
+  index <- vcapply(packing$name[i], function(name) {
+    offset <- generate_dust_sexp(call("OdinOffset", "state", name),
+                                 dat$sexp_data)
+    if (name %in% dat$storage$arrays$name) {
+      size <- generate_dust_sexp(call("OdinLength", name), dat$sexp_data)
+      sprintf("{dust2::tools::integer_sequence(%s, %s)}", size, offset)
+    } else {
+      sprintf("{%s}", offset)
+    }
+  })
+  str <- paste(sprintf("{%s, %s}", every, index), collapse = ", ")
+  body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 

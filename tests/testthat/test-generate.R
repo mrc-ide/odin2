@@ -634,17 +634,14 @@ test_that("can generate simple stochastic system", {
 })
 
 
-test_that("can generate empty zero_every method", {
+test_that("don't generate empty zero_every method", {
   dat <- odin_parse({
     update(x) <- 0
     initial(x) <- 0
   })
   dat <- generate_prepare(dat)
-  expect_equal(
-    generate_dust_system_zero_every(dat),
-    c(method_args$zero_every,
-      "  return dust2::zero_every_type<real_type>();",
-      "}"))
+  expect_null(
+    generate_dust_system_zero_every(dat))
 })
 
 
