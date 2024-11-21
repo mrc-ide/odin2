@@ -96,18 +96,6 @@ test_that("generate basic attributes for system with compare", {
 })
 
 
-test_that("don't generate packing gradient where not used", {
-  dat <- odin_parse({
-    update(x) <- 1
-    initial(x) <- 1
-    d <- data()
-    d ~ Normal(x, 1)
-  })
-  dat <- generate_prepare(dat)
-  expect_null(generate_dust_system_packing_gradient(dat))
-})
-
-
 test_that("generate data type where used", {
   dat <- odin_parse({
     update(x) <- 1
@@ -185,12 +173,8 @@ test_that("can generate empty packing_gradient function", {
     update(x) <- 1
   })
   dat <- generate_prepare(dat)
-  expect_equal(
-    generate_dust_system_packing_gradient(dat),
-    c(method_args$packing_gradient,
-      "  return dust2::packing{",
-      "  };",
-      "}"))
+  expect_null(
+    generate_dust_system_packing_gradient(dat))
 })
 
 
@@ -548,7 +532,6 @@ test_that("pull recursive dependencies into compare_data", {
 
 
 test_that("generate adjoint", {
-  skip("rework")
   dat <- odin_parse({
     update(x) <- x + a
     initial(x) <- 1
@@ -560,7 +543,7 @@ test_that("generate adjoint", {
 
   expect_equal(
     generate_dust_system_attributes(dat),
-    c("// [[dust2::class(odin)]]",
+    c("// [[dust2::class(odin_system)]]",
       "// [[dust2::time_type(discrete)]]",
       "// [[dust2::has_compare()]]",
       "// [[dust2::has_adjoint()]]",
@@ -569,41 +552,57 @@ test_that("generate adjoint", {
   dat <- generate_prepare(dat)
 
   expect_equal(
+    generate_dust_system_shared_state(dat),
+    c("struct shared_state {",
+      "  struct odin_internals_type {",
+      "    struct {",
+      "      dust2::packing state;",
+      "      dust2::packing adjoint;",
+      "      dust2::packing gradient;",
+      "    } packing;",
+      "    struct {",
+      "      std::array<size_t, 1> state;",
+      "      std::array<size_t, 2> adjoint;",
+      "      std::array<size_t, 1> gradient;",
+      "    } offset;",
+      "  } odin;",
+      "  real_type a;",
+      "};"))
+
+  expect_equal(
     generate_dust_system_packing_gradient(dat),
     c(method_args$packing_gradient,
-      "  return dust2::packing{",
-      '    {"a", {}}',
-      "  };",
+      "  return shared.odin.packing.gradient;",
       "}"))
 
   expect_equal(
     generate_dust_system_adjoint_update(dat),
     c(method_args$adjoint_update,
-      "  const auto adj_x = adjoint[0];",
-      "  const auto adj_a = adjoint[1];",
-      "  adjoint_next[0] = adj_x;",
-      "  adjoint_next[1] = adj_x + adj_a;",
+      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
+      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
+      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_x;",
+      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_x + adj_a;",
       "}"))
 
   expect_equal(
     generate_dust_system_adjoint_compare_data(dat),
     c(method_args$adjoint_compare_data,
       "  const auto x = state[shared.odin.offset.state[0]];",
-      "  const auto adj_x = adjoint[0];",
-      "  const auto adj_a = adjoint[1];",
+      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
+      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
       "  const real_type p = monty::math::exp(x);",
       "  const real_type adj_p = data.d / p - 1;",
-      "  adjoint_next[0] = adj_p * monty::math::exp(x) + adj_x;",
-      "  adjoint_next[1] = adj_a;",
+      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_p * monty::math::exp(x) + adj_x;",
+      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_a;",
       "}"))
 
   expect_equal(
     generate_dust_system_adjoint_initial(dat),
     c(method_args$adjoint_initial,
-      "  const auto adj_x = adjoint[0];",
-      "  const auto adj_a = adjoint[1];",
-      "  adjoint_next[0] = adj_x;",
-      "  adjoint_next[1] = adj_a;",
+      "  const auto adj_x = adjoint[shared.odin.offset.adjoint[0]];",
+      "  const auto adj_a = adjoint[shared.odin.offset.adjoint[1]];",
+      "  adjoint_next[shared.odin.offset.adjoint[0]] = adj_x;",
+      "  adjoint_next[shared.odin.offset.adjoint[1]] = adj_a;",
       "}"))
 
   expect_equal(

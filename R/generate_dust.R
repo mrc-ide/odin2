@@ -45,6 +45,9 @@ generate_dust_parts <- function() {
 generate_prepare <- function(dat) {
   rank <- set_names(dat$storage$arrays$rank, dat$storage$arrays$name)
   alias <- set_names(dat$storage$arrays$alias, dat$storage$arrays$name)
+  ## We will try and resolve the constant packing here, but perhaps
+  ## first let's tryt and rip out the offsets (and possibly size) from
+  ## that table.
   dat$sexp_data <- generate_dust_dat(dat$storage$location,
                                      dat$storage$packing,
                                      dat$storage$type,
@@ -169,6 +172,7 @@ generate_dust_system_data_type <- function(dat) {
 }
 
 
+## TODO: a bit of refactoring to do here:
 generate_dust_system_packing_state <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- "return shared.odin.packing.state;"
@@ -438,40 +442,29 @@ generate_dust_system_delays <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- collector()
 
-  packing <- dat$storage$packing$state
+  delays <- dat$delays
   arrays <- dat$storage$arrays
 
-  browser()
-  push_back_index <- function(nm, into) {
-    i <- match(nm, packing$name)
-    stopifnot(!is.na(i))
-    offset <- generate_dust_sexp(packing$offset[[i]], dat$sexp_data)
-    if (nm %in% arrays$name) {
-      ## TODO: use dust2::tools::integer_sequence(size, offset)
-      size <- generate_dust_sexp(packing$size[[i]], dat$sexp_data)
-      c(sprintf("for (size_t i = %s; i < %s + %s; ++i) {",
-                offset, offset, size),
-        sprintf("  %s.push_back(i);", into),
-        "}")
+  for (i in seq_len(nrow(delays))) {
+    nm <- delays$name[[i]]
+    stopifnot(delays$type[[i]] == "variable") # conditional later
+    target <- delays$value[[i]]$variables
+    by <- generate_dust_sexp(delays$by[[i]], dat$sexp_data)
+    offset <- generate_dust_sexp(call("OdinOffset", "state", target),
+                                 dat$sexp_data)
+    if (target %in% arrays$name) {
+      size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
+      index <- sprintf("dust2::tools::integer_sequence(%s, %s)",
+                       size, offset)
     } else {
-      sprintf("%s.push_back(%s);", into, offset)
-    }
-  }
-
-  for (i in seq_len(nrow(dat$delays))) {
-    nm <- dat$delays$name[[i]]
-    by <- generate_dust_sexp(dat$delays$by[[i]], dat$sexp_data)
-    index <- sprintf("odin_index_%s", nm)
-    body$add(sprintf("std::vector<size_t> %s;", index))
-    for (v in dat$delays$value[[i]]$variables) {
-      body$add(push_back_index(v, index))
+      index <- sprintf("{%s}", offset)
     }
     body$add(sprintf("const dust2::ode::delay<real_type> %s{%s, %s};",
                      nm, by, index))
   }
 
   body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
-                   paste(dat$delays$name, collapse = ", ")))
+                   paste(delays$name, collapse = ", ")))
 
   cpp_function("auto", "delays", args, body$get(), static = TRUE)
 }
