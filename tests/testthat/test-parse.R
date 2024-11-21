@@ -230,8 +230,7 @@ test_that("pack system entirely composed of arrays", {
     data_frame(name = c("x", "y"),
                rank = 1,
                dims = I(list(list(2), list(2))),
-               size = I(list(2, 2)),
-               offset = I(list(0, 2))))
+               size = I(list(2, 2))))
 })
 
 
@@ -248,8 +247,7 @@ test_that("pack system of mixed arrays and scalars", {
     data_frame(name = c("x", "y"),
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
-               size = I(list(2, 1)),
-               offset = I(list(0, 2))))
+               size = I(list(2, 1))))
 })
 
 
@@ -267,8 +265,7 @@ test_that("resolve array aliases when building pack", {
     data_frame(name = c("x", "y"),
                rank = c(1, 1),
                dims = I(list(list(2), list(2))),
-               size = I(list(2, 2)),
-               offset = I(list(0, 2))))
+               size = I(list(2, 2))))
 })
 
 

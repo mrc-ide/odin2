@@ -698,26 +698,6 @@ parse_packing <- function(names, arrays, no_reorder, type) {
   packing <- packing[order(!pack_first), ]
   rownames(packing) <- NULL
 
-  offset <- vector("list", nrow(packing))
-  for (i in seq_along(offset)) {
-    if (i == 1) {
-      offset[[i]] <- 0
-    } else {
-      if (is.numeric(offset[[i - 1]])) {
-        prev_offset <- offset[[i - 1]]
-      } else {
-        prev_offset <- call("OdinOffset", type, packing$name[[i - 1]])
-      }
-      if (is.numeric(packing$size[[i - 1]])) {
-        prev_size <- packing$size[[i - 1]]
-      } else {
-        prev_size <- call("OdinLength", packing$name[[i - 1]])
-      }
-      offset[[i]] <- expr_plus(prev_offset, prev_size)
-    }
-  }
-  packing$offset <- I(offset)
-
   packing
 }
 
