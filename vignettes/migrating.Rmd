@@ -48,7 +48,7 @@ Some of these features were present in versions of `odin.dust` and many derive f
 
 Things we do plan on implementing:
 
-* Complete delay differential equations (currently delayed *variables* are supported but fully delayed expressions)
+* Complete delay differential equations (currently delayed *variables* are supported but not fully delayed expressions)
 * Compile-time parameter substitution (`mrc-5575`)
 * Compilation to JavaScript
 * Compilation to GPU
