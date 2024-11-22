@@ -327,7 +327,8 @@ test_that("parse a very simple delay", {
   expect_true(dat$delays$in_rhs)
   expect_false(dat$delays$in_output)
   expect_equal(dat$delays$by, I(list(1)))
-  expect_equal(dat$delays$value, I(list(list(variables = "x"))))
+  expect_equal(dat$delays$value,
+               I(list(list(variables = "x", equations = NULL))))
 })
 
 
@@ -337,6 +338,16 @@ test_that("parse a less simple delay", {
     initial(x) <- 0
     b <- x + c
     c <- 2
-    a <- delay(b, 0)
+    a <- delay(b, 1)
   })
+  expect_equal(dat$phases$deriv$equations, "a")
+  expect_s3_class(dat$delays, "data.frame")
+  expect_equal(nrow(dat$delays), 1)
+  expect_equal(dat$delays$name, "a")
+  expect_equal(dat$delays$type, "expression")
+  expect_true(dat$delays$in_rhs)
+  expect_false(dat$delays$in_output)
+  expect_equal(dat$delays$by, I(list(1)))
+  expect_equal(dat$delays$value,
+               I(list(list(variables = "x", equations = "b"))))
 })
