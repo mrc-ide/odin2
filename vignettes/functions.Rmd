@@ -1,12 +1,12 @@
 ---
-title: "odin functions"
+title: "Supported Functions"
 author: "Rich FitzJohn"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{odin functions}
+  %\VignetteIndexEntry{Supported functions}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
