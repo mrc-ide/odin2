@@ -1,26 +1,16 @@
 build_array_table <- function(exprs, call) {
   dims <- list()
   names <- list()
-  sizes <- list()
   n <- 1
   for (expr in exprs) {
     names_i <- expr$lhs$names
     dims_i <- expr$rhs$value
-    if (rlang::is_call(dims_i, "dim")) {
-      size_i <- 1
-    } else {
-      size_i <- expr_prod(dims_i)
-      if (is.null(size_i)) {
-        size_i <- list(NULL)
-      }
-    }
 
     first_dim <- call("dim", as.symbol(expr$lhs$names[1]))
 
     for (j in seq_along(names_i)) {
       dims[[n]] <- if (j == 1) dims_i else first_dim
       names[[n]] <- names_i[j]
-      sizes[[n]] <- size_i
       n <- n + 1
     }
   }
@@ -28,8 +18,7 @@ build_array_table <- function(exprs, call) {
   data_frame(
     name = unlist(names),
     rank = lengths(dims),
-    dims = I(dims),
-    size = I(sizes))
+    dims = I(dims))
 }
 
 check_duplicate_dims <- function(arrays, exprs, call) {
@@ -75,7 +64,6 @@ resolve_array_references <- function(arrays) {
     res <- lookup_array(lhs_dim_var, rhs_dim_var, arrays[-i, ])
     if (!is.null(res)) {
       arrays$dims[i] <- list(NULL)
-      arrays$size[i] <- NA_integer_
       arrays$rank[i] <- res$rank
       arrays$alias[i] <- res$alias
     }

@@ -9,9 +9,7 @@ test_that("can generate a very simple delay", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  std::vector<size_t> odin_index_a;",
-      "  odin_index_a.push_back(0);",
-      "  const dust2::ode::delay<real_type> a{1, odin_index_a};",
+      "  const dust2::ode::delay<real_type> a{1, {0}};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
@@ -37,11 +35,7 @@ test_that("can generate a delayed array", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  std::vector<size_t> odin_index_a;",
-      "  for (size_t i = 0; i < 0 + 3; ++i) {",
-      "    odin_index_a.push_back(i);",
-      "  }",
-      "  const dust2::ode::delay<real_type> a{1, odin_index_a};",
+      "  const dust2::ode::delay<real_type> a{1, dust2::tools::integer_sequence(shared.dim.x.size, 0)};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 
@@ -70,9 +64,7 @@ test_that("can generate delay in output", {
   expect_equal(
     generate_dust_system_delays(dat),
     c(method_args$delays,
-      "  std::vector<size_t> odin_index_a;",
-      "  odin_index_a.push_back(0);",
-      "  const dust2::ode::delay<real_type> a{1, odin_index_a};",
+      "  const dust2::ode::delay<real_type> a{1, {0}};",
       "  return dust2::ode::delays<real_type>({a});",
       "}"))
 

@@ -4,7 +4,7 @@ test_that("can parse trivial system", {
     update(x) <- 0
   })
   expect_equal(res$time, "discrete")
-  expect_equal(res$class, "odin")
+  expect_equal(res$class, "odin_system")
   expect_equal(res$variables, "x")
   expect_equal(nrow(res$parameters), 0)
   expect_equal(nrow(res$data), 0)
@@ -27,7 +27,7 @@ test_that("can parse dust MVP system", {
   })
 
   expect_equal(res$time, "discrete")
-  expect_equal(res$class, "odin")
+  expect_equal(res$class, "odin_system")
   expect_equal(res$variables, "x")
   expect_equal(res$parameters,
                data_frame(name = c("b", "p"),
@@ -184,7 +184,6 @@ test_that("can parse systems that involve arrays in internal", {
     data_frame(name = "a",
                rank = 1,
                dims = I(list(list(2))),
-               size = I(list(2)),
                alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
@@ -207,7 +206,6 @@ test_that("can parse systems that involve arrays in shared", {
     data_frame(name = "a",
                rank = 1,
                dims = I(list(list(3))),
-               size = I(list(3)),
                alias = "a"))
   expect_equal(
     d$equations$a$lhs$array,
@@ -230,8 +228,7 @@ test_that("pack system entirely composed of arrays", {
     data_frame(name = c("x", "y"),
                rank = 1,
                dims = I(list(list(2), list(2))),
-               size = I(list(2, 2)),
-               offset = I(list(0, 2))))
+               offset = c(0, 2)))
 })
 
 
@@ -248,8 +245,7 @@ test_that("pack system of mixed arrays and scalars", {
     data_frame(name = c("x", "y"),
                rank = c(1, 0),
                dims = I(list(list(2), NULL)),
-               size = I(list(2, 1)),
-               offset = I(list(0, 2))))
+               offset = c(0, 2)))
 })
 
 
@@ -267,8 +263,30 @@ test_that("resolve array aliases when building pack", {
     data_frame(name = c("x", "y"),
                rank = c(1, 1),
                dims = I(list(list(2), list(2))),
-               size = I(list(2, 2)),
-               offset = I(list(0, 2))))
+               offset = c(0, 2)))
+})
+
+
+test_that("pack mix of known and unknown extents", {
+  d <- odin_parse({
+    initial(x[]) <- 0
+    initial(y) <- 0
+    initial(z[]) <- 0
+    output(a) <- 0
+    deriv(x[]) <- 0
+    deriv(y) <- 0
+    deriv(z[]) <- 0
+    dim(x) <- n
+    n <- parameter()
+    dim(z) <- 4
+  })
+
+  expect_equal(
+    d$storage$packing$state,
+    data_frame(name = c("y", "z", "x", "a"),
+               rank = c(0, 1, 1, 0),
+               dims = I(list(NULL, list(4), list(quote(n)), NULL)),
+               offset = c(0, 1, 5, NA)))
 })
 
 

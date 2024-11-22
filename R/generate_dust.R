@@ -121,15 +121,21 @@ generate_dust_system_shared_state <- function(dat) {
     dims <- NULL
   }
 
-  offset <- unlist0(lapply(names(dat$storage$packing), function(nm) {
-    c("  struct {",
-      sprintf("    size_t %s;", dat$storage$packing[[nm]]$name),
-      sprintf("  } %s;", nm))
-  }))
-  offset <- c("struct offset_type {", offset, "} offset;")
+  has_adjoint <- !is.null(dat$adjoint)
+  packing_type <- c("state", if (has_adjoint) c("adjoint", "gradient"))
+  packing_size <- viapply(dat$storage$packing[packing_type], nrow)
+
   c("struct shared_state {",
+    "  struct odin_internals_type {",
+    "    struct {",
+    sprintf("      dust2::packing %s;", packing_type),
+    "    } packing;",
+    "    struct {",
+    sprintf("      std::array<size_t, %d> %s;",
+            packing_size, packing_type),
+    "    } offset;",
+    "  } odin;",
     sprintf("  %s", dims),
-    sprintf("  %s", offset),
     sprintf("  %s %s;", type, nms),
     "};")
 }
@@ -161,31 +167,34 @@ generate_dust_system_data_type <- function(dat) {
 
 
 generate_dust_system_packing_state <- function(dat) {
-  generate_dust_system_packing("state", dat)
+  args <- c("const shared_state&" = "shared")
+  body <- "return shared.odin.packing.state;"
+  cpp_function("dust2::packing", "packing_state", args, body, static = TRUE)
 }
 
 
 generate_dust_system_packing_gradient <- function(dat) {
-  generate_dust_system_packing("gradient", dat)
+  if (is.null(dat$adjoint)) {
+    return(NULL)
+  }
+  args <- c("const shared_state&" = "shared")
+  body <- "return shared.odin.packing.gradient;"
+  cpp_function("dust2::packing", "packing_gradient", args, body, static = TRUE)
 }
 
 
 generate_dust_system_packing <- function(name, dat) {
   packing <- dat$storage$packing[[name]]
   arrays <- dat$storage$arrays
-  args <- c("const shared_state&" = "shared")
-  fmt <- "std::vector<size_t>(shared.dim.%s.dim.begin(), shared.dim.%s.dim.end())"
+  fmt <- "std::vector<size_t>(dim.%s.dim.begin(), dim.%s.dim.end())"
   dim_name <- arrays$alias[match(packing$name, arrays$name)]
-  dims <- ifelse(packing$rank == 0, "{}",
-                 sprintf(fmt, dim_name, dim_name))
+  dims <- ifelse(packing$rank == 0, "{}", sprintf(fmt, dim_name, dim_name))
   els <- sprintf('{"%s", %s}', packing$name, dims)
   ## trailing comma if needed
   els[-length(els)] <- sprintf("%s,", els[-length(els)])
-  body <- c("return dust2::packing{",
-            sprintf("  %s", els),
-            "};")
-  cpp_function("dust2::packing", sprintf("packing_%s", name), args, body,
-               static = TRUE)
+  c(sprintf("odin.packing.%s = dust2::packing{", name),
+    sprintf("  %s", els),
+    "};")
 }
 
 
@@ -209,23 +218,25 @@ generate_dust_system_build_shared <- function(dat) {
     }
     body$add(generate_dust_assignment(eq, "state", dat, options))
   }
+
   is_dim <- vlapply(eqs, function(x) identical(x$special, "dim"))
   if (any(is_dim)) {
     nms_dim <- vcapply(eqs[is_dim], function(x) x$lhs$name)
-    nms_return <- c("dim", "offset",
+    nms_return <- c("odin", "dim",
                     setdiff(dat$phases$build_shared$equations, nms_dim))
   } else {
-    nms_return <- c("offset", dat$phases$build_shared$equations)
+    nms_return <- c("odin", dat$phases$build_shared$equations)
   }
 
-  offset <- unlist0(lapply(names(dat$storage$packing), function(nm) {
-    value <- vcapply(dat$storage$packing[[nm]]$offset, generate_dust_sexp,
-                     dat$sexp_data, options)
-    sprintf("offset.%s.%s = %s;", nm, dat$storage$packing[[nm]]$name, value)
-  }))
-
-  body$add("shared_state::offset_type offset;")
-  body$add(offset)
+  body$add("shared_state::odin_internals_type odin;")
+  has_adjoint <- !is.null(dat$adjoint)
+  packing_type <- c("state", if (has_adjoint) c("adjoint", "gradient"))
+  for (type in packing_type) {
+    body$add(generate_dust_system_packing(type, dat))
+  }
+  body$add(sprintf(
+    "odin.packing.%s.copy_offset(odin.offset.%s.begin());",
+    packing_type, packing_type))
   body$add(sprintf("return shared_state{%s};",
                    paste(nms_return, collapse = ", ")))
   args <- c("cpp11::list" = "parameters")
@@ -412,38 +423,29 @@ generate_dust_system_delays <- function(dat) {
   args <- c("const shared_state&" = "shared")
   body <- collector()
 
-  packing <- dat$storage$packing$state
+  delays <- dat$delays
   arrays <- dat$storage$arrays
 
-  push_back_index <- function(nm, into) {
-    i <- match(nm, packing$name)
-    stopifnot(!is.na(i))
-    offset <- generate_dust_sexp(packing$offset[[i]], dat$sexp_data)
-    if (nm %in% arrays$name) {
-      size <- generate_dust_sexp(packing$size[[i]], dat$sexp_data)
-      c(sprintf("for (size_t i = %s; i < %s + %s; ++i) {",
-                offset, offset, size),
-        sprintf("  %s.push_back(i);", into),
-        "}")
+  for (i in seq_len(nrow(delays))) {
+    nm <- delays$name[[i]]
+    stopifnot(delays$type[[i]] == "variable") # conditional later
+    target <- delays$value[[i]]$variables
+    by <- generate_dust_sexp(delays$by[[i]], dat$sexp_data)
+    offset <- generate_dust_sexp(call("OdinOffset", "state", target),
+                                 dat$sexp_data)
+    if (target %in% arrays$name) {
+      size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
+      index <- sprintf("dust2::tools::integer_sequence(%s, %s)",
+                       size, offset)
     } else {
-      sprintf("%s.push_back(%s);", into, offset)
-    }
-  }
-
-  for (i in seq_len(nrow(dat$delays))) {
-    nm <- dat$delays$name[[i]]
-    by <- generate_dust_sexp(dat$delays$by[[i]], dat$sexp_data)
-    index <- sprintf("odin_index_%s", nm)
-    body$add(sprintf("std::vector<size_t> %s;", index))
-    for (v in dat$delays$value[[i]]$variables) {
-      body$add(push_back_index(v, index))
+      index <- sprintf("{%s}", offset)
     }
     body$add(sprintf("const dust2::ode::delay<real_type> %s{%s, %s};",
                      nm, by, index))
   }
 
   body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
-                   paste(dat$delays$name, collapse = ", ")))
+                   paste(delays$name, collapse = ", ")))
 
   cpp_function("auto", "delays", args, body$get(), static = TRUE)
 }
@@ -460,40 +462,32 @@ generate_dust_system_size_output <- function(dat) {
 
 
 generate_dust_system_zero_every <- function(dat) {
-  args <- c("const shared_state&" = "shared")
   if (is.null(dat$zero_every)) {
-    body <- "return dust2::zero_every_type<real_type>();"
-  } else {
-    packing <- dat$storage$packing$state
-    every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
-                     USE.NAMES = FALSE)
-    i <- match(names(dat$zero_every), packing$name)
-    is_array <- packing$rank[i] > 0
-    nms <- sprintf("zero_every_%s", packing$name[i])
-    nms[!is_array] <- sprintf(
-      "{%s}",
-      vcapply(packing$offset[i][!is_array], generate_dust_sexp, dat$sexp_data))
-    if (any(is_array)) {
-      create_vector <- function(name, offset, size) {
-        end <- generate_dust_sexp(expr_plus(offset, size), dat$sexp_data)
-        offset <- generate_dust_sexp(offset, dat$sexp_data)
-        c(sprintf("std::vector<size_t> %s;", name),
-          sprintf("for (size_t i = %s; i < %s; ++i) {", offset, end),
-          sprintf("  %s.push_back(i);", name),
-          "}")
-      }
-      create <- unlist0(Map(create_vector,
-                            nms[is_array],
-                            packing$offset[i][is_array],
-                            packing$size[i][is_array]))
-    } else {
-      create <- NULL
-    }
-    str <- paste(sprintf("{%s, %s}", every, nms), collapse = ", ")
-    body <- c(
-      create,
-      sprintf("return dust2::zero_every_type<real_type>{%s};", str))
+    return(NULL)
   }
+  args <- c("const shared_state&" = "shared")
+  packing <- dat$storage$packing$state
+  every <- vcapply(dat$zero_every, generate_dust_sexp, dat$sexp_data,
+                   USE.NAMES = FALSE)
+  i <- match(names(dat$zero_every), packing$name)
+  is_array <- packing$rank[i] > 0
+  nms <- sprintf("zero_every_%s", packing$name[i])
+
+  offset <- lapply(nms, function(name) {
+    call("OdinOffset", "state", packing$name[i])
+  })
+  index <- vcapply(packing$name[i], function(name) {
+    offset <- generate_dust_sexp(call("OdinOffset", "state", name),
+                                 dat$sexp_data)
+    if (name %in% dat$storage$arrays$name) {
+      size <- generate_dust_sexp(call("OdinLength", name), dat$sexp_data)
+      sprintf("{dust2::tools::integer_sequence(%s, %s)}", size, offset)
+    } else {
+      sprintf("{%s}", offset)
+    }
+  })
+  str <- paste(sprintf("{%s, %s}", every, index), collapse = ", ")
+  body <- sprintf("return dust2::zero_every_type<real_type>{%s};", str)
   cpp_function("auto", "zero_every", args, body, static = TRUE)
 }
 
@@ -837,7 +831,6 @@ generate_dust_unpack <- function(names, packing, sexp_data, from = "state") {
   i <- match(names, packing$name)
   is_scalar <- lengths(packing$dims[i]) == 0
   is_array <- !is_scalar
-
   offset <- vcapply(packing$name[i], function(nm) {
     generate_dust_sexp(call("OdinOffset", from, nm), sexp_data)
   })

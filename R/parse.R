@@ -34,7 +34,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   src <- lapply(exprs, "[[", "src")
 
   ret <- list(time = system$time,
-              class = "odin",
+              class = "odin_system",
               variables = system$variables,
               output = system$output,
               parameters = system$parameters,
