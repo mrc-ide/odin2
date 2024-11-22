@@ -1,6 +1,6 @@
 Package: odin2
 Title: Next generation odin
-Version: 0.3.6
+Version: 0.3.8
 Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
              person("Wes", "Hinsley", role = "aut"),

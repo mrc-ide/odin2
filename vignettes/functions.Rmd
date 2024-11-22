@@ -1,12 +1,12 @@
 ---
-title: "odin functions"
+title: "Supported Functions"
 author: "Rich FitzJohn"
 date: "`r Sys.Date()`"
 output:
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{odin functions}
+  %\VignetteIndexEntry{Supported functions}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -270,6 +270,7 @@ The currently supported distributions are (alphabetically):
   - `size`, `prob` (the mean probability of success), `rho` (dispersion parameter) (**default**)
   - `size`, `a`, `b`
 * `Binomial` -- the [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution) with parameters `size` and `prob`
+* `Cauchy` -- the [Cauchy distribution](https://en.wikipedia.org/wiki/Cauchy_distribution) with parameters `location` and `scale`. Note that as the Cauchy distribution does not have a defined mean, you can not run a model with Cauchy draws in [deterministic mode](https://mrc-ide.github.io/odin2/articles/fitting.html#deterministic-models-from-stochastic).
 * `Exponential` -- the [exponential distribution](https://en.wikipedia.org/wiki/Exponential_distribution) with two forms:
   - `rate` (**default**); this is the same parameterisation as `rexp`
   - `mean` which is the inverse of rate.  **NOTE**: we may change this to `scale` soon

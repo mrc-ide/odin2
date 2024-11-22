@@ -38,7 +38,7 @@ Some of these features were present in versions of `odin.dust` and many derive f
 
 ## Planned
 
-* Optional array bounds checking, both during compilation and during runtime (in the latter case with a performance penalty once enabled).
+* Optional array bounds checking, during runtime (in the latter case with a performance penalty once enabled).
 
 ## Hoped
 
@@ -46,11 +46,9 @@ Some of these features were present in versions of `odin.dust` and many derive f
 
 # Missing features
 
-This list is incomplete, and we'll expand it as we work through the tests.  We're not currently quite at MVP stage yet, so expect that most things don't work!
-
 Things we do plan on implementing:
 
-* Delay differential equations, e.g. `y_lag <- delay(y, tau)` (`mrc-5434`)
+* Complete delay differential equations (currently delayed *variables* are supported but not fully delayed expressions)
 * Compile-time parameter substitution (`mrc-5575`)
 * Compilation to JavaScript
 * Compilation to GPU
@@ -59,13 +57,13 @@ Things that we plan to drop in this version
 
 * Many details in `config()` and `options`
 
-Note that many errors are not caught as odin errors, and invalid odin code will be accepted and generate C++ code that fails to compile.
+Note that some errors are still not caught as odin errors, and invalid odin code will be accepted and generate C++ code that fails to compile.  Please send us code that causes this to happen.
 
 # Changes in syntax
 
 ## `user()` becomes `parameter()`
 
-This might be the largest user-visible change, and we'll add a translation system for this.
+This might be the largest user-visible change, and can be automatically migrated.
 
 Previously, to support parameters you might write
 
@@ -200,7 +198,7 @@ to have some quantity that took different values every `freq` steps, where `freq
 a <- if (time * dt / m == 0) b else c
 ```
 
-## The name of the time variable in discrete time models has changed
+## The name of the time variable in continuous time models has changed
 
 Previously, time was `t` but we have moved this to `time` to be a little more explicit.  We can automatically migrate your code in many cases, unless you have defined a variable `time` already.
 
