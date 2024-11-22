@@ -406,7 +406,6 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
     x$rhs$depends$variables_recursive
   }))
 
-  used <- character()
   required <- character()
 
   phase_names <- c("update", "deriv", "output", "initial", "compare")
@@ -419,12 +418,25 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
                             FALSE, FALSE))
       eqs <- intersect(names(equations), deps)
       eqs <- union(eqs, unlist0(deps_recursive[eqs]))
-      used <- union(used, eqs)
 
       is_time <- stage[eqs] %in% c("time", "data")
       eqs_time <- intersect(names(equations), eqs[is_time])
       unpack <- intersect(variables, c(eqs, deps))
       required <- union(required, eqs[!is_time])
+
+      ## Pull in additional dependencies required for delays here:
+      if (phase == "deriv") {
+        for (eq in equations[names(equations) %in% eqs]) {
+          if (identical(eq$special, "delay")) {
+            what <- equations$a$rhs$expr$what
+            check <- equations[names(equations == what)]
+            uses <- unlist0(lapply(check, function(eq) {
+              eq$rhs$depends$variables_recursive
+            }))
+            required <- union(required, intersect(uses, names(equations)))
+          }
+        }
+      }
 
       if (phase %in% c("update", "deriv", "output")) {
         check <- c(e, unname(equations[eqs_time]))
@@ -476,11 +488,18 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
 
 parse_storage <- function(equations, phases, variables, output, arrays,
                           parameters, data, delays, call) {
-  stopifnot(all(delays$type == "variable")) # affects usedness below
   used <- unique(unlist0(lapply(phases, "[[", "equations")))
+  ## Count things that are used only in delays here.
+  if (is.null(delays)) {
+    delayed_variables <- NULL
+    delayed_equations <- NULL
+  } else {
+    delayed_variables <- delays$name[delays$type == "variable"]
+    delayed_equations <- unique(unlist0(
+      lapply(delays$value, "[[", "equations")))
+    used <- union(used, delayed_equations)
+  }
   unused <- setdiff(names(equations), used)
-
-  delayed_variables <- delays$name[delays$type == "variable"]
 
   dim <- names(which(
     vlapply(equations[used], function(x) identical(x$special, "dim"))))
@@ -884,15 +903,36 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
               in_output = name %in% phases$output$equations)
 
   if (type == "variable") {
-    ret$value <- list(variables = what)
+    ret$value <- list(variables = what, equations = NULL)
   } else { # expression
-    odin_parse_error("Delayed expressions are not yet supported",
-                     "E0001", eq$src, call)
-    ## Here, list the variables, and work out how we will unpack them
-    ## if more than one is listed.
-    ##
-    ## Then find all time-varying equations and list them in sorted
-    ## order
+    i <- names(equations) == what
+    stopifnot(any(i))
+    depends <- unique(unlist0(
+      lapply(equations[i], function(x) x$rhs$depends$variables_recursive)))
+
+    ## Variables
+    depends_vars <- intersect(depends, variables)
+    if (length(depends_vars) == 0) {
+      odin_parse_error(
+        "Invalid delay expression '{name}' does not involve any variables",
+        "E2999", eq$src, call)
+    }
+
+    ## Other equations:
+    depends_eqs <- c(what, intersect(depends, names(equations)))
+    depends_eqs_stage <- vcapply(equations[depends_eqs], "[[", "stage")
+    if (any(depends_eqs_stage == "data")) {
+      err <- depends_eqs[depends_eqs_stage == "data"]
+      odin_parse_error(
+        "Invalid delay expression '{name}' depends on data {squote(err)}",
+        "E2999", eq$src, call)
+    }
+    depends_eqs_time <- depends_eqs[depends_eqs_stage == "time"]
+    ## We should also here find out if the expressions *involve* time,
+    ## but I think that involves reanalysis of the expressions, and is
+    ## not entirely trivial?
+    ret$value <- list(variables = depends_vars,
+                      equations = depends_eqs_time)
   }
 
   ret

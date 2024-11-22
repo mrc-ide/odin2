@@ -329,3 +329,14 @@ test_that("parse a very simple delay", {
   expect_equal(dat$delays$by, I(list(1)))
   expect_equal(dat$delays$value, I(list(list(variables = "x"))))
 })
+
+
+test_that("parse a less simple delay", {
+  dat <- odin_parse({
+    deriv(x) <- x - a
+    initial(x) <- 0
+    b <- x + c
+    c <- 2
+    a <- delay(b, 0)
+  })
+})
