@@ -679,10 +679,11 @@ parse_expr_compare_rhs <- function(rhs, src, call) {
   density <- list(cpp = result$value$cpp$density,
                   expr = result$value$expr$density,
                   args = names(formals(result$value$density)))
+  args <- lapply(result$value$args, parse_expr_usage, src, call)
 
   list(type = "compare",
        density = density,
-       args = result$value$args,
+       args = args,
        depends = depends)
 }
 
