@@ -700,3 +700,11 @@ test_that("length is treated as special dependency", {
   res <- parse_expr(quote(dim(a) <- length(b)), NULL, NULL)
   expect_equal(res$rhs$depends$variables, "dim_b")
 })
+
+
+test_that("parse sum within compare", {
+  res <- parse_expr(quote(d ~ Poisson(sum(y))), NULL, NULL)
+  expect_equal(res$rhs$args,
+               list(quote(d),
+                    quote(OdinReduce("sum", "y", index = NULL))))
+})
