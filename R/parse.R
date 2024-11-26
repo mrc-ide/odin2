@@ -142,6 +142,9 @@ parse_check_consistent_dimensions <- function(dat, call) {
     if (!is.null(eq$rhs)) {
       parse_check_consistent_dimensions_rhs(eq, dat, call)
     }
+    if (identical(eq$rhs$type, "compare")) {
+      parse_check_consistent_dimensions_compare(eq, dat, call)
+    }
   }
 }
 
@@ -166,7 +169,8 @@ parse_check_consistent_dimensions_lhs <- function(eq, dat, call, src = eq$src) {
   check(eq$lhs)
 }
 
-parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
+
+parse_check_consistent_dimensions_expr <- function(expr, src, dat, call) {
   throw_mismatch <- function(var, dim_rank, array_rank) {
     odin_parse_error(
       c("Array rank in expression differs from the rank declared with `dim`",
@@ -258,5 +262,15 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call, src = eq$src) {
       }
     }
   }
-  check(eq$rhs$expr)
+  check(expr)
+}
+
+parse_check_consistent_dimensions_rhs <- function(eq, dat, call) {
+  parse_check_consistent_dimensions_expr(eq$rhs$expr, eq$src, dat, call)
+}
+
+
+parse_check_consistent_dimensions_compare <- function(eq, dat, call) {
+  lapply(eq$rhs$args, parse_check_consistent_dimensions_expr,
+         eq$src, dat, call)
 }

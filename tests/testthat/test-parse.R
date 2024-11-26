@@ -1131,6 +1131,20 @@ test_that("prevent use of arrays without braces", {
 })
 
 
+test_that("prevent use of arrays without index in compare", {
+  ## Found by Keith:
+  expect_error(
+    odin_parse({
+      update(y[]) <- y[i] + 1
+      initial(y[]) <- 0
+      dim(y) <- 2
+      d <- data()
+      d ~ Poisson(y)
+    }),
+    "Trying to use vector 'y' without index")
+})
+
+
 test_that("can't reference data in print", {
   expect_error(
     odin_parse({
