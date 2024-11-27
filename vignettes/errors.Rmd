@@ -1188,6 +1188,24 @@ Cannot use `delay()` within a discrete-time system.  We can only support delay d
 
 The delay time (`by` or second argument to `delay()`) is not constant, i.e., determined at system creation.  If you are taking this as a parameter, ensure that you have specified `constant = TRUE` (this disallows changing the parameter via `dust2::dust_system_update_pars()`).  This requirement stems from our current design of the delay differential equation solver in dust and we may relax this if it causes difficulty.
 
+# `E2026`
+
+Invalid use of the empty index or range operator on the right hand side of an array expression.  You cannot, for example, write
+
+```r
+a[] <- b + c[i, ]
+```
+
+or
+
+```r
+a[] <- b + c[i, 2:3]
+```
+
+Here, the accesses of `c` are problematic because they would refer to a vector.  You might have forgotten to write `sum(c[i, ])` or some other reduction that would have converted this into a vector.
+
+This rule does not apply within `sum()` or other reductions.
+
 # `E3001`
 
 An array access would be out of bounds.  This error is thrown where your code would result in you reading or writing out of bounds on an array (or a dimension of an array).  Currently, we throw this error if we are certain that your access is invalid. For example, we would error if your code contains:

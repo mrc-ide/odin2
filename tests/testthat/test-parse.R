@@ -1206,3 +1206,27 @@ test_that("correctly resolve dependency order with aliased parameter dims", {
     c("I0", "N", "beta0", "dim_schools_time", "schools_modifier",
       "gamma", "schools_time", "schools_open", "interpolate_schools"))
 })
+
+
+test_that("disallow empty index on rhs", {
+  expect_error(
+    odin_parse({
+      dim(n) <- c(2, 3)
+      n[, ] <- 1
+      initial(out) <- 0
+      update(out) <- out + n[1, ]
+    }),
+    "Can't use an empty index while accessing arrays on the rhs")
+})
+
+
+test_that("disallow empty index on rhs", {
+  expect_error(
+    odin_parse({
+      dim(n) <- c(2, 3)
+      n[, ] <- 1
+      initial(out) <- 0
+      update(out) <- out + n[1, 2:3]
+    }),
+    "Can't use the range operator `:` while accessing arrays on the rhs")
+})

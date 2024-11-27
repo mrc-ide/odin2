@@ -206,6 +206,20 @@ parse_check_consistent_dimensions_expr <- function(expr, src, dat, call) {
       "E2022", src, call)
   }
 
+  throw_empty_index_rhs <- function(name, expr) {
+    odin_parse_error(
+      c("Can't use an empty index while accessing arrays on the rhs",
+        x = "In access of '{name}' as '{deparse(expr)}'"),
+      "E2026", src, call)
+  }
+
+  throw_range_access_rhs <- function(name, expr) {
+    odin_parse_error(
+      c("Can't use the range operator `:` while accessing arrays on the rhs",
+        x = "In access of '{name}' as '{deparse(expr)}'"),
+      "E2026", src, call)
+  }
+
   fn_use_whole_array <- c("length", "nrow", "ncol", "OdinReduce",
                           "OdinInterpolate")
 
@@ -226,8 +240,14 @@ parse_check_consistent_dimensions_expr <- function(expr, src, dat, call) {
             throw_mismatch(array_name, dim_rank, array_rank)
           }
         }
-        lapply(expr[-(1:2)], check)
-
+        args <- as.list(expr[-(1:2)])
+        if (any(vlapply(args, rlang::is_missing))) {
+          throw_empty_index_rhs(array_name, expr)
+        }
+        if (any(vlapply(args, rlang::is_call, ":"))) {
+          throw_range_access_rhs(array_name, expr)
+        }
+        lapply(args, check)
       } else if (rlang::is_call(expr, fn_use_whole_array)) {
         if (rlang::is_call(expr, "OdinReduce")) {
           array_name <- expr[[3]]
