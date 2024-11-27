@@ -172,7 +172,9 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       }
     }
   } else if (is.numeric(expr)) {
-    if (expr %% 1 == 0) {
+    if (expr == Inf) {
+      ret <- "std::numeric_limits<real_type>::infinity()"
+    } else if (expr %% 1 == 0) {
       ret <- format(expr)
     } else {
       ret <- sprintf("static_cast<real_type>(%s)",

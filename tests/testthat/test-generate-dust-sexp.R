@@ -168,3 +168,15 @@ test_that("unsupported types are bugs", {
     "Unhandled data type while generating expression",
     class = "odin_bug")
 })
+
+
+test_that("can generate special maths bits", {
+  dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
+  expect_equal(generate_dust_sexp(quote(2 * pi), dat, list()), "2 * M_PI")
+  expect_equal(
+    generate_dust_sexp(quote(Inf), dat, list()),
+    "std::numeric_limits<real_type>::infinity()")
+  expect_equal(
+    generate_dust_sexp(quote(-Inf), dat, list()),
+    "-std::numeric_limits<real_type>::infinity()")
+})
