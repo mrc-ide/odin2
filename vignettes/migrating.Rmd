@@ -224,7 +224,7 @@ The mapping is:
 
 * `rbeta()` to `Beta`
 * `rbinom()` to `Binomial`
-* `rcauchy()` to `Cauchy` (unsupported for now)
+* `rcauchy()` to `Cauchy`
 * `rchisq()` to `ChiSquared` (unsupported for now)
 * `rexp()` to `Exponential`
 * `rf()` to `F` (unsupported for now)
@@ -232,13 +232,13 @@ The mapping is:
 * `rgeometric()` to `Geometric` (unsupported for now)
 * `rhyper()` to `Hypergeometric`
 * `rlogis()` to `Logistic` (unsupported for now)
-* `rlnorm()` to `Lognormal` (unsupported for now)
+* `rlnorm()` to `LogNormal`
 * `rnbinom()` to `NegativeBinomial`
 * `rnorm()` to `Normal`
 * `rpois()` to `Poisson`
 * `rt()` to `T` (unsupported for now)
 * `runif()` to `Uniform`
-* `rweibull()` to `Weibull` (unsupported for now)
+* `rweibull()` to `Weibull`
 
 (Not all of these are implemented yet).
 
