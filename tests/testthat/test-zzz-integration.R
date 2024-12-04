@@ -136,8 +136,8 @@ test_that("can generate simple model with array", {
   dust2::dust_system_run_to_time(sys, 1)
   state <- dust2::dust_system_state(sys)
 
-  r <- monty::monty_rng$new(10, seed = 42)
-  expect_equal(state, rbind(colSums(r$normal(3, 0, 1))))
+  r <- monty::monty_rng_create(n_streams = 10, seed = 42)
+  expect_equal(state, rbind(colSums(monty::monty_random_n_normal(3, 0, 1, r))))
 })
 
 
