@@ -1,6 +1,6 @@
 Package: odin2
 Title: Next generation odin
-Version: 0.3.11
+Version: 0.3.12
 Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
              person("Wes", "Hinsley", role = "aut"),
@@ -19,7 +19,7 @@ Imports:
     cli,
     dust2 (>= 0.3.7),
     glue,
-    monty (>= 0.3.0),
+    monty (>= 0.3.11),
     rlang
 Suggests:
     decor,
