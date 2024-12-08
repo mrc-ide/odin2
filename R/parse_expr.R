@@ -900,7 +900,7 @@ parse_expr_usage_rewrite_stochastic <- function(expr, src, call) {
   mean <- substitute_(
     res$value$expr$mean,
     set_names(lapply(args, rewrite_stochastic_to_expectation),
-              names(formals(res$value$sample))[-1]))
+              names(formals(res$value$density))[-1]))
 
   expr[[1]] <- call("OdinStochasticCall",
                     sample = res$value$cpp$sample,
