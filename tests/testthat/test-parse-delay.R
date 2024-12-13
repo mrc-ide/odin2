@@ -18,19 +18,6 @@ test_that("delay must be constant", {
 })
 
 
-test_that("can't delay expressions yet", {
-  expect_error(
-    odin_parse({
-      y1 <- y + 1
-      ylag <- delay(y1, 1)
-      initial(y) <- 0.5
-      deriv(y) <- 0.2 * ylag * 1 / (1 + ylag^10) - 0.1 * y
-    }),
-    "Delayed expressions are not yet supported")
-})
-
-
-
 test_that("can parse simple delay", {
   dat <- odin_parse({
     ylag <- delay(y, 1)
@@ -44,5 +31,5 @@ test_that("can parse simple delay", {
                in_rhs = TRUE,
                in_output = FALSE,
                by = I(list(1)),
-               value = I(list(list(variables = "y")))))
+               value = I(list(list(variables = "y", equations = NULL)))))
 })
