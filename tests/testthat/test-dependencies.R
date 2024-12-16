@@ -41,3 +41,17 @@ test_that("can join dependencies", {
     list(functions = c("a", "f", "g", "h", "i"),
          variables = c("a", "b", "c", "d", "e")))
 })
+
+
+test_that("cope with poorly deparsing epxressions", {
+  expr <- quote(
+    OdinStochasticCall(
+      sample = "binomial",
+      mean = S_leave[i, j, k] * (S_rates[i, j, k, 1] / S_leave_rate[i, j, k])
+    )(S_leave[i, j, k], S_rates[i, j, k, 1]/S_leave_rate[i, j, k]))
+  res <- find_dependencies(expr)
+  expect_setequal(res$functions, c("[", "/"))
+  expect_setequal(
+    res$variables,
+    c("S_leave", "i", "j", "k", "S_rates", "S_leave_rate"))
+})

@@ -3,9 +3,12 @@ find_dependencies <- function(expr) {
   variables <- collector()
   descend <- function(e) {
     if (is.recursive(e)) {
-      nm <- deparse(e[[1L]])
-      functions$add(nm)
-      if (nm %in% c("length", "dim") && length(e) == 2 && is.symbol(e[[2]])) {
+      if (rlang::is_call(e) && is.symbol(e[[1]])) {
+        functions$add(deparse(e[[1L]]))
+      }
+      is_dim_read <- rlang::is_call(e, c("length", "dim")) &&
+        length(e) == 2 && is.symbol(e[[2]])
+      if (is_dim_read) {
         variables$add(odin_dim_name(deparse(e[[2]])))
       } else {
         for (el in as.list(e[-1])) {
