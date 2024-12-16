@@ -428,19 +428,23 @@ generate_dust_system_delays <- function(dat) {
 
   for (i in seq_len(nrow(delays))) {
     nm <- delays$name[[i]]
-    stopifnot(delays$type[[i]] == "variable") # conditional later
-    target <- delays$value[[i]]$variables
     by <- generate_dust_sexp(delays$by[[i]], dat$sexp_data)
-    offset <- generate_dust_sexp(call("OdinOffset", "state", target),
-                                 dat$sexp_data)
-    if (target %in% arrays$name) {
-      size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
+    variables <- delays$value[[i]]$variables
+    if (length(variables) == 1) {
+      target <- variables
+      offset <- generate_dust_sexp(call("OdinOffset", "state", target),
+                                   dat$sexp_data)
+      if (target %in% arrays$name) {
+        size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
+      } else {
+        size <- "1"
+      }
+      index <- sprintf("{%s, %s}", offset, size)
+      body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
+                       nm, by, index))
     } else {
-      size <- "1"
+      stop("write multi-variable case")
     }
-    index <- sprintf("{%s, %s}", offset, size)
-    body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
-                     nm, by, index))
   }
 
   body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
@@ -662,7 +666,11 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
     if (is_array) {
       stop("We don't have stack-allocated arrays") # nocov
     }
-    sprintf("const %s %s", dat$storage$type[[name]], name)
+    if (identical(name, options$delay)) {
+      name
+    } else {
+      sprintf("const %s %s", dat$storage$type[[name]], name)
+    }
   } else if (location %in% c("shared", "internal")) {
     if (is_array) {
       stopifnot(!(name %in% dat$parameters$name))
@@ -970,7 +978,16 @@ generate_dust_system_delay_equation <- function(nm, dat) {
   delay_type <- dat$delays$type[[i]]
   is_array <- nm %in% dat$storage$arrays$name
 
+  unpack_delay <- function(nm) {
+    if (nm %in% dat$storage$arrays$name) {
+      sprintf("const auto& %s = delays[%d];", nm, i - 1)
+    } else {
+      sprintf("const auto %s = delays[%d][0];", nm, i - 1)
+    }
+  }
+
   if (delay_type == "variable") {
+    ## This one is easy enough:
     if (is_array) {
       ret <- sprintf("const auto& %s = delays[%d].data;",
                      nm, i - 1)
@@ -979,7 +996,37 @@ generate_dust_system_delay_equation <- function(nm, dat) {
                      nm, i - 1)
     }
   } else {
-    stop("not yet implemented") # nocov
+    if (is_array) {
+      declare <- NULL
+    } else {
+      declare <- sprintf("%s %s;", dat$storage$type[[nm]], nm)
+    }
+
+    body <- collector()
+    variables <- dat$delays$value[[i]]$variables
+    for (j in seq_along(variables)) {
+      v <- variables[[j]]
+      if (v %in% dat$storage$arrays$name) {
+        ## Something like this should work, but we might need some
+        ## extra work to make sure that we get the delays bits into
+        ## shared nicely.
+        stop("write me, look up offsets")
+        offset <- sprintf("shared.delays[%d].offset[%d]", i, j)
+        body$add(sprintf("const auto& %s = delays[%d] + %s;",
+                         v, i, offset))
+      } else {
+        ## TODO: this is just an assumption here about the offsets,
+        ## it's possibly wrong in general but it gets us started.
+        body$add(sprintf("const auto %s = delays[%d][%d];", v, i, j))
+      }
+    }
+
+    eqs <- c(dat$delays$value[[i]]$equations, nm)
+    options <- list(delay = nm)
+    for (eq in dat$equations[names(dat$equations) %in% eqs]) {
+      body$add(generate_dust_assignment(eq, "state_deriv", dat, options))
+    }
+    ret <- c(declare, cpp_body(body$get()))
   }
 
   ret

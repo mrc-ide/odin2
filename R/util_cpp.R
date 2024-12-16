@@ -12,3 +12,8 @@ cpp_args <- function(return_type, name, args, static = FALSE) {
   sprintf("%s%s %s(%s) {",
           static_str, return_type, name, args_str)
 }
+
+
+cpp_body <- function(body) {
+  c("{", sprintf("  %s", body), "}")
+}
