@@ -220,3 +220,39 @@ test_that("Can generate an ode system with output", {
 
   expect_equal(y, logistic(pars$r, pars$K, t, rep(1, 5)), tolerance = 1e-5)
 })
+
+
+test_that("can compile model with delays", {
+  skip_if_not_installed("deSolve")
+  gen <- odin({
+    ylag <- delay(y, tau)
+    initial(y) <- 0.5
+    deriv(y) <- 0.2 * ylag * 1 / (1 + ylag^10) - 0.1 * y
+    tau <- parameter(10, constant = TRUE)
+  }, quiet = TRUE, debug = TRUE)
+
+  rhs <- function(t, y, pars) {
+    tau <- pars$tau
+    if (t < tau) {
+      ylag <- 0.5
+    } else {
+      ylag <- deSolve::lagvalue(t - tau)
+    }
+    list(0.2 * ylag * 1 / (1 + ylag^10) - 0.1 * y)
+  }
+
+  t <- seq(0, 300, length.out = 301)
+  sys1 <- dust2::dust_system_create(gen)
+  dust2::dust_system_set_state_initial(sys1)
+  y1 <- dust2::dust_system_simulate(sys1, t)
+
+  ## Compare against deSolve
+  z1 <- deSolve::dede(0.5, t, rhs, list(tau = 10))
+  expect_equal(drop(y1), z1[, 2], tolerance = 1e-5)
+
+  sys2 <- dust2::dust_system_create(gen, list(tau = 20))
+  dust2::dust_system_set_state_initial(sys2)
+  y2 <- dust2::dust_system_simulate(sys2, t)
+  z2 <- deSolve::dede(0.5, t, rhs, list(tau = 20))
+  expect_equal(drop(y2), z2[, 2], tolerance = 1e-5)
+})

@@ -1,6 +1,6 @@
 Package: odin2
 Title: Next generation odin
-Version: 0.3.15
+Version: 0.3.16
 Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
              person("Wes", "Hinsley", role = "aut"),
@@ -17,12 +17,13 @@ URL: https://mrc-ide.github.io/odin2, https://github.com/mrc-ide/odin2
 BugReports: https://github.com/mrc-ide/odin2/issues
 Imports:
     cli,
-    dust2 (>= 0.3.7),
+    dust2 (>= 0.3.9),
     glue,
     monty (>= 0.3.11),
     rlang
 Suggests:
     decor,
+    deSolve,
     fs,
     knitr,
     rmarkdown,

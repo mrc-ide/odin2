@@ -435,12 +435,11 @@ generate_dust_system_delays <- function(dat) {
                                  dat$sexp_data)
     if (target %in% arrays$name) {
       size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
-      index <- sprintf("dust2::tools::integer_sequence(%s, %s)",
-                       size, offset)
     } else {
-      index <- sprintf("{%s}", offset)
+      size <- "1"
     }
-    body$add(sprintf("const dust2::ode::delay<real_type> %s{%s, %s};",
+    index <- sprintf("{%s, %s}", offset, size)
+    body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
                      nm, by, index))
   }
 
@@ -973,10 +972,10 @@ generate_dust_system_delay_equation <- function(nm, dat) {
 
   if (delay_type == "variable") {
     if (is_array) {
-      ret <- sprintf("const auto& %s = delays[%d];",
+      ret <- sprintf("const auto& %s = delays[%d].data;",
                      nm, i - 1)
     } else {
-      ret <- sprintf("const auto %s = delays[%d][0];",
+      ret <- sprintf("const auto %s = delays[%d].data[0];",
                      nm, i - 1)
     }
   } else {
