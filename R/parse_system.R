@@ -127,12 +127,17 @@ parse_system_overall <- function(exprs, call) {
     }
   }
 
+  if (is_continuous) {
+    ode_variables <- variables
+  } else {
+    ode_variables <- NULL
+  }
+
   if (any(is_output)) {
     if (!is_continuous) {
       src <- lapply(exprs[is_output], "[[", "src")
       throw_discrete_using_output(src)
     }
-
     output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))
     variables <- c(variables, output)
   } else {
@@ -231,6 +236,7 @@ parse_system_overall <- function(exprs, call) {
 
   list(time = if (is_continuous) "continuous" else "discrete",
        variables = variables,
+       ode_variables = ode_variables,
        output = output,
        parameters = parameters,
        arrays = arrays,
@@ -396,8 +402,8 @@ parse_system_stage <- function(equations, variables, parameters, data, call) {
 ## Next step, make phase (again) a property of a name, not an id.  I
 ## don't think the alternative is interesting enough to warrant the
 ## effort.  Then things simplify back out quite nicely again....
-parse_system_phases <- function(exprs, equations, variables, parameters, data,
-                                call) {
+parse_system_phases <- function(exprs, equations, variables, parameters,
+                                delays, data, call) {
   stage <- vcapply(equations, "[[", "stage")
 
   ## Now, we try and work out which parts of the graph are needed at
@@ -425,18 +431,19 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
       required <- union(required, eqs[!is_time])
 
       ## Pull in additional dependencies required for delays here:
-      if (phase == "deriv") {
-        for (eq in equations[names(equations) %in% eqs]) {
-          if (identical(eq$special, "delay")) {
-            what <- equations$a$rhs$expr$what
-            check <- equations[names(equations == what)]
-            uses <- unlist0(lapply(check, function(eq) {
-              eq$rhs$depends$variables_recursive
-            }))
-            required <- union(required, intersect(uses, names(equations)))
-          }
-        }
-      }
+      ## if (phase == "deriv") {
+      ##   browser()
+      ##   for (eq in equations[names(equations) %in% eqs]) {
+      ##     if (identical(eq$special, "delay")) {
+      ##       what <- equations$a$rhs$expr$what
+      ##       check <- equations[names(equations == what)]
+      ##       uses <- unlist0(lapply(check, function(eq) {
+      ##         eq$rhs$depends$variables_recursive
+      ##       }))
+      ##       required <- union(required, intersect(uses, names(equations)))
+      ##     }
+      ##   }
+      ## }
 
       if (phase %in% c("update", "deriv", "output")) {
         check <- c(e, unname(equations[eqs_time]))
@@ -477,9 +484,9 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
     }
   }
 
-  if (NROW(dat$delays) > 0) {
-    delayed_eqs <- unlist0(lapply(dat$delays$value, function(x) x$equations))
-    delayed_deps <- unlist0(lapply(dat$equations[delayed_eqs], function(x) {
+  if (!is.null(delays)) {
+    delayed_eqs <- unlist0(lapply(delays$value, function(x) x$equations))
+    delayed_deps <- unlist0(lapply(equations[delayed_eqs], function(x) {
       x$rhs$depends$variables_recursive
     }))
     delayed_required <- intersect(
@@ -858,23 +865,18 @@ parse_system_overall_parameters <- function(exprs, arrays) {
 }
 
 
-parse_system_delays <- function(equations, phases, variables, arrays,
-                                call) {
+parse_system_delays <- function(equations, ode_variables, arrays, call) {
   is_delay <- vcapply(equations, function(x) x$special %||% "") == "delay"
   if (!any(is_delay)) {
     return(NULL)
   }
 
-  ## Now, consider the dependencies of the delay equation; we should
-  ## actually do this in the
   dat <- lapply(unname(equations[is_delay]), parse_system_delay,
-                equations, phases, variables, arrays, call)
+                equations, ode_variables, arrays, call)
 
   data_frame(
     name = vcapply(dat, "[[", "name"),
     type = vcapply(dat, "[[", "type"),
-    in_rhs = vlapply(dat, "[[", "in_rhs"),
-    in_output = vlapply(dat, "[[", "in_output"),
     by = I(lapply(dat, "[[", "by")),
     value = I(lapply(dat, "[[", "value")))
 }
@@ -882,7 +884,7 @@ parse_system_delays <- function(equations, phases, variables, arrays,
 
 ## TODO: Consider the effect of a delayed delay, and at least prevent
 ## that here for now.  I have a feeling the malaria model does this.
-parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
+parse_system_delay <- function(eq, equations, ode_variables, arrays, call) {
   name <- eq$lhs$name
 
   ## Check that 'by' looks constant:
@@ -891,7 +893,7 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
                                "[[", "stage")
   err <- c(
     names(by_uses_eqs_stage)[by_uses_eqs_stage != "create"],
-    intersect(by_uses, variables))
+    intersect(by_uses, ode_variables))
   if (length(err)) {
     by_str <- deparse(eq$rhs$expr$by)
     odin_parse_error(
@@ -899,20 +901,12 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
       "E2025", eq$src, call)
   }
 
-  ## We need *just* the ODE variables here, as nothing else is really
-  ## delayed directly.  Once we support mixed models we will likely
-  ## need to prevent access of those variables or think about how to
-  ## delay them carefully.
-  ode_variables <- vcapply(phases$deriv$variables, function(x) x$lhs$name)
-
   what <- eq$rhs$expr$what
   type <- if (what %in% ode_variables) "variable" else "expression"
 
   ret <- list(name = name,
               type = type,
-              by = eq$rhs$expr$by,
-              in_rhs = name %in% phases$deriv$equations,
-              in_output = name %in% phases$output$equations)
+              by = eq$rhs$expr$by)
 
   if (type == "variable") {
     ret$value <- list(what = what, variables = what, equations = NULL)
@@ -923,7 +917,7 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
       lapply(equations[i], function(x) x$rhs$depends$variables_recursive)))
 
     ## Variables
-    depends_vars <- intersect(depends, variables)
+    depends_vars <- intersect(depends, ode_variables)
     if (length(depends_vars) == 0) {
       odin_parse_error(
         "Invalid delay expression '{name}' does not involve any variables",
