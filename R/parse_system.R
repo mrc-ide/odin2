@@ -903,7 +903,7 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
               in_output = name %in% phases$output$equations)
 
   if (type == "variable") {
-    ret$value <- list(variables = what, equations = NULL)
+    ret$value <- list(what = what, variables = what, equations = NULL)
   } else { # expression
     i <- names(equations) == what
     stopifnot(any(i))
@@ -931,7 +931,8 @@ parse_system_delay <- function(eq, equations, phases, variables, arrays, call) {
     ## We should also here find out if the expressions *involve* time,
     ## but I think that involves reanalysis of the expressions, and is
     ## not entirely trivial?
-    ret$value <- list(variables = depends_vars,
+    ret$value <- list(what = what,
+                      variables = depends_vars,
                       equations = depends_eqs_time)
   }
 
