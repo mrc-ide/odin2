@@ -328,7 +328,7 @@ test_that("parse a very simple delay", {
   expect_false(dat$delays$in_output)
   expect_equal(dat$delays$by, I(list(1)))
   expect_equal(dat$delays$value,
-               I(list(list(variables = "x", equations = NULL))))
+               I(list(list(what = "x", variables = "x", equations = NULL))))
 })
 
 
@@ -349,5 +349,5 @@ test_that("parse a less simple delay", {
   expect_false(dat$delays$in_output)
   expect_equal(dat$delays$by, I(list(1)))
   expect_equal(dat$delays$value,
-               I(list(list(variables = "x", equations = "b"))))
+               I(list(list(what = "b", variables = "x", equations = "b"))))
 })

@@ -26,12 +26,13 @@ test_that("can parse simple delay", {
   })
   expect_equal(
     dat$delays,
-    data.frame(name = "ylag",
-               type = "variable",
-               in_rhs = TRUE,
-               in_output = FALSE,
-               by = I(list(1)),
-               value = I(list(list(variables = "y", equations = NULL)))))
+    data.frame(
+      name = "ylag",
+      type = "variable",
+      by = I(list(1)),
+      value = I(list(list(what = "y", variables = "y", equations = NULL))),
+      in_rhs = TRUE,
+      in_output = FALSE))
 })
 
 
