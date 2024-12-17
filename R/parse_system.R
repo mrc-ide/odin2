@@ -477,6 +477,16 @@ parse_system_phases <- function(exprs, equations, variables, parameters, data,
     }
   }
 
+  if (NROW(dat$delays) > 0) {
+    delayed_eqs <- unlist0(lapply(dat$delays$value, function(x) x$equations))
+    delayed_deps <- unlist0(lapply(dat$equations[delayed_eqs], function(x) {
+      x$rhs$depends$variables_recursive
+    }))
+    delayed_required <- intersect(
+      delayed_deps, names(stage)[stage %in% c("create", "modify")])
+    required <- union(required, delayed_required)
+  }
+
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
@@ -492,12 +502,14 @@ parse_storage <- function(equations, phases, variables, output, arrays,
   ## Count things that are used only in delays here.
   if (is.null(delays)) {
     delayed_variables <- NULL
-    delayed_equations <- NULL
   } else {
     delayed_variables <- delays$name[delays$type == "variable"]
     delayed_equations <- unique(unlist0(
       lapply(delays$value, "[[", "equations")))
-    used <- union(used, delayed_equations)
+    delayed_deps <- unlist0(lapply(equations[delayed_equations], function(eq) {
+      eq$rhs$depends$variables_recursive
+    }))
+    used <- union(used, c(delayed_equations, delayed_deps))
   }
   unused <- setdiff(names(equations), used)
 

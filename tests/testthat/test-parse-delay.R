@@ -33,3 +33,22 @@ test_that("can parse simple delay", {
                by = I(list(1)),
                value = I(list(list(variables = "y", equations = NULL)))))
 })
+
+
+test_that("can parse delayed array equation", {
+  dat <- odin_parse({
+    deriv(x) <- sum(y)
+    initial(x) <- 1
+    y <- delay(z, 2)
+    dim(y) <- 5
+    z[] <- x / i
+    dim(z) <- 2
+  })
+
+  expect_setequal(dat$phases$build_shared$equations, c("dim_y", "dim_z"))
+  expect_equal(dat$phases$update_shared$equations, character())
+  expect_equal(dat$phases$deriv$equations, "y")
+  expect_equal(nrow(dat$delays), 1)
+  expect_equal(dat$delays$value[[1]],
+               list(what = "z", variables = "x", equations = "z"))
+})
