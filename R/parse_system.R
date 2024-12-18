@@ -430,21 +430,6 @@ parse_system_phases <- function(exprs, equations, variables, parameters,
       unpack <- intersect(variables, c(eqs, deps))
       required <- union(required, eqs[!is_time])
 
-      ## Pull in additional dependencies required for delays here:
-      ## if (phase == "deriv") {
-      ##   browser()
-      ##   for (eq in equations[names(equations) %in% eqs]) {
-      ##     if (identical(eq$special, "delay")) {
-      ##       what <- equations$a$rhs$expr$what
-      ##       check <- equations[names(equations == what)]
-      ##       uses <- unlist0(lapply(check, function(eq) {
-      ##         eq$rhs$depends$variables_recursive
-      ##       }))
-      ##       required <- union(required, intersect(uses, names(equations)))
-      ##     }
-      ##   }
-      ## }
-
       if (phase %in% c("update", "deriv", "output")) {
         check <- c(e, unname(equations[eqs_time]))
         err <- lapply(check, function(eq) {
