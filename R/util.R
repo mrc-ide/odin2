@@ -149,16 +149,6 @@ expr_sum <- function(x) {
 }
 
 
-expr_prod <- function(x) {
-  times <- monty::monty_differentiation()$maths$times
-  ret <- 1
-  for (el in x) {
-    ret <- times(ret, el)
-  }
-  ret
-}
-
-
 ## From dust2
 writelines_if_changed <- function(text, workdir, path, quiet) {
   path_full <- file.path(workdir, path)
