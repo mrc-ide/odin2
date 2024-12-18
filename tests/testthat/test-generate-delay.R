@@ -82,3 +82,38 @@ test_that("can generate delay in output", {
       "  state[1] = x - a;",
       "}"))
 })
+
+
+test_that("can generate code for complex delay expression", {
+  dat <- odin_parse({
+    deriv(x) <- 1
+    deriv(y) <- 2
+    initial(x) <- 0
+    initial(y) <- 0
+    a <- x + y
+    b <- delay(a, 1)
+    output(z) <- b
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_delays(dat),
+    c(method_args$delays,
+      "  const dust2::ode::delay<real_type> b(1, {{0, 1}, {1, 1}});",
+      "  return dust2::ode::delays<real_type>({b});",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_output(dat),
+    c(method_args$output_delays,
+      "  real_type b;",
+      "  {",
+      "    const auto x = delays[0].data[delays[0].offset[0]];",
+      "    const auto y = delays[0].data[delays[0].offset[1]];",
+      "    const real_type a = x + y;",
+      "    b = a;",
+      "  }",
+      "  state[2] = b;",
+      "}"))
+})

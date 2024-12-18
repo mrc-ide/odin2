@@ -430,21 +430,19 @@ generate_dust_system_delays <- function(dat) {
     nm <- delays$name[[i]]
     by <- generate_dust_sexp(delays$by[[i]], dat$sexp_data)
     variables <- delays$value[[i]]$variables
-    if (length(variables) == 1) {
-      target <- variables
-      offset <- generate_dust_sexp(call("OdinOffset", "state", target),
-                                   dat$sexp_data)
-      if (target %in% arrays$name) {
-        size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
+    offset <- vcapply(variables, function(v) {
+      generate_dust_sexp(call("OdinOffset", "state", v), dat$sexp_data)
+    })
+    size <- vcapply(variables, function(v) {
+      if (v %in% arrays$name) {
+        generate_dust_sexp(call("OdinLength", v), dat$sexp_data)
       } else {
-        size <- "1"
+        "1"
       }
-      index <- sprintf("{%s, %s}", offset, size)
-      body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
-                       nm, by, index))
-    } else {
-      stop("write multi-variable case")
-    }
+    })
+    index <- sprintf("{%s, %s}", offset, size)
+    body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
+                     nm, by, paste(index, collapse = ", ")))
   }
 
   body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
