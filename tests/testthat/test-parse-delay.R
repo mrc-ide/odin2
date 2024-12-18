@@ -56,3 +56,30 @@ test_that("can parse delayed array equation", {
   expect_equal(dat$delays$value[[1]],
                list(what = "z", variables = "x", equations = "z"))
 })
+
+
+test_that("delay expressions need to involve variables", {
+  expect_error(
+    odin_parse({
+      deriv(x) <- a
+      initial(x) <- 1
+      b <- 10
+      a <- delay(b, 1)
+    }),
+    "Invalid delay expression 'a' does not involve any variables")
+})
+
+
+test_that("delay expressions cannot involve data", {
+  expect_error(
+    odin_parse({
+      deriv(x) <- 1
+      deriv(y) <- a
+      initial(x) <- 1
+      initial(y) <- 1
+      d <- data()
+      b <- x + d
+      a <- delay(b, 1)
+    }),
+    "Invalid delay expression 'a' depends on data (via 'b')", fixed = TRUE)
+})

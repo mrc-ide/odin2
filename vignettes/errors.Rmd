@@ -1206,6 +1206,30 @@ Here, the accesses of `c` are problematic because they would refer to a vector. 
 
 This rule does not apply within `sum()` or other reductions.
 
+# `E2027`
+
+Delayed expression does not involve any variables.  You have tried to use `delay()` to delay an expression which does not involve any of the ODE variables (those that involve `deriv()`), either directly or indirectly.  For example:
+
+```r
+b <- 1
+a <- delay(b, 10)
+```
+
+would throw this error because `b` is constant over time.  This error usually indicates you have not written the model you intended to write.
+
+# `E2028`
+
+Delayed expression involves data (introduced with the `data()` function). For example:
+
+```r
+d <- data()
+deriv(x) <- 1
+y <- x + d
+a <- delay(y, 5)
+```
+
+Here `y` involves the variable `x` but also the data `d`, which is not possible.
+
 # `E3001`
 
 An array access would be out of bounds.  This error is thrown where your code would result in you reading or writing out of bounds on an array (or a dimension of an array).  Currently, we throw this error if we are certain that your access is invalid. For example, we would error if your code contains:

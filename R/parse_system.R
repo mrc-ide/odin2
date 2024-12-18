@@ -906,7 +906,7 @@ parse_system_delay <- function(eq, equations, ode_variables, arrays, call) {
     if (length(depends_vars) == 0) {
       odin_parse_error(
         "Invalid delay expression '{name}' does not involve any variables",
-        "E2999", eq$src, call)
+        "E2027", eq$src, call)
     }
 
     ## Other equations:
@@ -915,8 +915,8 @@ parse_system_delay <- function(eq, equations, ode_variables, arrays, call) {
     if (any(depends_eqs_stage == "data")) {
       err <- depends_eqs[depends_eqs_stage == "data"]
       odin_parse_error(
-        "Invalid delay expression '{name}' depends on data {squote(err)}",
-        "E2999", eq$src, call)
+        "Invalid delay expression '{name}' depends on data (via {squote(err)})",
+        "E2028", eq$src, call)
     }
     depends_eqs_time <- depends_eqs[depends_eqs_stage == "time"]
     ## We should also here find out if the expressions *involve* time,
