@@ -117,3 +117,42 @@ test_that("can generate code for complex delay expression", {
       "  state[2] = b;",
       "}"))
 })
+
+
+test_that("can generate code for an expression array", {
+  dat <- odin_parse({
+    deriv(x) <- 1
+    deriv(y[]) <- 2
+    initial(x) <- 0
+    initial(y[]) <- 0
+    a[] <- x + y[i]
+    b <- delay(a, 1)
+    output(z[]) <- b[i]
+    dim(a, b, y, z) <- 3
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_delays(dat),
+    c(method_args$delays,
+      "  const dust2::ode::delay<real_type> b(1, {{0, 1}, {1, shared.dim.a.size}});",
+      "  return dust2::ode::delays<real_type>({b});",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_output(dat),
+    c(method_args$output_delays,
+      "  {",
+      "    const auto x = delays[0].data[delays[0].offset[0]];",
+      "    const auto* y = delays[0].data.data() + delays[0].offset[1];",
+      "    for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "      internal.a[i - 1] = x + y[i - 1];",
+      "    }",
+      "    std::copy_n(internal.a.data(), shared.dim.a.size, internal.b.data());",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    state[i - 1 + 4] = internal.b[i - 1];",
+      "  }",
+      "}"))
+})
