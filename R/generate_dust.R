@@ -968,7 +968,7 @@ generate_dust_system_delay_equations <- function(phase, dat) {
 
 
 generate_dust_system_delay_equation <- function(nm, dat) {
-  i <- match(nm, dat$delays)
+  i <- match(nm, dat$delays$name)
   delay_type <- dat$delays$type[[i]]
   is_array <- nm %in% dat$storage$arrays$name
 
