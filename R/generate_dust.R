@@ -973,7 +973,6 @@ generate_dust_system_delay_equation <- function(nm, dat) {
   is_array <- nm %in% dat$storage$arrays$name
 
   if (delay_type == "variable") {
-    ## This one is easy enough:
     if (is_array) {
       ret <- sprintf("const auto& %s = delays[%d].data;",
                      nm, i - 1)

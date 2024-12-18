@@ -897,7 +897,6 @@ parse_system_delay <- function(eq, equations, ode_variables, arrays, call) {
     ret$value <- list(what = what, variables = what, equations = NULL)
   } else { # expression
     i <- names(equations) == what
-    stopifnot(any(i))
     depends <- unique(unlist0(
       lapply(equations[i], function(x) x$rhs$depends$variables_recursive)))
 

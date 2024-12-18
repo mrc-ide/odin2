@@ -40,9 +40,6 @@ test_that("can parse delayed array equation", {
   dat <- odin_parse({
     deriv(x) <- sum(y)
     initial(x) <- 1
-    ## TODO: array size here, this implies that the size of y and z
-    ## are the same, this can be done by the constraints mechanism or
-    ## through the same way as interpolate does it.
     y <- delay(z, 2)
     dim(y) <- 5
     z[] <- x / i
