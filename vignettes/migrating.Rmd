@@ -48,7 +48,6 @@ Some of these features were present in versions of `odin.dust` and many derive f
 
 Things we do plan on implementing:
 
-* Complete delay differential equations (currently delayed *variables* are supported but not fully delayed expressions)
 * Compile-time parameter substitution (`mrc-5575`)
 * Compilation to JavaScript
 * Compilation to GPU
@@ -248,9 +247,49 @@ This limitation comes from our implementation in `dust2` and it is possible to r
 
 If your system has a parameter that affects the number of state variables in the system (e.g., the number of age categories that a compartment is stratified by), you may not change this after initialisation.  This will be prevented by the parser once arrays are implemented.
 
-# Changes in the way arrays are handled
+## Changes in the way arrays are handled
 
 The two-argument form of `dim()` has been removed, as we did not believe it was used and it is confusingly different to R.  Previously you could write `dim(x, 3)` to get the length of the third dimension of `x`; this is no longer supported.  Please let us know if this is a problem.
+
+# Changes to how delays are supported
+
+We support, to a degree, delay differential equations.  That they work at all is a minor miracle, especially given that the solver we use (in dust2) is extremely simple.
+
+## `delay()` cannot be used in discrete time models
+
+This was removed in `odin.dust` and the limitation remains, at least for now.  We may enable this later if required, please let us know.  The reason for this change is that the way that delays are handled in continuous time is fundamentally different to how we would do this in discrete time (particularly with stochastic expressions), but we do not have a good motivating reason to develop this.
+
+## `delay()` results assign without array indices
+
+Previously, if you had a `delay()` call that returned a vector (or higher-dimension array) you had to write
+
+```r
+v[] <- delay(a, tau)
+```
+
+but now you should drop the `[]`, as for the `parameter()` and `interpolate()` cases above, as you are replacing *all* of `v` at once, writing:
+
+```r
+v <- delay(a, tau)
+```
+
+## The first argument to `delay()` must be the name of an equation
+
+Previously, you could delay an expression (e.g., `x <- delay(a + b, 1)`).  For simplicity in implementation we have dropped this and require that the first argument is an expression.  We might change this later, but in the current version it makes the syntax around handling delayed arrays a little more consistent (see above).
+
+## The 'default' argument to `delay()` has been removed
+
+Previously, you could write
+
+```r
+x <- delay(y, tau, default)
+```
+
+to provide a default argument to the delayed value before `tau` time had elapsed.  This was not widely advertised or used, and has been removed.
+
+## The delay time must be constant
+
+We require that the delay time is known at first model initialisation and not updated subsequently (i.e., that it is numeric, a literal value assigned to symbol or a paramter with `constant = TRUE`).
 
 # General changes
 
