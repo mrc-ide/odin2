@@ -83,3 +83,42 @@ test_that("delay expressions cannot involve data", {
     }),
     "Invalid delay expression 'a' depends on data (via 'b')", fixed = TRUE)
 })
+
+
+test_that("delay and target must match", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      deriv(x) <- a
+      b <- x + 1
+      a <- delay(b, 1)
+      dim(a) <- 1
+    }),
+    "Invalid dimensionality of 'a', expected a scalar following 'b'")
+})
+
+
+test_that("delay and target must have compatible sizes", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      deriv(x) <- sum(a)
+      a <- delay(b, 1)
+      b[] <- x / i
+      dim(b) <- 3
+      dim(a) <- 2
+    }),
+    "Out of range write of 'a' in 'a <- delay(b, 1)'",
+    fixed = TRUE)
+  expect_error(
+    odin_parse({
+      initial(x) <- 0
+      deriv(x) <- sum(a)
+      a <- delay(b, 1)
+      b[] <- x / i
+      dim(b) <- 2
+      dim(a) <- 3
+    }),
+    "Out of range read of 'b' in 'a <- delay(b, 1)'",
+    fixed = TRUE)
+})

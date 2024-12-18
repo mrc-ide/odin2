@@ -925,6 +925,19 @@ parse_system_delay <- function(eq, equations, ode_variables, arrays, call) {
     ret$value <- list(what = what,
                       variables = depends_vars,
                       equations = depends_eqs_time)
+
+    ## Check dimensionality here, then we'll pick up size in the
+    ## constraint checks:
+    get_rank <- function(nm) {
+      if (is.na(i <- match(nm, arrays$name))) 0L else arrays$rank[[i]]
+    }
+    rank_what <- get_rank(what)
+    if (get_rank(name) != rank_what) {
+      odin_parse_error(
+        paste("Invalid dimensionality of '{name}', expected a",
+              "{rank_description(rank_what)} following '{what}'"),
+        "E2029", eq$src, call)
+    }
   }
 
   ret

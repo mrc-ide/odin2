@@ -1230,6 +1230,18 @@ a <- delay(y, 5)
 
 Here `y` involves the variable `x` but also the data `d`, which is not possible.
 
+# `E2029`
+
+Incompatible dimensionality of delayed expression (first argument to `delay`) and the object it is assigned to.  A delayed expression will always be the same dimensionality (a delayed scalar is a scalar, a delayed matrix is a matrix, etc), so the left hand side of the `delay()` call needs to have the same dimensionality (and size!) as the expression being delayed.  For example, this is an error:
+
+```
+a <- x * 2
+b <- delay(a)
+dim(b) <- 1
+```
+
+because here `b` is a vector but `a` is a scalar.
+
 # `E3001`
 
 An array access would be out of bounds.  This error is thrown where your code would result in you reading or writing out of bounds on an array (or a dimension of an array).  Currently, we throw this error if we are certain that your access is invalid. For example, we would error if your code contains:
