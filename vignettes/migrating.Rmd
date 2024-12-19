@@ -275,7 +275,7 @@ v <- delay(a, tau)
 
 ## The first argument to `delay()` must be the name of an equation
 
-Previously, you could delay an expression (e.g., `x <- delay(a + b, 1)`).  For simplicity in implementation we have dropped this and require that the first argument is an expression.  We might change this later, but in the current version it makes the syntax around handling delayed arrays a little more consistent (see above).
+Previously, you could delay an expression (e.g., `x <- delay(a + b, 1)`).  For simplicity in implementation we have dropped this and require that the first argument is a symbol.  We might change this later, but in the current version it makes the syntax around handling delayed arrays a little more consistent (see above).
 
 ## The 'default' argument to `delay()` has been removed
 
