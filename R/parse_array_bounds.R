@@ -54,7 +54,9 @@ parse_array_bounds_extract_constraints <- function(dat) {
   ## to index into an array and compare that with the size of that
   ## dimension of the array.  Don't try and be clever yet, there's
   ## enough to be done here; this stage just finds the accesses:
-  constraints <- unlist0(lapply(check, parse_array_bounds_extract_constraint))
+  constraints <- c(
+    unlist0(lapply(check, parse_array_bounds_extract_constraint)),
+    parse_delays_extract_constraint(dat))
 
   ## Convert this list-of-lists into a nicer data frame:
   constraints <- data.frame(
@@ -395,4 +397,39 @@ constraint_deparse_rewrite <- function(expr, arrays) {
   } else {
     expr
   }
+}
+
+
+parse_delays_extract_constraint <- function(dat) {
+  delays <- dat$delays
+  if (is.null(delays)) {
+    return(NULL)
+  }
+  arrays <- dat$storage$arrays
+
+  ret <- collector(list())
+
+  for (i in seq_len(nrow(delays))) {
+    name <- delays$name[[i]]
+    what <- delays$value[[i]]$what
+    if (name %in% arrays$name) {
+      idx_name <- match(name, arrays$name)
+      idx_what <- match(what, arrays$name)
+      if (arrays$alias[[idx_name]] != arrays$alias[[idx_what]]) {
+        eq <- dat$equations[[name]]
+        rank <- arrays$rank[[idx_name]]
+        dims_name <- arrays$dims[[idx_name]]
+        dims_what <- arrays$dims[[idx_what]]
+        expr <- eq$src$value
+        for (j in seq_len(rank)) {
+          ret$add(constraint(name, expr, j, call("OdinDim", what, j),
+                             eq$src$index, TRUE))
+          ret$add(constraint(what, expr, j, call("OdinDim", name, j),
+                             eq$src$index, FALSE))
+        }
+      }
+    }
+  }
+
+  ret$get()
 }

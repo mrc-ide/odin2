@@ -551,7 +551,7 @@ dim(a) <- if (time > 10) 100 else 20
 
 # `E1041`
 
-Special functions on the right-hand-side of an expression must be the only expression there.  This applies to `parameter()`, `interpolate()` and `data()`; if these are used they must be the **only** expression on the right hand side.
+Special functions on the right-hand-side of an expression must be the only expression there.  This applies to `parameter()`, `interpolate()`, `data()` and `delay()`; if these are used they must be the **only** expression on the right hand side.
 
 For example you cannot write:
 
@@ -1205,6 +1205,42 @@ a[] <- b + c[i, 2:3]
 Here, the accesses of `c` are problematic because they would refer to a vector.  You might have forgotten to write `sum(c[i, ])` or some other reduction that would have converted this into a vector.
 
 This rule does not apply within `sum()` or other reductions.
+
+# `E2027`
+
+Delayed expression does not involve any variables.  You have tried to use `delay()` to delay an expression which does not involve any of the ODE variables (those that involve `deriv()`), either directly or indirectly.  For example:
+
+```r
+b <- 1
+a <- delay(b, 10)
+```
+
+would throw this error because `b` is constant over time.  This error usually indicates you have not written the model you intended to write.
+
+# `E2028`
+
+Delayed expression involves data (introduced with the `data()` function). For example:
+
+```r
+d <- data()
+deriv(x) <- 1
+y <- x + d
+a <- delay(y, 5)
+```
+
+Here `y` involves the variable `x` but also the data `d`, which is not possible.
+
+# `E2029`
+
+Incompatible dimensionality of delayed expression (first argument to `delay`) and the object it is assigned to.  A delayed expression will always be the same dimensionality (a delayed scalar is a scalar, a delayed matrix is a matrix, etc), so the left hand side of the `delay()` call needs to have the same dimensionality (and size!) as the expression being delayed.  For example, this is an error:
+
+```
+a <- x * 2
+b <- delay(a)
+dim(b) <- 1
+```
+
+because here `b` is a vector but `a` is a scalar.
 
 # `E3001`
 

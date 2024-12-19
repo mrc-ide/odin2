@@ -240,7 +240,7 @@ parse_expr_assignment_rhs <- function(rhs, src, call) {
 parse_expr_assignment_rhs_expression <- function(rhs, src, call) {
   depends <- find_dependencies(rhs)
 
-  special_rhs <- c("parameter", "interpolate", "data")
+  special_rhs <- c("parameter", "interpolate", "data", "delay")
   err <- intersect(special_rhs, depends$functions)
   if (length(err) > 0) {
     odin_parse_error(

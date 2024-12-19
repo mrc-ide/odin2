@@ -17,11 +17,17 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
     system$exprs$equations, system$variables, call)
   equations <- parse_system_stage(
     equations, system$variables, system$parameters, system$data$name, call)
+  delays <- parse_system_delays(
+    equations, system$ode_variables, system$arrays, call)
   phases <- parse_system_phases(
-    system$exprs, equations, system$variables, system$parameters,
+    system$exprs, equations, system$variables, system$parameters, delays,
     system$data$name, call)
-  delays <- parse_system_delays(equations, phases, system$variables,
-                                system$arrays, call)
+
+  if (!is.null(delays)) {
+    delays$in_rhs <- delays$name %in% phases$deriv$equations
+    delays$in_output <- delays$name %in% phases$output$equations
+  }
+
   storage <- parse_storage(
     equations, phases, system$variables, system$output, system$arrays,
     system$parameters, system$data, delays, call)

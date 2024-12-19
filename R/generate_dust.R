@@ -428,19 +428,21 @@ generate_dust_system_delays <- function(dat) {
 
   for (i in seq_len(nrow(delays))) {
     nm <- delays$name[[i]]
-    stopifnot(delays$type[[i]] == "variable") # conditional later
-    target <- delays$value[[i]]$variables
     by <- generate_dust_sexp(delays$by[[i]], dat$sexp_data)
-    offset <- generate_dust_sexp(call("OdinOffset", "state", target),
-                                 dat$sexp_data)
-    if (target %in% arrays$name) {
-      size <- generate_dust_sexp(call("OdinLength", target), dat$sexp_data)
-    } else {
-      size <- "1"
-    }
+    variables <- delays$value[[i]]$variables
+    offset <- vcapply(variables, function(v) {
+      generate_dust_sexp(call("OdinOffset", "state", v), dat$sexp_data)
+    })
+    size <- vcapply(variables, function(v) {
+      if (v %in% arrays$name) {
+        generate_dust_sexp(call("OdinLength", v), dat$sexp_data)
+      } else {
+        "1"
+      }
+    })
     index <- sprintf("{%s, %s}", offset, size)
     body$add(sprintf("const dust2::ode::delay<real_type> %s(%s, {%s});",
-                     nm, by, index))
+                     nm, by, paste(index, collapse = ", ")))
   }
 
   body$add(sprintf("return dust2::ode::delays<real_type>({%s});",
@@ -966,7 +968,7 @@ generate_dust_system_delay_equations <- function(phase, dat) {
 
 
 generate_dust_system_delay_equation <- function(nm, dat) {
-  i <- match(nm, dat$delays)
+  i <- match(nm, dat$delays$name)
   delay_type <- dat$delays$type[[i]]
   is_array <- nm %in% dat$storage$arrays$name
 
@@ -979,7 +981,37 @@ generate_dust_system_delay_equation <- function(nm, dat) {
                      nm, i - 1)
     }
   } else {
-    stop("not yet implemented") # nocov
+    what <- generate_dust_sexp(dat$delays$value[[i]]$what, dat$sexp_data)
+    if (is_array) {
+      declare <- NULL
+      size <- generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+      assign <- sprintf("std::copy_n(%s.data(), %s, %s.data());",
+                        what, size, generate_dust_sexp(nm, dat$sexp_data))
+    } else {
+      declare <- sprintf("%s %s;", dat$storage$type[[nm]], nm)
+      assign <- sprintf("%s = %s;", nm, what)
+    }
+
+    body <- collector()
+    variables <- dat$delays$value[[i]]$variables
+    for (j in seq_along(variables)) {
+      v <- variables[[j]]
+      offset <- sprintf("delays[%d].offset[%d]", i - 1, j - 1)
+      if (v %in% dat$storage$arrays$name) {
+        body$add(sprintf("const auto* %s = delays[%d].data.data() + %s;",
+                         v, i - 1, offset))
+      } else {
+        body$add(sprintf("const auto %s = delays[%d].data[%s];",
+                         v, i - 1, offset))
+      }
+    }
+
+    eqs <- dat$delays$value[[i]]$equations
+    for (eq in dat$equations[names(dat$equations) %in% eqs]) {
+      body$add(generate_dust_assignment(eq, "state_deriv", dat))
+    }
+    body$add(assign)
+    ret <- c(declare, cpp_body(body$get()))
   }
 
   ret
