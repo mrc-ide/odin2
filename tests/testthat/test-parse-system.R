@@ -351,3 +351,21 @@ test_that("parse a less simple delay", {
   expect_equal(dat$delays$value,
                I(list(list(what = "b", variables = "x", equations = "b"))))
 })
+
+
+test_that("output handling", {
+  dat1 <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- 1
+    output(y) <- x * 2
+  })
+
+  dat2 <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- 1
+    y <- x * 2
+    output(y) <- TRUE
+  })
+  
+
+})

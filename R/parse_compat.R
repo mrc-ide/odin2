@@ -16,6 +16,7 @@ parse_compat <- function(exprs, action, ignore_error, call) {
   exprs <- apply_fix(exprs, parse_compat_fix_parameter_array)
   exprs <- apply_fix(exprs, parse_compat_fix_distribution)
   exprs <- apply_fix(exprs, parse_compat_fix_compare)
+  exprs <- apply_fix(exprs, parse_compat_fix_output_self)
   exprs <- apply_fix(exprs, parse_compat_fix_interpolate_assign)
 
   ## Bunch of time-related things; these are a bit harder, and can't
@@ -164,6 +165,8 @@ parse_compat_report <- function(exprs, action, call) {
       compare = paste(
         "Remove redundant 'compare()' wrapper, because all expressions",
         "using `~` are comparisons."),
+      output_self =
+        "Use `TRUE` on rhs for 'output(x) <- x' expressions",
       interpolate_assign =
         "Drop arrays from lhs of assignments from 'interpolate()'",
       assign_time = paste(
@@ -240,6 +243,35 @@ parse_compat_report <- function(exprs, action, call) {
   exprs
 }
 
+
+parse_compat_fix_output_self <- function(expr, call) {
+  is_output_expr <-
+    rlang::is_call(expr$value, c("<-", "=")) &&
+    rlang::is_call(expr$value[[2]], "output") &&
+    !isTRUE(expr$value[[3]])
+  if (is_output_expr) {
+    lhs <- expr$value[[2]]
+    rhs <- expr$value[[3]]
+    rewrite <-
+      (is.symbol(lhs) &&
+       is.symbol(rhs) &&
+       identical(lhs, rhs)) ||
+      (rlang::is_call(lhs, "[") &&
+       rlang::is_call(rhs, "[") &&
+       identical(lhs[[2]], rhs[[2]]))
+    if (rewrite) {
+      original <- expr$value
+      if (is_call(lhs, "[[")) {
+        expr$value[[2]] <- expr$value[[2]][[2]]
+      }
+      expr$value[[3]] <- TRUE
+      expr <- parse_add_compat(expr, "output_self", original)
+    }
+  }
+  expr
+}
+
+
 parse_compat_fix_compare <- function(expr, call) {
   is_compare <-
     rlang::is_call(expr$value, "~") &&
@@ -255,7 +287,7 @@ parse_compat_fix_compare <- function(expr, call) {
 
 parse_compat_fix_interpolate_assign <- function(expr, call) {
   is_interpolate_assign_array <-
-    rlang::is_call(expr$value, "<-") &&
+    rlang::is_call(expr$value, c("<-", "=")) &&
     rlang::is_call(expr$value[[3]], "interpolate") &&
     rlang::is_call(expr$value[[2]], "[") &&
     all(vlapply(expr$value[[2]][-(1:2)], rlang::is_missing))

@@ -138,7 +138,35 @@ parse_system_overall <- function(exprs, call) {
       src <- lapply(exprs[is_output], "[[", "src")
       throw_discrete_using_output(src)
     }
-    output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))
+
+    is_output_flag <- vlapply(exprs[is_output], function(x) isTRUE(x$rhs$expr))
+    is_output_expr <- !is_output_flag
+
+    nms <- lapply(exprs[is_output], function(x) x$lhs$name)
+    nms_flag <- unlist0(nms[is_output_flag])
+    nms_expr <- unique(unlist0(nms[is_output_expr]))
+
+    dups <- union(unique(nms_flag[duplicated(nms_flag)]),
+                  intersect(nms_flag, nms_expr))
+
+    if (length(dups) > 0) {
+      err <- vlapply(nms, function(x) any(dups %in% nms))
+      src <- lapply(exprs[err], "[[", "src")
+      odin_parse_error(
+        "Duplicated output expressions for '{squote(dups)}'",
+        "E2099", src, call)
+    }
+
+    ## Rewrite expressions in output(x) <- expr style to just drop the
+    ## special output bit now, and treat them as normal expressions.
+    if (any(is_output_expr)) {
+      for (idx in which(is_output)[is_output_expr]) {
+        exprs[[idx]]["special"] <- list(NULL)
+        is_equation[[idx]] <- TRUE
+      }
+    }
+
+    output <- unique(unlist0(nms))
     variables <- c(variables, output)
   } else {
     output <- NULL
@@ -220,7 +248,6 @@ parse_system_overall <- function(exprs, call) {
   exprs <- list(equations = c(exprs[is_equation], interpolate_use),
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
-                output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
                 print = exprs[is_print],
@@ -228,7 +255,7 @@ parse_system_overall <- function(exprs, call) {
                 data = exprs[is_data])
 
   nms <- vcapply(exprs$equations, function(x) x$lhs$name)
-  err <- intersect(nms, variables)
+  err <- intersect(nms, setdiff(variables, output))
   if (length(err) > 0) {
     src <- lapply(exprs$equations[nms %in% err], "[[", "src")
     throw_eq_using_borrowed_name(err, src)
@@ -402,8 +429,8 @@ parse_system_stage <- function(equations, variables, parameters, data, call) {
 ## Next step, make phase (again) a property of a name, not an id.  I
 ## don't think the alternative is interesting enough to warrant the
 ## effort.  Then things simplify back out quite nicely again....
-parse_system_phases <- function(exprs, equations, variables, parameters,
-                                delays, data, call) {
+parse_system_phases <- function(exprs, equations, variables, output,
+                                parameters, delays, data, call) {
   stage <- vcapply(equations, "[[", "stage")
 
   ## Now, we try and work out which parts of the graph are needed at
@@ -414,7 +441,7 @@ parse_system_phases <- function(exprs, equations, variables, parameters,
 
   required <- character()
 
-  phase_names <- c("update", "deriv", "output", "initial", "compare")
+  phase_names <- c("update", "deriv", "initial", "compare")
   phases <- set_names(vector("list", length(phase_names)), phase_names)
 
   for (phase in phase_names) {
@@ -451,6 +478,9 @@ parse_system_phases <- function(exprs, equations, variables, parameters,
                                 equations = eqs_time,
                                 variables = e)
       } else if (phase == "initial") {
+        ## TODO: also need to guard against data here, but that's
+        ## actually _everywhere_ so move it out og the above.
+        ##
         ## I forget what the trick was here, but there's some extra
         ## effort required.
         if (length(unpack) > 0) {
@@ -467,6 +497,19 @@ parse_system_phases <- function(exprs, equations, variables, parameters,
                                 compare = e)
       }
     }
+  }
+
+  ## Treat output differently:
+  if (length(output) > 0) {
+    eqs <- intersect(names(equations), output)
+    eqs <- union(eqs, unlist0(deps_recursive[eqs]))
+    is_time <- stage[eqs] == "time"
+    eqs_time <- intersect(names(equations), eqs[is_time])
+    unpack <- setdiff(intersect(variables, c(eqs, deps)), output)
+    required <- union(required, eqs[!is_time])
+    
+    
+    browser()
   }
 
   if (!is.null(delays)) {
