@@ -68,3 +68,11 @@ test_that("'by' must be a symbol or number", {
     "Expected 'by' argument to 'delay()' to be a number or symbol",
     fixed = TRUE)
 })
+
+
+test_that("forbid delay within an expression", {
+  expect_error(
+    parse_expr(quote(a <- 1 + delay(b, 2)), NULL, NULL),
+    "'delay()' must be the only call on the rhs if used",
+    fixed = TRUE)
+})

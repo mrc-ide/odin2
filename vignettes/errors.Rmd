@@ -551,7 +551,7 @@ dim(a) <- if (time > 10) 100 else 20
 
 # `E1041`
 
-Special functions on the right-hand-side of an expression must be the only expression there.  This applies to `parameter()`, `interpolate()` and `data()`; if these are used they must be the **only** expression on the right hand side.
+Special functions on the right-hand-side of an expression must be the only expression there.  This applies to `parameter()`, `interpolate()`, `data()` and `delay()`; if these are used they must be the **only** expression on the right hand side.
 
 For example you cannot write:
 
