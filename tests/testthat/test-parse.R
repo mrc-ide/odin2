@@ -1230,3 +1230,28 @@ test_that("disallow empty index on rhs", {
     }),
     "Can't use the range operator `:` while accessing arrays on the rhs")
 })
+
+
+## In this case, we need to allow for the equations to be put in the
+## correct graph order!
+test_that("allow reuse of output variables", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- x / a + b
+    a <- sqrt(x)
+    b <- a + 1
+    output(a) <- TRUE
+    output(b) <- TRUE
+  })
+
+  expect_equal(dat$phases$deriv$unpack, "x")
+  expect_equal(dat$phases$deriv$equations, c("a", "b"))
+  expect_length(dat$phases$deriv$variables, 1)
+  expect_equal(dat$phases$deriv$variables[[1]]$lhs$name, "x")
+
+  expect_equal(dat$phases$output$unpack, "x")
+  expect_equal(dat$phases$output$equations, character())
+  expect_length(dat$phases$output$variables, 2)
+  expect_equal(dat$phases$output$variables[[1]]$lhs$name, "a")
+  expect_equal(dat$phases$output$variables[[2]]$lhs$name, "b")
+})

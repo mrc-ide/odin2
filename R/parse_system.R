@@ -458,6 +458,10 @@ parse_system_phases <- function(exprs, equations, variables, output,
   phase_names <- c("update", "deriv", "output", "initial", "compare")
   phases <- set_names(vector("list", length(phase_names)), phase_names)
 
+  if (length(output) > 0) {
+    variables <- setdiff(variables, output)
+  }
+
   for (phase in phase_names) {
     e <- exprs[[phase]]
     if (length(e) > 0) {
@@ -487,6 +491,9 @@ parse_system_phases <- function(exprs, equations, variables, output,
                         "is not allowed because data are not defined",
                         "at this point")),
             "E2010", src, call)
+        }
+        if (phase == "output") {
+          eqs_time <- setdiff(eqs_time, output)
         }
         phases[[phase]] <- list(unpack = unpack,
                                 equations = eqs_time,
