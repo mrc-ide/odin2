@@ -138,7 +138,35 @@ parse_system_overall <- function(exprs, call) {
       src <- lapply(exprs[is_output], "[[", "src")
       throw_discrete_using_output(src)
     }
-    output <- unique(vcapply(exprs[is_output], function(x) x$lhs$name))
+
+    is_output_flag <- vlapply(exprs[is_output], function(x) isTRUE(x$rhs$expr))
+    is_output_expr <- !is_output_flag
+
+    nms <- lapply(exprs[is_output], function(x) x$lhs$name)
+    nms_flag <- unlist0(nms[is_output_flag])
+    nms_expr <- unique(unlist0(nms[is_output_expr]))
+
+    dups <- union(unique(nms_flag[duplicated(nms_flag)]),
+                  intersect(nms_flag, nms_expr))
+
+    if (length(dups) > 0) {
+      err <- vlapply(nms, function(x) any(dups %in% nms))
+      src <- lapply(exprs[err], "[[", "src")
+      odin_parse_error(
+        "Duplicated output expressions for '{squote(dups)}'",
+        "E2099", src, call)
+    }
+
+    ## Rewrite expressions in output(x) <- expr style to just drop the
+    ## special output bit now, and treat them as normal expressions.
+    if (any(is_output_expr)) {
+      for (idx in which(is_output)[is_output_expr]) {
+        exprs[[idx]]["special"] <- list(NULL)
+        is_equation[[idx]] <- TRUE
+      }
+    }
+
+    output <- unique(unlist0(nms))
     variables <- c(variables, output)
   } else {
     output <- NULL
@@ -217,18 +245,31 @@ parse_system_overall <- function(exprs, call) {
     interpolate_use <- NULL
   }
 
-  exprs <- list(equations = c(exprs[is_equation], interpolate_use),
+  equations <- c(exprs[is_equation], interpolate_use)
+  if (length(output) == 0) {
+    exprs_output <- list()
+  } else {
+    exprs_output <-
+      equations[vcapply(equations, function(x) x$lhs$name) %in% output]
+    ## If this assertion holds, then we can drop changes around here
+    ## and return this simpler expression. However, I don't think it's
+    ## quite as simple as this because in the flag case we don't
+    ## really have that expression to work with.
+    ## stopifnot(identical(exprs_output, exprs[is_output]))
+  }
+
+  exprs <- list(equations = equations,
                 update = exprs[is_update],
                 deriv = exprs[is_deriv],
-                output = exprs[is_output],
                 initial = exprs[is_initial],
                 compare = exprs[is_compare],
+                output = exprs_output,
                 print = exprs[is_print],
                 browser = exprs[is_browser],
                 data = exprs[is_data])
 
   nms <- vcapply(exprs$equations, function(x) x$lhs$name)
-  err <- intersect(nms, variables)
+  err <- intersect(nms, setdiff(variables, output))
   if (length(err) > 0) {
     src <- lapply(exprs$equations[nms %in% err], "[[", "src")
     throw_eq_using_borrowed_name(err, src)
@@ -402,8 +443,8 @@ parse_system_stage <- function(equations, variables, parameters, data, call) {
 ## Next step, make phase (again) a property of a name, not an id.  I
 ## don't think the alternative is interesting enough to warrant the
 ## effort.  Then things simplify back out quite nicely again....
-parse_system_phases <- function(exprs, equations, variables, parameters,
-                                delays, data, call) {
+parse_system_phases <- function(exprs, equations, variables, output,
+                                parameters, delays, data, call) {
   stage <- vcapply(equations, "[[", "stage")
 
   ## Now, we try and work out which parts of the graph are needed at
@@ -451,8 +492,12 @@ parse_system_phases <- function(exprs, equations, variables, parameters,
                                 equations = eqs_time,
                                 variables = e)
       } else if (phase == "initial") {
+        ## TODO: also need to guard against use of data within this
+        ## phase, but that's the case in all phases other than compare
+        ## so move it out of the above.
+        ##
         ## I forget what the trick was here, but there's some extra
-        ## effort required.
+        ## effort required, and this is not commonly done.
         if (length(unpack) > 0) {
           odin_parse_error(
             "Dependencies within initial conditions not yet supported",
@@ -503,7 +548,7 @@ parse_storage <- function(equations, phases, variables, output, arrays,
     }))
     used <- union(used, c(delayed_equations, delayed_deps))
   }
-  unused <- setdiff(names(equations), used)
+  unused <- setdiff(names(equations), c(used, output))
 
   dim <- names(which(
     vlapply(equations[used], function(x) identical(x$special, "dim"))))

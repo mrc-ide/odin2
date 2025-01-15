@@ -2779,3 +2779,29 @@ test_that("correct packing with aliased arrays", {
       "  return shared_state{odin, dim, x, y};",
       "}"))
 })
+
+
+test_that("output <- TRUE version generates same code", {
+  dat1 <- odin_parse({
+    initial(x[]) <- 0
+    deriv(x[]) <- x[i] * r[i]
+    r <- parameter()
+    n <- 3
+    dim(x) <- n
+    dim(r) <- n
+    output(tot) <- sum(x)
+  })
+
+  dat2 <- odin_parse({
+    initial(x[]) <- 0
+    deriv(x[]) <- x[i] * r[i]
+    r <- parameter()
+    n <- 3
+    dim(x) <- n
+    dim(r) <- n
+    tot <- sum(x)
+    output(tot) <- TRUE
+  })
+
+  expect_equal(generate_dust_system(dat2), generate_dust_system(dat1))
+})
