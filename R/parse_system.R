@@ -141,6 +141,7 @@ parse_system_overall <- function(exprs, call) {
 
     is_output_flag <- vlapply(exprs[is_output], function(x) isTRUE(x$rhs$expr))
     is_output_expr <- !is_output_flag
+    nms <- lapply(exprs[is_output], function(x) x$lhs$name)
 
     ## Rewrite expressions in output(x) <- expr style to just drop the
     ## special output bit now, and treat them as normal expressions.
@@ -644,7 +645,8 @@ parse_system_arrays <- function(exprs, call) {
     err <- vlapply(exprs[i], function(x) {
       is.null(x$lhs$array) &&
         !identical(x$special, "parameter") &&
-        !identical(x$special, "delay")
+        !identical(x$special, "delay") &&
+        !(identical(x$special, "output") && isTRUE(x$rhs$expr))
     })
     if (any(err)) {
       src <- lapply(exprs[i][err], "[[", "src")

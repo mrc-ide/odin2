@@ -250,7 +250,7 @@ parse_compat_fix_output_self <- function(expr, call) {
     rlang::is_call(expr$value[[2]], "output") &&
     !isTRUE(expr$value[[3]])
   if (is_output_expr) {
-    lhs <- expr$value[[2]]
+    lhs <- expr$value[[2]][[2]]
     rhs <- expr$value[[3]]
     rewrite <-
       (is.symbol(lhs) &&
@@ -261,10 +261,10 @@ parse_compat_fix_output_self <- function(expr, call) {
        identical(lhs[[2]], rhs[[2]]))
     if (rewrite) {
       original <- expr$value
-      if (is_call(lhs, "[[")) {
-        expr$value[[2]] <- expr$value[[2]][[2]]
-      }
       expr$value[[3]] <- TRUE
+      if (rlang::is_call(lhs, "[")) {
+        expr$value[[2]][[2]] <- lhs[[2]]
+      }
       expr <- parse_add_compat(expr, "output_self", original)
     }
   }

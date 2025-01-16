@@ -2805,3 +2805,23 @@ test_that("output <- TRUE version generates same code", {
 
   expect_equal(generate_dust_system(dat2), generate_dust_system(dat1))
 })
+
+
+test_that("cope with array output", {
+  dat1 <- odin_parse({
+    initial(x[]) <- 0
+    deriv(x[]) <- x[i]
+    a[] <- x[i] + 1
+    output(a) <- TRUE
+    dim(x, a) <- 5
+  })
+
+  dat2 <- odin_parse({
+    initial(x[]) <- 0
+    deriv(x[]) <- x[i]
+    output(a[]) <- x[i] + 1
+    dim(x, a) <- 5
+  })
+
+  expect_equal(generate_dust_system(dat2), generate_dust_system(dat1))
+})
