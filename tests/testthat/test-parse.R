@@ -1232,8 +1232,6 @@ test_that("disallow empty index on rhs", {
 })
 
 
-## In this case, we need to allow for the equations to be put in the
-## correct graph order!
 test_that("allow reuse of output variables", {
   dat <- odin_parse({
     initial(x) <- 0
@@ -1250,8 +1248,6 @@ test_that("allow reuse of output variables", {
   expect_equal(dat$phases$deriv$variables[[1]]$lhs$name, "x")
 
   expect_equal(dat$phases$output$unpack, "x")
-  expect_equal(dat$phases$output$equations, character())
-  expect_length(dat$phases$output$variables, 2)
-  expect_equal(dat$phases$output$variables[[1]]$lhs$name, "a")
-  expect_equal(dat$phases$output$variables[[2]]$lhs$name, "b")
+  expect_equal(dat$phases$output$equations, c("a", "b"))
+  expect_equal(dat$phases$output$variables, list())
 })

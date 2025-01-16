@@ -492,12 +492,18 @@ parse_system_phases <- function(exprs, equations, variables, output,
                         "at this point")),
             "E2010", src, call)
         }
+        ## Output variables are different because they are both
+        ## written to and read from so we treat them more like
+        ## equations here.
         if (phase == "output") {
-          eqs_time <- setdiff(eqs_time, output)
+          eqs_time <- intersect(names(equations), c(eqs_time, output))
+          vars <- list()
+        } else {
+          vars <- e
         }
         phases[[phase]] <- list(unpack = unpack,
                                 equations = eqs_time,
-                                variables = e)
+                                variables = vars)
       } else if (phase == "initial") {
         ## TODO: also need to guard against use of data within this
         ## phase, but that's the case in all phases other than compare

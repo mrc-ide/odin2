@@ -406,8 +406,7 @@ generate_dust_system_output <- function(dat) {
   unpack <- intersect(dat$variables, dat$phases$output$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
-  eqs <- c(get_phase_equations("output", dat),
-           dat$phases$output$variables)
+  eqs <- get_phase_equations("output", dat)
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state", dat))
   }
