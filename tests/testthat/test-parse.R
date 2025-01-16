@@ -1251,3 +1251,18 @@ test_that("allow reuse of output variables", {
   expect_equal(dat$phases$output$equations, c("a", "b"))
   expect_equal(dat$phases$output$variables, list())
 })
+
+
+## This is not the ideal error, we can put in a special check for this
+## later perhaps.  However, sorting out arrays currently happens
+## before we start breaking apartthe system, which is where
+test_that("disallow use of both forms of output", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      deriv(x) <- 2
+      output(y) <- x
+      output(y) <- TRUE
+    }),
+    "Only arrays can be assigned over multiple statements")
+})

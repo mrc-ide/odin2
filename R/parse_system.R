@@ -142,21 +142,6 @@ parse_system_overall <- function(exprs, call) {
     is_output_flag <- vlapply(exprs[is_output], function(x) isTRUE(x$rhs$expr))
     is_output_expr <- !is_output_flag
 
-    nms <- lapply(exprs[is_output], function(x) x$lhs$name)
-    nms_flag <- unlist0(nms[is_output_flag])
-    nms_expr <- unique(unlist0(nms[is_output_expr]))
-
-    dups <- union(unique(nms_flag[duplicated(nms_flag)]),
-                  intersect(nms_flag, nms_expr))
-
-    if (length(dups) > 0) {
-      err <- vlapply(nms, function(x) any(dups %in% nms))
-      src <- lapply(exprs[err], "[[", "src")
-      odin_parse_error(
-        "Duplicated output expressions for '{squote(dups)}'",
-        "E2099", src, call)
-    }
-
     ## Rewrite expressions in output(x) <- expr style to just drop the
     ## special output bit now, and treat them as normal expressions.
     if (any(is_output_expr)) {
