@@ -237,11 +237,6 @@ parse_system_overall <- function(exprs, call) {
   } else {
     exprs_output <-
       equations[vcapply(equations, function(x) x$lhs$name) %in% output]
-    ## If this assertion holds, then we can drop changes around here
-    ## and return this simpler expression. However, I don't think it's
-    ## quite as simple as this because in the flag case we don't
-    ## really have that expression to work with.
-    ## stopifnot(identical(exprs_output, exprs[is_output]))
   }
 
   exprs <- list(equations = equations,
