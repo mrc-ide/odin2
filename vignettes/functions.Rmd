@@ -38,7 +38,7 @@ where `b` will be an entry from data (introduced by `data()`), `Distribution` wi
 Conceptually, a system is entirely determined by its **variables**; these are the state of the system.
 
 * for continuous time (ODE) models, these are the equations that you have time derivatives for, represented by `deriv()` on the left-hand-side of an assignment
-* for discrete time models, these are the equations that you have `update()` equations for, for describing the recurrence equation.
+* for discrete time models, these are the equations that you have `update()` expressions for, for describing the recurrence relation.
 
 Practically, we actually determine the variables of a system based on the presence of an `initial()` call on the left hand side, as this will be present for both continuous-time and discrete-time systems.
 
