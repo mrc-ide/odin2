@@ -708,3 +708,14 @@ test_that("parse sum within compare", {
                list(quote(d),
                     quote(OdinReduce("sum", "y", index = NULL))))
 })
+
+
+test_that("parse output", {
+  res <- parse_expr(quote(output(x) <- TRUE), NULL, NULL)
+  expect_equal(res$lhs$name, "x")
+  expect_equal(res$rhs$expr, TRUE)
+
+  res <- parse_expr(quote(output(x) <- 2 * y), NULL, NULL)
+  expect_equal(res$lhs$name, "x")
+  expect_equal(res$rhs$expr, quote(2 * y))
+})

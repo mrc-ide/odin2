@@ -294,3 +294,30 @@ test_that("disallow parsing interpolation to slice", {
                "Drop arrays from lhs of assignments from 'interpolate()'",
                fixed = TRUE)
 })
+
+
+test_that("warn about old-style output assignments", {
+  w <- expect_warning(
+    odin_parse({
+      initial(x) <- 0
+      deriv(x) <- 1
+      a <- x + 1
+      output(a) <- a
+    }),
+    "Use `TRUE` on rhs for 'output(x) <- x' expressions",
+    fixed = TRUE)
+})
+
+
+test_that("warn about old-style output assignments in arrays", {
+  w <- expect_warning(
+    odin_parse({
+      initial(x) <- 0
+      deriv(x) <- 1
+      a[] <- x + 1
+      output(a[]) <- a[i]
+      dim(a) <- 1
+    }),
+    "Use `TRUE` on rhs for 'output(x) <- x' expressions",
+    fixed = TRUE)
+})

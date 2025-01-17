@@ -20,8 +20,8 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   delays <- parse_system_delays(
     equations, system$ode_variables, system$arrays, call)
   phases <- parse_system_phases(
-    system$exprs, equations, system$variables, system$parameters, delays,
-    system$data$name, call)
+    system$exprs, equations, system$variables, system$output,
+    system$parameters, delays, system$data$name, call)
 
   if (!is.null(delays)) {
     delays$in_rhs <- delays$name %in% phases$deriv$equations

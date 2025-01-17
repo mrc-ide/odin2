@@ -1230,3 +1230,39 @@ test_that("disallow empty index on rhs", {
     }),
     "Can't use the range operator `:` while accessing arrays on the rhs")
 })
+
+
+test_that("allow reuse of output variables", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- x / a + b
+    a <- sqrt(x)
+    b <- a + 1
+    output(a) <- TRUE
+    output(b) <- TRUE
+  })
+
+  expect_equal(dat$phases$deriv$unpack, "x")
+  expect_equal(dat$phases$deriv$equations, c("a", "b"))
+  expect_length(dat$phases$deriv$variables, 1)
+  expect_equal(dat$phases$deriv$variables[[1]]$lhs$name, "x")
+
+  expect_equal(dat$phases$output$unpack, "x")
+  expect_equal(dat$phases$output$equations, c("a", "b"))
+  expect_equal(dat$phases$output$variables, list())
+})
+
+
+## This is not the ideal error, we can put in a special check for this
+## later perhaps.  However, sorting out arrays currently happens
+## before we start breaking apartthe system, which is where
+test_that("disallow use of both forms of output", {
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      deriv(x) <- 2
+      output(y) <- x
+      output(y) <- TRUE
+    }),
+    "Only arrays can be assigned over multiple statements")
+})

@@ -33,6 +33,53 @@ where `b` will be an entry from data (introduced by `data()`), `Distribution` wi
 
 `odin2` supports many functions that you'd expect to see for constructing dynamical models.  These include most common mathematical operations and some that are quite obscure.  The support for stochastic models and comparison to data comes from `monty`.
 
+# Variables
+
+Conceptually, a system is entirely determined by its **variables**; these are the state of the system.
+
+* for continuous time (ODE) models, these are the equations that you have time derivatives for, represented by `deriv()` on the left-hand-side of an assignment
+* for discrete time models, these are the equations that you have `update()` expressions for, for describing the recurrence relation.
+
+Practically, we actually determine the variables of a system based on the presence of an `initial()` call on the left hand side, as this will be present for both continuous-time and discrete-time systems.
+
+The simplest ODE system might be:
+
+```r
+deriv(x) <- 1 / x
+initial(x) <- 1
+```
+
+which describes some sort of logarithmic growth in `x`.
+
+Similarly, a trivial discrete-time system might be
+
+```r
+update(x) <- x + 1
+initial(x) <- 0
+```
+
+which describes a counter.
+
+## Continous time models
+
+There are two special considerations for ODE models.
+
+First, we allow additional "variables" as output; these are quantities for which you do not have derivatives and are computed from your true variables and other quantities in the model, but which are considered state for the purposes of input and output.  You can specify output by writing:
+
+```r
+output(y) <- x * 2
+```
+
+which would define a new variable `y` which takes on the value of `x * 2`.  When passing state into or out of a system `y` would be included even though it is computable from `x`.  Alternatively, if `y` is something that you are already using within the model you can write:
+
+```r
+output(y) <- TRUE
+```
+
+You may want to use these to inspect intermediates in an ODE model, or to reduce the amount of state you need to save from `simulate` etc (for example you may want to output the sum over some disaggregated set of variables for which you actually have derivatives).
+
+Second, if your system has delays, then there is implicit state in the history of these delays.  Delays start off life empty and are filled up as the system runs.  This means that continuing a delayed system is not the same as starting a delayed system from a particular point in space/time, and we will provide tools for working with this in future versions.
+
 # Basic operations
 
 * `+` -- **Plus**: Both infix (`a + b`) and prefix (`+a`) versions supported (e.g., `1 + 2` &rarr; `3`)
