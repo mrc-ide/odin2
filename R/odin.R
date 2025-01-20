@@ -18,7 +18,8 @@
 ##'   silently rewrite code, but this is not recommended for general
 ##'   use as eventually the compatibility mode will be removed (this
 ##'   option is primarily intended for comparing output of odin1 and
-##'   odin2 models against old code).
+##'   odin2 models against old code).  The default, `NULL`, currently
+##'   corresponds to `warning`.
 ##'
 ##' @inheritParams dust2::dust_compile
 ##'
@@ -37,7 +38,7 @@
 ##' y <- dust2::dust_system_simulate(sys, 0:100)
 ##' matplot(t(y[1, , ]), type = "l", lty = 1, xlab = "Time", ylab = "Value")
 odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
-                 debug = NULL, skip_cache = FALSE, compatibility = "warning") {
+                 debug = NULL, skip_cache = FALSE, compatibility = NULL) {
   call <- environment()
   dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
   code <- generate_dust_system(dat)
@@ -77,7 +78,7 @@ odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
 ##'   update(x) <- a
 ##'   a <- Normal(x, 1)
 ##' }, what = "update")
-odin_show <- function(expr, input_type = NULL, compatibility = "warning",
+odin_show <- function(expr, input_type = NULL, compatibility = NULL,
                       what = NULL) {
   call <- environment()
   dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)

@@ -321,3 +321,17 @@ test_that("warn about old-style output assignments in arrays", {
     "Use `TRUE` on rhs for 'output(x) <- x' expressions",
     fixed = TRUE)
 })
+
+
+test_that("select appropriate compatibility mode", {
+  withr::with_options(list(odin2.compatibility = NULL), {
+    expect_equal(odin_compatibility_value(NULL, NULL), "warning")
+    expect_equal(odin_compatibility_value("warning", NULL), "warning")
+    expect_equal(odin_compatibility_value("error", NULL), "error")
+  })
+  withr::with_options(list(odin2.compatibility = "error"), {
+    expect_equal(odin_compatibility_value(NULL, NULL), "error")
+    expect_equal(odin_compatibility_value("warning", NULL), "warning")
+    expect_equal(odin_compatibility_value("error", NULL), "error")
+  })
+})

@@ -4,7 +4,7 @@
 \alias{odin_validate}
 \title{Validate odin code}
 \usage{
-odin_validate(expr, input_type = NULL, compatibility = "warning")
+odin_validate(expr, input_type = NULL, compatibility = NULL)
 }
 \arguments{
 \item{expr}{Odin code as the path to a file (a string), a
@@ -23,7 +23,8 @@ and "error", which will error.  The option "silent" will
 silently rewrite code, but this is not recommended for general
 use as eventually the compatibility mode will be removed (this
 option is primarily intended for comparing output of odin1 and
-odin2 models against old code).}
+odin2 models against old code).  The default, \code{NULL}, currently
+corresponds to \code{warning}.}
 }
 \value{
 A list with elements:
