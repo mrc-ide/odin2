@@ -77,8 +77,7 @@
 ##'   deriv(x) <- a
 ##'   a <- user()
 ##' })
-odin_validate <- function(expr, input_type = NULL,
-                          compatibility = "warning") {
+odin_validate <- function(expr, input_type = NULL, compatibility = NULL) {
   call <- environment()
   env <- new.env(parent = emptyenv())
   quo <- rlang::enquo(expr)

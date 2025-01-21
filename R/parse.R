@@ -1,11 +1,11 @@
-odin_parse <- function(expr, input_type = NULL, compatibility = "warning") {
+odin_parse <- function(expr, input_type = NULL, compatibility = NULL) {
   call <- environment()
   odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
 }
 
 
 odin_parse_quo <- function(quo, input_type, compatibility, call) {
-  match_value(compatibility, c("silent", "warning", "error"), call = call)
+  compatibility <- odin_compatibility_value(compatibility, call)
   dat <- parse_prepare(quo, input_type, call)
   dat$exprs <- parse_compat(dat$exprs, compatibility, ignore_error = FALSE,
                             call = call)
@@ -299,4 +299,13 @@ parse_check_consistent_dimensions_rhs <- function(eq, dat, call) {
 parse_check_consistent_dimensions_compare <- function(eq, dat, call) {
   lapply(eq$rhs$args, parse_check_consistent_dimensions_expr,
          eq$src, dat, call)
+}
+
+
+odin_compatibility_value <- function(compatibility, call) {
+  if (is.null(compatibility)) {
+    compatibility <- getOption("odin2.compatibility", "warning")
+  }
+  valid <- c("warning", "silent", "error")
+  match_value(compatibility, valid, call = call)
 }

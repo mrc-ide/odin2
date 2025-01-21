@@ -36,3 +36,17 @@ Consider discrete time model that compares to data.  There will be some series o
 1. Read from variables
 1. Look up interpolation (using `t0 + dt`)
 1. Compare to data
+
+# Options
+
+You can control the *default* behaviour of some odin functions by setting options.  All options are prefixed with `odin2.` (this will change to `odin.` once we start actively replacing the old version).  To set an option for a session, you can use
+
+```r
+options(odin2.whatever = TRUE)
+```
+
+If you want to make this permanent, you can add this line to your `~/.Rprofile` file.  The easiest way to edit that file is to run `usethis::edit_r_profile()` which will find the correct file and open it in your editor (e.g., RStudio, if you are using that).
+
+## `odin2.compatibility`
+
+The default behaviour of the odin1 to odin2 compatibility checks.  If set, this should be a string suitable to pass to `odin2::odin` (one of `warning`, `error` or `silent`); see the help for `odin2::odin` for a description of the possible options.

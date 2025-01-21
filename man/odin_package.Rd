@@ -4,7 +4,7 @@
 \alias{odin_package}
 \title{Update odin code in package}
 \usage{
-odin_package(path, quiet = FALSE, compatibility = "warning")
+odin_package(path, quiet = FALSE, compatibility = NULL)
 }
 \arguments{
 \item{path}{Path to the package root (the directory that contains
@@ -22,7 +22,8 @@ and "error", which will error.  The option "silent" will
 silently rewrite code, but this is not recommended for general
 use as eventually the compatibility mode will be removed (this
 option is primarily intended for comparing output of odin1 and
-odin2 models against old code).}
+odin2 models against old code).  The default, \code{NULL}, currently
+corresponds to \code{warning}.}
 }
 \value{
 Invisibly, the path to the package.  However, this
