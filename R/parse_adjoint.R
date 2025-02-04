@@ -15,7 +15,12 @@ parse_adjoint <- function(dat) {
   }
 
   ## Not sure what I will need to do here, but it's a bunch!
-  arrays <- NULL
+  arrays <- dat$storage$arrays
+  if (!is.null(arrays)) {
+    arrays$name <- sprintf("adj_%s", arrays$name) # TODO: here's our prefix again
+    dat$storage$arrays <- rbind(dat$storage$arrays, arrays)
+    arrays <- dat$storage$arrays
+  }
 
   ## TODO: validate that we have data/compare because otherwise we
   ## have nothing to differentiate!
