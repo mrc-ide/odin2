@@ -10,10 +10,11 @@ parse_adjoint <- function(dat) {
     return(dat)
   }
 
-  ## Not sure what I will need to do here, but it's a bunch!
-  if (nrow(dat$storage$arrays) > 0) {
-    stop("Implement differentiation with arrays") # nocov
+  if (!is.null(dat$delays)) {
+    stop("Prevent delays + differentiation; do this earlier and remove this")
   }
+
+  ## Not sure what I will need to do here, but it's a bunch!
   arrays <- NULL
 
   ## TODO: validate that we have data/compare because otherwise we
@@ -132,11 +133,30 @@ adjoint_phase <- function(eqs, dat) {
 }
 
 
+differentiate <- function(expr, name) {
+  expr <- rewrite_reduction_for_monty(expr)
+  expr <- rewrite_stochastic_to_expectation(expr)
+  monty::monty_differentiation()$differentiate(expr, name)
+}
+
+
+rewrite_reduction_for_monty <- function(expr) {
+  if (is.recursive(expr)) {
+    if (rlang::is_call(expr, "OdinReduce")) {
+      expr$orig
+    } else {
+      expr[-1] <- lapply(expr[-1], rewrite_reduction_for_monty)
+      expr
+    }
+  } else {
+    expr
+  }
+}
+
+
 adjoint_equation <- function(nm, equations, intermediate, accumulate) {
   prefix <- "adj_" # we might move this elsewhere?
-  diff <- monty::monty_differentiation()
-  differentiate <- diff$differentiate
-  maths <- diff$maths
+  maths <- monty::monty_differentiation()$maths
 
   ## We can apply this approach and at the *moment* everything we
   ## create goes on the stack.  Later we will end up with non scalars
@@ -146,13 +166,8 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate) {
     if (rlang::is_call(eq$src$value, "~")) {
       differentiate(eq$rhs$density$expr, nm)
     } else {
-      if (isTRUE(eq$rhs$is_stochastic)) {
-        expr <- rewrite_stochastic_to_expectation(eq$rhs$expr)
-      } else {
-        expr <- eq$rhs$expr
-      }
       maths$times(as.name(paste0(prefix, eq$lhs$name)),
-                  differentiate(expr, nm))
+                  differentiate(eq$rhs$expr, nm))
     }
   }
 
