@@ -238,3 +238,8 @@ counter <- function() {
 odin_dim_name <- function(name) {
   sprintf("dim_%s", name)
 }
+
+
+names_if <- function(x) {
+  names(x)[x]
+}

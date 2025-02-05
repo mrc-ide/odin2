@@ -58,6 +58,17 @@ parse_adjoint <- function(dat) {
 adjoint_update <- function(dat, parameters, deps) {
   update <- dat$phases$update
   used <- adjoint_uses(update$variables, update$equations, deps)
+
+  ## At this point we just lack the information about what is
+  ## time-dependent and therefore needs the adjoint calculated.  This
+  ## also makes me think that we actually have some adjoint
+  ## calculations that might be required during the initial set up
+  ## that we might need to push into the initial conditions?
+
+  ## We can push this into adjoint_uses, and we should, but that will
+  ## require passing in a little more information about what is
+  ## actually time-based.
+
   equations <- c(update$variables, dat$equations[used])
   eqs <- c(
     lapply(used, adjoint_equation, equations,
@@ -120,9 +131,16 @@ adjoint_phase <- function(eqs, dat) {
   uses <- union(uses, uses_in_equations)
 
   unpack <- intersect(dat$variables, uses)
-  ## Alternatively, filter *to* things in stack/internal?
+  ## This might not actually be totally correct - what about where we
+  ## have a chain of calculations through from a parameter that
+  ## happens at the constant phase; this should also be differentiated
+  ## and I think we're skipping this for now.  We can probably pop
+  ## that into the initial conditions phase, but it might need to go
+  ## into its own depending on the logic around custom initial
+  ## conditions in dust2.
   ignore <- c(dat$storage$contents$shared,
               dat$storage$contents$data,
+              names_if(dat$storage$location == "dim"),
               dat$variables)
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
   location <- set_names(vcapply(eqs, function(x) x$lhs$location),
