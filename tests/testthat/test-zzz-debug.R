@@ -1,5 +1,6 @@
 test_that("can compile model with debug enabled", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   expect_no_error(
     odin({
       p_IR <- 1 - exp(-gamma * dt)
