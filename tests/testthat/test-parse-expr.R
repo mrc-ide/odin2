@@ -461,6 +461,8 @@ test_that("Can't assign to names with reserved prefixes", {
                "Invalid name 'odin_x' starts with reserved prefix 'odin'")
   expect_error(parse_expr(quote(adjoint_x <- 1), NULL, NULL),
                "Invalid name 'adjoint_x' starts with reserved prefix 'adjoint'")
+  expect_error(parse_expr(quote(dim_x <- 1), NULL, NULL),
+               "Invalid name 'dim_x' starts with reserved prefix 'dim'")
 })
 
 

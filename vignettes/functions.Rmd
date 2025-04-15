@@ -436,4 +436,4 @@ You cannot assign to a name that is reserved in:
 * [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words) - includes useful words such as `default` and `export`
 * A few words restricted by odin itself: `time`, `dt`, `parameter`, `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`, `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`, `shared`, `internal`, `pi`.  We may reduce this list in future.
 
-In addition, odin restricts a few prefixes; a name cannot start with `odin_`, `interpolate_`, `delay_` or `adjoint_`.
+In addition, odin restricts a few prefixes; a name cannot start with `odin_`, `dim_`, `interpolate_`, `delay_` or `adjoint_`.
