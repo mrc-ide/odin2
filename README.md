@@ -3,7 +3,7 @@
 <!-- badges: start -->
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![R build status](https://github.com/mrc-ide/odin2/workflows/R-CMD-check/badge.svg)](https://github.com/mrc-ide/odin2/actions)
-[![codecov.io](https://codecov.io/github/mrc-ide/odin2/coverage.svg?branch=main)](https://codecov.io/github/mrc-ide/odin2?branch=main)
+[![Codecov test coverage](https://codecov.io/gh/mrc-ide/odin2/graph/badge.svg)](https://app.codecov.io/gh/mrc-ide/odin2)
 <!-- badges: end -->
 
 `odin2` implements a high-level language for describing and implementing ordinary differential equations and difference equations in R.  It provides a "[domain specific language](https://en.wikipedia.org/wiki/Domain-specific_language)" (DSL) which _looks_ like R but is compiled directly to C++, using [`dust2`](https://mrc-ide.github.io/dust2/) to solve your system and to provide an interface to particle filters.  You can then use [`monty`](https://mrc-ide.github.io/monty/) to fit your models using MCMC.
