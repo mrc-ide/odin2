@@ -46,7 +46,7 @@
 ##'   `dust2::dust_package()`, which does most of the work here.
 ##'
 ##' @export
-##' @examplesIf requireNamespace("fs", quietly = TRUE)
+##' @examplesIf requireNamespace("fs", quietly = TRUE) && requireNamespace("decor", quietly = TRUE)
 ##' \dontshow{
 ##' path <- odin2:::example_package()
 ##' }
