@@ -152,8 +152,9 @@ test_that("can generate code for an expression array", {
       "    std::copy_n(internal.a.data(), shared.dim.a.size, internal.b.data());",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
-      "    state[i - 1 + 4] = internal.b[i - 1];",
+      "    internal.z[i - 1] = internal.b[i - 1];",
       "  }",
+      "  std::copy(internal.z.begin(), internal.z.end(), state + 4);",
       "}"))
 })
 
