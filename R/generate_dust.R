@@ -411,16 +411,20 @@ generate_dust_system_output <- function(dat) {
     body$add(generate_dust_assignment(eq, "state", dat))
   }
 
-  copy_output <- intersect(dat$output, dat$storage$arrays$name)
-  if (length(copy_output) > 0) {
+  if (length(dat$output) > 0) {
     packing <- dat$storage$packing$state
-    for (el in copy_output) {
+    for (el in dat$output) {
       src <- generate_dust_sexp(el, dat$sexp_data)
       offset <- generate_dust_sexp(call("OdinOffset", "state", el),
                                    dat$sexp_data)
-      body$add(sprintf(
-        "std::copy(%s.begin(), %s.end(), state + %s);",
-        src, src, offset))
+      is_array <- el %in% dat$storage$arrays$name
+      if (is_array) {
+        body$add(sprintf(
+          "std::copy(%s.begin(), %s.end(), state + %s);",
+          src, src, offset))
+      } else {
+        body$add(sprintf("state[%s] = %s;", offset, src))
+      }
     }
   }
 

@@ -569,10 +569,9 @@ parse_storage <- function(equations, phases, variables, output, arrays,
                         unlist(contents, FALSE, TRUE))
   location[location == "variables"] <- "state"
 
-  output_arrays <- intersect(output, arrays$name)
-  if (length(output_arrays) > 0) {
+  if (length(output) > 0) {
     location <- location[
-      !(location == "state" & names(location) %in% output_arrays)]
+      !(location == "state" & names(location) %in% output)]
   }
 
   type <- set_names(rep("real_type", length(location)), names(location))
