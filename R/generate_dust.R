@@ -416,7 +416,7 @@ generate_dust_system_output <- function(dat) {
     packing <- dat$storage$packing$state
     for (el in copy_output) {
       src <- generate_dust_sexp(el, dat$sexp_data)
-      offset <- generate_dust_sexp(packing$offset[packing$name == el],
+      offset <- generate_dust_sexp(call("OdinOffset", "state", el),
                                    dat$sexp_data)
       body$add(sprintf(
         "std::copy(%s.begin(), %s.end(), state + %s);",
