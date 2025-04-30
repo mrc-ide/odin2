@@ -2689,7 +2689,8 @@ test_that("can generate system with output", {
     generate_dust_system_output(dat),
     c(method_args$output,
       "  const auto * x = state + 0;",
-      "  state[shared.odin.offset.state[1]] = dust2::array::sum<real_type>(x, shared.dim.x);",
+      "  const real_type tot = dust2::array::sum<real_type>(x, shared.dim.x);",
+      "  state[shared.odin.offset.state[1]] = tot;",
       "}"))
 
   expect_equal(
