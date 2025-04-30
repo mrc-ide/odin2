@@ -94,8 +94,22 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (n == 1 && fn == "+") {
       ret <- args_str[[1]]
     } else if (n == 2 && fn %in% binary_inplace) {
-      ## Some care might be needed for division in some cases.
-      if (fn %in% binary_inplace) {
+      if (fn == "/") {
+        ## Force division as real_type if all arguments are:
+        ##
+        ## * actual integers, e.g. from dimensions
+        ## * literal integers
+        force_real_division <- all(vlapply(args_value, function(x) {
+          (is.name(x) &&
+             as.character(x) %in% names(dat$type) &&
+             dat$type[[as.character(x)]] == "int") ||
+            (is.numeric(x) && x %% 1 == 0)
+        }))
+        if (force_real_division) {
+          args_str[[1]] <- sprintf("static_cast<real_type>(%s)", args_str[[1]])
+        }
+      }
+      if (fn %in% binary_compare) {
         ## Stop a == x causing warnings where 'a' is an int and 'x' is
         ## size_t; this happens for x in INDEX and would happen if
         ## used on a dimension too.
