@@ -36,6 +36,16 @@ test_that("can generate integer maths functions", {
 })
 
 
+test_that("can generate robust code for division", {
+  dat <- generate_dust_dat(c(a = "shared", b = "stack"), NULL, NULL, NULL)
+  options <- list()
+  expect_equal(generate_dust_sexp(quote(a / b), dat, options),
+               "shared.a / b")
+  expect_equal(generate_dust_sexp(quote(1 / 2), dat, options),
+               "static_cast<real_type>(1) / 2")
+})
+
+
 test_that("can cast types", {
   dat <- generate_dust_dat(c(a = "shared"), NULL, NULL, NULL)
   options <- list()
