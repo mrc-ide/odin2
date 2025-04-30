@@ -2348,6 +2348,39 @@ test_that("can generate browser code", {
 })
 
 
+test_that("can dereference array dimension alias in browser", {
+  dat <- odin_parse({
+    dim(a, b) <- 4
+    a[] <- Normal(0, 1)
+    b[] <- Normal(0, 1)
+    initial(x) <- 0
+    update(x) <- sum(a) + sum(b)
+    browser(phase = "update")
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.b[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.a.data(), shared.dim.a) + dust2::array::sum<real_type>(internal.b.data(), shared.dim.a);",
+      "  const auto x = state[0];",
+      "  auto odin_env = dust2::r::browser::create();",
+      '  dust2::r::browser::save(time, "time", odin_env);',
+      '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
+      '  dust2::r::browser::save(internal.b.data(), shared.dim.a, "b", odin_env);',
+      '  dust2::r::browser::enter(odin_env, "update", time);',
+      "}"))
+})
+
+
 test_that("can generate nontrivial debug", {
   dat <- odin_parse({
     p_IR <- 1 - exp(-gamma * dt)
