@@ -922,13 +922,13 @@ generate_dust_browser <- function(dat, phase) {
                                 dat$sexp_data))
   env <- "odin_env"
   body$add(sprintf("auto %s = dust2::r::browser::create();", env))
-  ## TODO: don't drop 'data' if using browser in compare, but think
-  ## about how probabilities might be surfaced.
+
   type <- dat$storage$type
-  location <- dat$storage$type
-  export <- intersect(
-    names(location[location != "data"]),
-    names(type[type %in% c("real_type", "int", "bool")]))
+  export <- intersect(c(dat$phases$build_shared$equations,
+                        dat$phases$update_shared$equations,
+                        dat$phases[[phase]]$equations,
+                        dat$variables),
+                      names(type)[type %in% c("real_type", "int", "bool")])
   for (v in c("time", export)) {
     body$add(generate_dust_browser_to_env(v, dat, env))
   }
@@ -947,12 +947,13 @@ generate_dust_browser <- function(dat, phase) {
 
 generate_dust_browser_to_env <- function(name, dat, env) {
   data <- generate_dust_sexp(name, dat$sexp_data)
-  if (name %in% dat$storage$arrays$name) {
+  arrays <- dat$storage$arrays
+  if (name %in% arrays$name) {
     location <- dat$storage$location[[name]]
     if (location %in% c("shared", "internal")) {
       data <- sprintf("%s.data()", data)
     }
-    dim <- sprintf("shared.dim.%s", name)
+    dim <- sprintf("shared.dim.%s", arrays$alias[match(name, arrays$name)])
     sprintf('dust2::r::browser::save(%s, %s, "%s", %s);', data, dim, name, env)
   } else {
     sprintf('dust2::r::browser::save(%s, "%s", %s);', data, name, env)

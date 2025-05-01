@@ -2339,11 +2339,44 @@ test_that("can generate browser code", {
       "  if (time > 2) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
-      '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::save(a, "a", odin_env);',
       '    dust2::r::browser::save(b, "b", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
+      "}"))
+})
+
+
+test_that("can dereference array dimension alias in browser", {
+  dat <- odin_parse({
+    dim(a, b) <- 4
+    a[] <- Normal(0, 1)
+    b[] <- Normal(0, 1)
+    initial(x) <- 0
+    update(x) <- sum(a) + sum(b)
+    browser(phase = "update")
+  })
+
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.a[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
+      "    internal.b[i - 1] = monty::random::normal<real_type>(rng_state, 0, 1);",
+      "  }",
+      "  state_next[0] = dust2::array::sum<real_type>(internal.a.data(), shared.dim.a) + dust2::array::sum<real_type>(internal.b.data(), shared.dim.a);",
+      "  const auto x = state[0];",
+      "  auto odin_env = dust2::r::browser::create();",
+      '  dust2::r::browser::save(time, "time", odin_env);',
+      '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
+      '  dust2::r::browser::save(internal.b.data(), shared.dim.a, "b", odin_env);',
+      '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
 
@@ -2390,9 +2423,6 @@ test_that("can generate nontrivial debug", {
       "  if (I < 10 && time > 20) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
-      '    dust2::r::browser::save(S, "S", odin_env);',
-      '    dust2::r::browser::save(I, "I", odin_env);',
-      '    dust2::r::browser::save(R, "R", odin_env);',
       '    dust2::r::browser::save(shared.N, "N", odin_env);',
       '    dust2::r::browser::save(shared.beta, "beta", odin_env);',
       '    dust2::r::browser::save(shared.gamma, "gamma", odin_env);',
@@ -2401,6 +2431,9 @@ test_that("can generate nontrivial debug", {
       '    dust2::r::browser::save(p_SI, "p_SI", odin_env);',
       '    dust2::r::browser::save(n_SI, "n_SI", odin_env);',
       '    dust2::r::browser::save(n_IR, "n_IR", odin_env);',
+      '    dust2::r::browser::save(S, "S", odin_env);',
+      '    dust2::r::browser::save(I, "I", odin_env);',
+      '    dust2::r::browser::save(R, "R", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
@@ -2435,9 +2468,9 @@ test_that("browse with arrays", {
       "  }",
       "  auto odin_env = dust2::r::browser::create();",
       '  dust2::r::browser::save(time, "time", odin_env);',
-      '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
       '  dust2::r::browser::save(internal.b.data(), shared.dim.b, "b", odin_env);',
+      '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
@@ -2824,4 +2857,30 @@ test_that("cope with array output", {
   })
 
   expect_equal(generate_dust_system(dat2), generate_dust_system(dat1))
+})
+
+
+test_that("correctly use browser in system with compare", {
+  dat <- odin_parse({
+    a <- Uniform(0, 1)
+    b <- Normal(0, 1)
+    initial(x) <- 0
+    update(x) <- x + a
+    browser(phase = "update")
+    d ~ Normal(b, x)
+    d <- data()
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type a = monty::random::uniform<real_type>(rng_state, 0, 1);",
+      "  state_next[0] = x + a;",
+      "  auto odin_env = dust2::r::browser::create();",
+      '  dust2::r::browser::save(time, "time", odin_env);',
+      '  dust2::r::browser::save(a, "a", odin_env);',
+      '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::enter(odin_env, "update", time);',
+      "}"))
 })
