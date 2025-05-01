@@ -2858,3 +2858,29 @@ test_that("cope with array output", {
 
   expect_equal(generate_dust_system(dat2), generate_dust_system(dat1))
 })
+
+
+test_that("correctly use browser in system with compare", {
+  dat <- odin_parse({
+    a <- Uniform(0, 1)
+    b <- Normal(0, 1)
+    initial(x) <- 0
+    update(x) <- x + a
+    browser(phase = "update")
+    d ~ Normal(b, x)
+    d <- data()
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto x = state[0];",
+      "  const real_type a = monty::random::uniform<real_type>(rng_state, 0, 1);",
+      "  state_next[0] = x + a;",
+      "  auto odin_env = dust2::r::browser::create();",
+      '  dust2::r::browser::save(time, "time", odin_env);',
+      '  dust2::r::browser::save(a, "a", odin_env);',
+      '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::enter(odin_env, "update", time);',
+      "}"))
+})
