@@ -569,6 +569,11 @@ parse_storage <- function(equations, phases, variables, output, arrays,
                         unlist(contents, FALSE, TRUE))
   location[location == "variables"] <- "state"
 
+  if (length(output) > 0) {
+    location <- location[
+      !(location == "state" & names(location) %in% output)]
+  }
+
   type <- set_names(rep("real_type", length(location)), names(location))
   type[parameters$name] <- parameters$type
 

@@ -256,3 +256,20 @@ test_that("can compile model with delays", {
   z2 <- deSolve::dede(0.5, t, rhs, list(tau = 20))
   expect_equal(drop(y2), z2[, 2], tolerance = 1e-5)
 })
+
+
+test_that("can use output arrays", {
+  gen <- odin({
+    deriv(x[]) <- a[i]
+    initial(x[]) <- i
+    a[] <- sqrt(time / (x[i] + 1))
+    output(a) <- TRUE
+    dim(a, x) <- 5
+  }, quiet = TRUE, debug = TRUE)
+  sys <- dust2::dust_system_create(gen, list())
+  dust2::dust_system_set_state_initial(sys)
+  time <- seq(0, 10, length.out = 11)
+  y <- dust2::dust_system_simulate(sys, time)
+  yy <- dust2::dust_unpack_state(sys, y)
+  expect_equal(yy$a, sqrt(rep(time, each = 5) / (yy$x + 1)))
+})

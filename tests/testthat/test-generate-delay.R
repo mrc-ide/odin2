@@ -79,7 +79,8 @@ test_that("can generate delay in output", {
     c(method_args$output_delays,
       "  const auto a = delays[0].data[0];",
       "  const auto x = state[0];",
-      "  state[1] = x - a;",
+      "  const real_type y = x - a;",
+      "  state[1] = y;",
       "}"))
 })
 
@@ -114,7 +115,8 @@ test_that("can generate code for complex delay expression", {
       "    const real_type a = x + y;",
       "    b = a;",
       "  }",
-      "  state[2] = b;",
+      "  const real_type z = b;",
+      "  state[2] = z;",
       "}"))
 })
 
@@ -152,8 +154,9 @@ test_that("can generate code for an expression array", {
       "    std::copy_n(internal.a.data(), shared.dim.a.size, internal.b.data());",
       "  }",
       "  for (size_t i = 1; i <= shared.dim.a.size; ++i) {",
-      "    state[i - 1 + 4] = internal.b[i - 1];",
+      "    internal.z[i - 1] = internal.b[i - 1];",
       "  }",
+      "  std::copy(internal.z.begin(), internal.z.end(), state + 4);",
       "}"))
 })
 
@@ -197,6 +200,7 @@ test_that("can generate a system with two delays", {
       "    const real_type a = (x + y) / 2;",
       "    c = a;",
       "  }",
-      "  state[2] = b + c;",
+      "  const real_type z = b + c;",
+      "  state[2] = z;",
       "}"))
 })

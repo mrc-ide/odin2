@@ -2689,7 +2689,8 @@ test_that("can generate system with output", {
     generate_dust_system_output(dat),
     c(method_args$output,
       "  const auto * x = state + 0;",
-      "  state[shared.odin.offset.state[1]] = dust2::array::sum<real_type>(x, shared.dim.x);",
+      "  const real_type tot = dust2::array::sum<real_type>(x, shared.dim.x);",
+      "  state[shared.odin.offset.state[1]] = tot;",
       "}"))
 
   expect_equal(
@@ -2882,5 +2883,61 @@ test_that("correctly use browser in system with compare", {
       '  dust2::r::browser::save(a, "a", odin_env);',
       '  dust2::r::browser::save(x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
+      "}"))
+})
+
+
+test_that("can use output as well as return it", {
+  ## with previous odin, the rhs was wrong:
+  ##   state_deriv[1] = time * 2;
+  ##   state_deriv[0] = a;
+  dat <- odin_parse({
+    deriv(x) <- a
+    initial(x) <- 0
+    a <- time * 2
+    output(a) <- TRUE
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const real_type a = time * 2;",
+      "  state_deriv[0] = a;",
+      "}"))
+})
+
+
+
+test_that("can use depend on output variables correctly", {
+  ## with previous odin, the output was wrong:
+  ##   state[2] = 2 * a;
+  ##   state[1] = shared.interpolate_a.eval(time);
+  ##
+  ## this is because we weren't properly treating output variables in
+  ## the dependency sorting, assuming they were always present.
+  dat <- odin_parse({
+    deriv(x) <- a
+    initial(x) <- 0
+    a <- interpolate(at, ay, "constant")
+    at <- parameter()
+    ay <- parameter()
+    dim(at, ay) <- 5
+    output(a) <- TRUE
+    output(b) <- 2 * a
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const real_type a = shared.interpolate_a.eval(time);",
+      "  state_deriv[0] = a;",
+      "}"))
+  expect_equal(
+    generate_dust_system_output(dat),
+    c(method_args$output,
+      "  const real_type a = shared.interpolate_a.eval(time);",
+      "  const real_type b = 2 * a;",
+      "  state[1] = a;",
+      "  state[2] = b;",
       "}"))
 })

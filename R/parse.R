@@ -14,7 +14,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
   exprs <- parse_system_arrays(exprs, call)
   system <- parse_system_overall(exprs, call)
   equations <- parse_system_depends(
-    system$exprs$equations, system$variables, call)
+    system$exprs$equations, system$ode_variables, call)
   equations <- parse_system_stage(
     equations, system$variables, system$parameters, system$data$name, call)
   delays <- parse_system_delays(
