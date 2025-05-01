@@ -2339,9 +2339,9 @@ test_that("can generate browser code", {
       "  if (time > 2) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
-      '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::save(a, "a", odin_env);',
       '    dust2::r::browser::save(b, "b", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
@@ -2373,9 +2373,9 @@ test_that("can dereference array dimension alias in browser", {
       "  const auto x = state[0];",
       "  auto odin_env = dust2::r::browser::create();",
       '  dust2::r::browser::save(time, "time", odin_env);',
-      '  dust2::r::browser::save(x, "x", odin_env);',
       '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
       '  dust2::r::browser::save(internal.b.data(), shared.dim.a, "b", odin_env);',
+      '  dust2::r::browser::save(x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
@@ -2423,9 +2423,6 @@ test_that("can generate nontrivial debug", {
       "  if (I < 10 && time > 20) {",
       "    auto odin_env = dust2::r::browser::create();",
       '    dust2::r::browser::save(time, "time", odin_env);',
-      '    dust2::r::browser::save(S, "S", odin_env);',
-      '    dust2::r::browser::save(I, "I", odin_env);',
-      '    dust2::r::browser::save(R, "R", odin_env);',
       '    dust2::r::browser::save(shared.N, "N", odin_env);',
       '    dust2::r::browser::save(shared.beta, "beta", odin_env);',
       '    dust2::r::browser::save(shared.gamma, "gamma", odin_env);',
@@ -2434,6 +2431,9 @@ test_that("can generate nontrivial debug", {
       '    dust2::r::browser::save(p_SI, "p_SI", odin_env);',
       '    dust2::r::browser::save(n_SI, "n_SI", odin_env);',
       '    dust2::r::browser::save(n_IR, "n_IR", odin_env);',
+      '    dust2::r::browser::save(S, "S", odin_env);',
+      '    dust2::r::browser::save(I, "I", odin_env);',
+      '    dust2::r::browser::save(R, "R", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
@@ -2468,9 +2468,9 @@ test_that("browse with arrays", {
       "  }",
       "  auto odin_env = dust2::r::browser::create();",
       '  dust2::r::browser::save(time, "time", odin_env);',
-      '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
       '  dust2::r::browser::save(internal.b.data(), shared.dim.b, "b", odin_env);',
+      '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
