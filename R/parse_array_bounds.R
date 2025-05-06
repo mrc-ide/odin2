@@ -107,9 +107,9 @@ parse_array_bounds_extract_constraint_lhs <- function(eq) {
     ## We need to add:
     ## * 1 constraint for length(time) == dim(value, rank)
     ## * n constraints for dim(name, i) == dim(value, i) over all dimensions
-    len_t <- call("OdinDim", value, rank + 1L)
+    len_t <- call("OdinLength", time)
     ret$add(constraint(
-      "interpolate:time", time, expr[[3]], 1L, len_t, TRUE, eq$src$index))
+      "interpolate:time", value, time, rank + 1L, len_t, TRUE, eq$src$index))
     for (i in seq_len(rank)) {
       len_i <- call("OdinDim", value, i)
       ret$add(constraint(
@@ -205,13 +205,10 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
     is_interpolate <- startsWith(d$type[[i]], "interpolate:")
 
     if (is_interpolate) {
-      info <- equations[[name]]$rhs$info
-      target <- name
-      value <- info$value
-      time <- info$time
       msg <- "Incompatible size arrays in arguments to 'interpolate()'"
-
       if (d$type[[i]] == "interpolate:time") {
+        time <- d$expr[[1]]
+        value <- name
         time_length <- at_value
         value_length <- size_value
         if (rank == 1) {
@@ -231,6 +228,9 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
             "E3002", expr, call)
         }
       } else {
+        info <- equations[[name]]$rhs$info
+        target <- name
+        value <- info$value
         target_length <- size_value
         value_length <- at_value
         odin_parse_error(

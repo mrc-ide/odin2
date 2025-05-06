@@ -1328,3 +1328,43 @@ test_that("don't error if array sizes are not provably correct for interp", {
       dim(ay) <- parameter(rank = 3)
     }))
 })
+
+
+test_that("require that time for interpolation is reasonable", {
+  err <- expect_error(
+    odin_parse({
+      initial(y) <- 0
+      update(y) <- a
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(at) <- 5
+      dim(ay) <- 6
+    }),
+    "Incompatible size arrays in arguments to 'interpolate()'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[1]],
+    "'ay' must have the same length as 'at'")
+})
+
+
+test_that("require that time for interpolation is reasonable", {
+  err <- expect_error(
+    odin_parse({
+      initial(y[, ]) <- 0
+      update(y[, ]) <- a[i, j]
+      dim(y) <- c(2, 3)
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(a) <- c(2, 3)
+      dim(at) <- 5
+      dim(ay) <- c(2, 3, 6)
+    }),
+    "Incompatible size arrays in arguments to 'interpolate()'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[1]],
+    "The last dimension of 'ay' must be the same as the length of 'at'")
+})
