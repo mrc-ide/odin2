@@ -223,6 +223,9 @@ parse_system_overall <- function(exprs, call) {
           rhs = list(type = "expression",
                      expr = call("OdinInterpolateEval",
                                  eq$lhs$name, eq$lhs$name_data),
+                     info = list(rank = eq$rhs$expr$rank,
+                                 time = eq$rhs$expr$time,
+                                 value = eq$rhs$expr$value),
                      depends = list(functions = character(),
                                     variables = eq$lhs$name)),
           src = eq$src)

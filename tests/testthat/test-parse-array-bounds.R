@@ -188,30 +188,40 @@ test_that("can deparse constraints", {
 
 
 test_that("solve simple constraints", {
-  expect_equal(constraint_solve(1, 2), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 2), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 1), list(valid = FALSE))
-  expect_equal(constraint_solve(quote(a), quote(a)), list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + b), quote(a + b)), list(valid = TRUE))
+  expect_equal(constraint_solve(1, 2, FALSE), list(valid = TRUE))
+  expect_equal(constraint_solve(2, 2, FALSE), list(valid = TRUE))
+  expect_equal(constraint_solve(2, 1, FALSE), list(valid = FALSE))
+  expect_equal(constraint_solve(quote(a), quote(a), FALSE),
+               list(valid = TRUE))
+  expect_equal(constraint_solve(quote(a + b), quote(a + b), FALSE),
+               list(valid = TRUE))
 
-  expect_equal(constraint_solve(quote(a - 1), quote(a)), list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + 1), quote(a)), list(valid = FALSE))
+  expect_equal(constraint_solve(quote(a - 1), quote(a), FALSE),
+               list(valid = TRUE))
+  expect_equal(constraint_solve(quote(a + 1), quote(a), FALSE),
+               list(valid = FALSE))
 
   expect_equal(
-    constraint_solve(quote(OdinParameter("a") - 1), quote(OdinParameter("a"))),
+    constraint_solve(quote(OdinParameter("a") - 1),
+                     quote(OdinParameter("a")),
+                     FALSE),
     list(valid = TRUE))
   expect_equal(
-    constraint_solve(quote(OdinParameter("a") + 1), quote(OdinParameter("a"))),
+    constraint_solve(quote(OdinParameter("a") + 1),
+                     quote(OdinParameter("a")),
+                     FALSE),
     list(valid = FALSE))
   expect_equal(
-    constraint_solve(quote(OdinParameter("a")), quote(OdinParameter("b"))),
+    constraint_solve(quote(OdinParameter("a")),
+                     quote(OdinParameter("b")),
+                     FALSE),
     list(valid = NA,
          constraint = quote(OdinParameter("b") >= OdinParameter("a"))))
 })
 
 
 test_that("tidy expression", {
-  expect_equal(constraint_tidy(quote(a + 1)), quote(a + 1 >= 0))
-  expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x"))),
+  expect_equal(constraint_tidy(quote(a + 1), FALSE), quote(a + 1 >= 0))
+  expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x")), FALSE),
                quote(OdinParameter("x") >= 1 + a))
 })
