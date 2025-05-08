@@ -1255,3 +1255,21 @@ dim(a) <- 4
 because we are accessing `a` at position 5 due to the loop over `x`, but `a` only has 4 elements.
 
 More complex errors are possible, and it may not be possible to obviously reverse odin's chain of logic for deciding an access would be out of bounds; please let us know if you find difficult-to-explain cases and we can use these to try and make it clearer.
+
+# `E3002`
+
+Incompatible sizes in arguments to `interpolate()`.  The array sizes of the arguments and the "target" (the variable on the left hand side), must be compatible with each other.
+
+Consider the expression:
+
+```
+a <- interpolate(b, c, "constant")
+```
+
+The target `a` can be a scalar, vector or higher dimensional object.  The time argument `b` is always a vector (say of length `nt`) and the value `c` has dimensions `c(dim(a), nt)`; that is the dimensions of `a` followed by the number of time elements.
+
+So:
+
+* if `a` is a scalar, then `c` must be a vector of length `nt`
+* If `a` is a vector of length `n1`, then `c` must be a matrix with `n1` rows and `nt` columns
+* If `a` is a matrix with `n1` rows and `n2` columns, then `c` must be a 3-dimensional array with dimensions `c(n1, n2, nt)` and so on

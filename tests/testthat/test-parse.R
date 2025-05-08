@@ -1266,3 +1266,105 @@ test_that("disallow use of both forms of output", {
     }),
     "Only arrays can be assigned over multiple statements")
 })
+
+
+test_that("can validate interpolation dimensions correctly", {
+  ## This is the expected behaviour, in the output
+  gen <- odin({
+    initial(y[, ]) <- 0
+    update(y[, ]) <- a[i, j]
+    dim(y) <- c(2, 3)
+    a <- interpolate(at, ay, "constant")
+    at <- parameter()
+    ay <- parameter()
+    dim(a) <- c(2, 3)
+    dim(at) <- 5
+    dim(ay) <- c(2, 3, 5)
+  }, debug = TRUE, quiet = TRUE)
+
+  at <- c(0, 4, 8, 12, 16)
+  ay <- array(runif(2 * 3 * 5), c(2, 3, 5))
+  sys <- dust2::dust_system_create(gen, list(at = at, ay = ay))
+  y <- dust2::dust_system_simulate(sys, 0:20)
+
+  yy <- dust2::dust_unpack_state(sys, y)$y
+  expect_equal(yy[, , 1], matrix(0, 2, 3))
+  expect_equal(yy[, , -1], ay[, , rep(1:5, each = 4)])
+})
+
+
+test_that("Can detect errors in array sizes where all are known", {
+  err <- expect_error(
+    odin_parse({
+      initial(y[, ]) <- 0
+      update(y[, ]) <- a[i, j]
+      dim(y) <- c(2, 3)
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(a) <- c(2, 3)
+      dim(at) <- 5
+      dim(ay) <- c(5, 2, 3)
+    }),
+    "Incompatible size arrays in arguments to 'interpolate()'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[1]],
+    "The first 2 dimensions of 'ay' must be the same as the dimensions of 'a'")
+})
+
+
+test_that("don't error if array sizes are not provably correct for interp", {
+  expect_no_error(
+    odin_parse({
+      initial(y[, ]) <- 0
+      update(y[, ]) <- a[i, j]
+      dim(y) <- c(2, 3)
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(a) <- parameter(rank = 2)
+      dim(at) <- parameter(rank = 1)
+      dim(ay) <- parameter(rank = 3)
+    }))
+})
+
+
+test_that("require that time for interpolation is reasonable", {
+  err <- expect_error(
+    odin_parse({
+      initial(y) <- 0
+      update(y) <- a
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(at) <- 5
+      dim(ay) <- 6
+    }),
+    "Incompatible size arrays in arguments to 'interpolate()'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[1]],
+    "'ay' must have the same length as 'at'")
+})
+
+
+test_that("require that time for interpolation is reasonable", {
+  err <- expect_error(
+    odin_parse({
+      initial(y[, ]) <- 0
+      update(y[, ]) <- a[i, j]
+      dim(y) <- c(2, 3)
+      a <- interpolate(at, ay, "constant")
+      at <- parameter()
+      ay <- parameter()
+      dim(a) <- c(2, 3)
+      dim(at) <- 5
+      dim(ay) <- c(2, 3, 6)
+    }),
+    "Incompatible size arrays in arguments to 'interpolate()'",
+    fixed = TRUE)
+  expect_match(
+    err$body[[1]],
+    "The last dimension of 'ay' must be the same as the length of 'at'")
+})
