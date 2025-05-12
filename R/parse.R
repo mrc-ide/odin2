@@ -256,7 +256,7 @@ parse_check_consistent_dimensions_expr <- function(expr, src, dat, call) {
         lapply(args, check)
       } else if (rlang::is_call(expr, fn_use_whole_array)) {
         if (rlang::is_call(expr, "OdinReduce")) {
-          array_name <- expr[[3]]
+          array_name <- expr$what
           if (!(array_name %in% names(dim_ranks))) {
             throw_no_dim(array_name)
           }

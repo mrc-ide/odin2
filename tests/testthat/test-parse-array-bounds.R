@@ -225,3 +225,28 @@ test_that("tidy expression", {
   expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x")), FALSE),
                quote(OdinParameter("x") >= 1 + a))
 })
+
+
+test_that("can detect out-of-range access in sum()", {
+  expect_error(
+    odin_parse({
+      N[] <- 0
+      dim(N) <- 3
+      update(x) <- a
+      initial(x) <- 0
+      a <- sum(N[5])
+    }),
+    "Out of range read of 'N' in 'N[5]'",
+    fixed = TRUE)
+
+  expect_error(
+    odin_parse({
+      N[] <- 0
+      dim(N) <- 3
+      update(x) <- a
+      initial(x) <- 0
+      a <- sum(N[1:5])
+    }),
+    "Out of range read of 'N' in 'N[1:5]'",
+    fixed = TRUE)
+})
