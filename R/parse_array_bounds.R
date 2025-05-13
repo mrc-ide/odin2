@@ -186,7 +186,7 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
               ret$add(constraint(
                 "access:read", name, expr_reduce, i, at_i, FALSE, eq$src$index))
             } else {
-              warn_unhandled_analysis(expr, uses)
+              warn_unhandled_analysis(expr$expr, uses)
             }
           }
         }
