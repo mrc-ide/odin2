@@ -576,8 +576,9 @@ test_that("prevent nested special calls", {
 
 test_that("parse min as a reduction", {
   res <- parse_expr(quote(a <- min(x)), NULL, NULL)
-  expect_equal(res$rhs$expr,
-               quote(OdinReduce("min", "x", index = NULL)))
+  expect_equal(
+    res$rhs$expr,
+    quote(OdinReduce(fn = "min", what = "x", index = NULL, expr = min(x))))
   expect_equal(res$rhs$depends,
                list(functions = "min", variables = "x"))
 })
@@ -597,8 +598,9 @@ test_that("parse min as a 2-arg function", {
 
 test_that("parse max as a reduction", {
   res <- parse_expr(quote(a <- max(x)), NULL, NULL)
-  expect_equal(res$rhs$expr,
-               quote(OdinReduce("max", "x", index = NULL)))
+  expect_equal(
+    res$rhs$expr,
+    quote(OdinReduce(fn = "max", what = "x", index = NULL, expr = max(x))))
   expect_equal(res$rhs$depends,
                list(functions = "max", variables = "x"))
 })
@@ -706,9 +708,11 @@ test_that("length is treated as special dependency", {
 
 test_that("parse sum within compare", {
   res <- parse_expr(quote(d ~ Poisson(sum(y))), NULL, NULL)
-  expect_equal(res$rhs$args,
-               list(quote(d),
-                    quote(OdinReduce("sum", "y", index = NULL))))
+  expect_equal(
+    res$rhs$args,
+    list(quote(d),
+         quote(OdinReduce(fn = "sum", what = "y", index = NULL,
+                          expr = sum(y)))))
 })
 
 
