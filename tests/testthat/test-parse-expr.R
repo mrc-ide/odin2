@@ -725,3 +725,30 @@ test_that("parse output", {
   expect_equal(res$lhs$name, "x")
   expect_equal(res$rhs$expr, quote(2 * y))
 })
+
+
+test_that("can't use unary minus in array access", {
+  expect_error(
+    parse_expr(quote(x <- y[-3]), NULL, NULL),
+    "Invalid negative index (unary minus) '-3' in array access",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(x <- y[-a]), NULL, NULL),
+    "Invalid negative index (unary minus) '-a' in array access",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(x <- sum(y[-3])), NULL, NULL),
+    "Invalid negative index (unary minus) '-3' in array access",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(x <- sum(y[-a])), NULL, NULL),
+    "Invalid negative index (unary minus) '-3' in array access",
+    fixed = TRUE)
+})
+
+
+test_that("can't use some functions within array access", {
+  expect_error(
+    parse_expr(quote(x <- y[sin(a)]), NULL, NULL),
+    "Invalid function used in array access: 'sin'")
+})

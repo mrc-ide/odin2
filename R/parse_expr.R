@@ -811,13 +811,16 @@ parse_expr_usage <- function(expr, src, call) {
         "E1044", src, call)
     }
     fn_str <- as.character(fn)
-    ignore <- "["
     is_reduction <- fn_str %in% c("sum", "prod") ||
       (fn_str %in% c("min", "max") && length(expr) == 2)
     if (is_reduction) {
       expr <- parse_expr_usage_rewrite_reduce(expr, src, call)
     } else if (fn_str %in% monty::monty_dsl_distributions()$name) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
+    } else if (fn_str == "[") {
+      for (el in as.list(expr[-(1:2)])) {
+        parse_expr_check_array_access(el, src, call)
+      }
     } else if (fn_str %in% names(FUNCTIONS)) {
       parse_expr_check_call(expr, src, call)
       args <- lapply(expr[-1], parse_expr_usage, src, call)
@@ -828,7 +831,7 @@ parse_expr_usage <- function(expr, src, call) {
       odin_parse_error(
         "Can't use '{fn_str}' within odin code",
         "E1045", src, call)
-    } else if (!(fn_str %in% ignore)) {
+    } else {
       odin_parse_error(
         "Unsupported function '{fn_str}'",
         "E1027", src, call)
@@ -937,6 +940,7 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
   }
 
   for (i in seq_along(index)) {
+    parse_expr_check_array_access(index[[i]], src, call)
     v <- parse_index(name, i, index[[i]])
     deps <- v$depends
     if (!is.null(deps)) {
@@ -1050,5 +1054,29 @@ parse_index <- function(name_data, dim, value) {
     list(name = name_index, type = "single", at = value, depends = depends)
   } else {
     NULL
+  }
+}
+
+
+parse_expr_check_array_access <- function(expr, src, call) {
+  if (is.recursive(expr)) {
+    if (rlang::is_call(expr, "-")) {
+      odin_parse_error(
+        c(paste("Invalid negative index (unary minus) '{deparse1(expr)}'",
+                "in array access"),
+          i = "Only entries 1 or greater can be accessed",
+          i = paste("In R, you can use 'x[-idx]' to mean \"'x' except for the",
+                    "element 'idx'\", but this is not (yet) supported in",
+                    "odin")),
+        "E1071", src, call)
+    }
+    deps <- find_dependencies(expr)
+    allowed <- c("-", "+", ":", "(", "length", "dim", "[", "as.integer")
+    err <- setdiff(deps$functions, allowed)
+    if (length(err) > 0) {
+      odin_parse_error(
+        "Invalid function{?s} used in array access: {squote(err)}",
+        "E1072", src, call)
+    }
   }
 }
