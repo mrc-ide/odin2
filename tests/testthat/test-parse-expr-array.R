@@ -108,17 +108,24 @@ test_that("array equations assigning with brackets", {
 test_that("can parse call to a whole array", {
   res <- parse_expr(quote(a <- sum(x)), NULL, NULL)
   expect_equal(res$rhs$expr,
-               quote(OdinReduce("sum", "x", index = NULL)))
+               quote(OdinReduce(fn = "sum", what = "x", index = NULL,
+                                expr = sum(x))))
   expect_equal(res$rhs$depends,
                list(functions = "sum", variables = "x"))
 })
 
 
 test_that("all empty index on sum is a complete sum", {
-  expr <- quote(OdinReduce("sum", "x", index = NULL))
-  expect_equal(parse_expr(quote(a <- sum(x[])), NULL, NULL)$rhs$expr, expr)
-  expect_equal(parse_expr(quote(a <- sum(x[, ])), NULL, NULL)$rhs$expr, expr)
-  expect_equal(parse_expr(quote(a <- sum(x[, , ])), NULL, NULL)$rhs$expr, expr)
+  expect_equal(
+    parse_expr(quote(a <- sum(x[])), NULL, NULL)$rhs$expr,
+    quote(OdinReduce(fn = "sum", what = "x", index = NULL, expr = sum(x[]))))
+  expect_equal(
+    parse_expr(quote(a <- sum(x[, ])), NULL, NULL)$rhs$expr,
+    quote(OdinReduce(fn = "sum", what = "x", index = NULL, expr = sum(x[, ]))))
+  expect_equal(
+    parse_expr(quote(a <- sum(x[, , ])), NULL, NULL)$rhs$expr,
+    quote(OdinReduce(fn = "sum", what = "x", index = NULL,
+                     expr = sum(x[, , ]))))
 })
 
 
@@ -126,9 +133,10 @@ test_that("can parse call sum over part of array", {
   res <- parse_expr(quote(a[] <- sum(x[, i])), NULL, NULL)
   expect_equal(
     res$rhs$expr,
-    call("OdinReduce", "sum", "x", index = list(
+    call("OdinReduce", fn = "sum", what = "x", index = list(
       list(name = "i", type = "range", from = 1, to = quote(OdinDim("x", 1L))),
-      list(name = "j", type = "single", at = quote(i)))))
+      list(name = "j", type = "single", at = quote(i))),
+      expr = quote(sum(x[, i]))))
   expect_equal(res$rhs$depends,
                list(functions = c("sum", "["), variables = "x"))
 })
@@ -138,9 +146,10 @@ test_that("can parse call sum over part of part of array", {
   res <- parse_expr(quote(a[] <- sum(x[a:b, i])), NULL, NULL)
   expect_equal(
     res$rhs$expr,
-    call("OdinReduce", "sum", "x", index = list(
+    call("OdinReduce", fn = "sum", what = "x", index = list(
       list(name = "i", type = "range", from = quote(a), to = quote(b)),
-      list(name = "j", type = "single", at = quote(i)))))
+      list(name = "j", type = "single", at = quote(i))),
+      expr = quote(sum(x[a:b, i]))))
   expect_equal(res$rhs$depends,
                list(functions = c("sum", "[", ":"),
                     variables = c("x", "a", "b")))
@@ -150,7 +159,8 @@ test_that("can parse call sum over part of part of array", {
 test_that("parse prod as a reduction", {
   res <- parse_expr(quote(a <- prod(x)), NULL, NULL)
   expect_equal(res$rhs$expr,
-               quote(OdinReduce("prod", "x", index = NULL)))
+               quote(OdinReduce(fn = "prod", what = "x", index = NULL,
+                                expr = prod(x))))
   expect_equal(res$rhs$depends,
                list(functions = "prod", variables = "x"))
 })

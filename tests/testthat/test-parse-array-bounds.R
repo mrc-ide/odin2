@@ -225,3 +225,44 @@ test_that("tidy expression", {
   expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x")), FALSE),
                quote(OdinParameter("x") >= 1 + a))
 })
+
+
+test_that("can detect out-of-range access in sum()", {
+  expect_error(
+    odin_parse({
+      N[] <- 0
+      dim(N) <- 3
+      update(x) <- a
+      initial(x) <- 0
+      a <- sum(N[5])
+    }),
+    "Out of range read of 'N' in 'N[5]'",
+    fixed = TRUE)
+
+  expect_error(
+    odin_parse({
+      N[] <- 0
+      dim(N) <- 3
+      update(x) <- a
+      initial(x) <- 0
+      a <- sum(N[1:5])
+    }),
+    "Out of range read of 'N' in 'N[1:5]'",
+    fixed = TRUE)
+})
+
+
+test_that("difficult constraints in sum expressions", {
+  ## This would be an out of bounds access but we cannot easily see it
+  ## because it involves both 'i' and 'j' in a single access (putting
+  ## the if/else on the outside would work fine though)
+  expect_warning(
+    odin_parse({
+      initial(a[, ]) <- 1
+      update(a[, ]) <- sum(x[1:(if (time > 10) i else j)])
+      x[] <- Normal(0, 1)
+      dim(x) <- 3
+      dim(a) <- c(2, 2)
+    }),
+    "Cannot validate array access")
+})

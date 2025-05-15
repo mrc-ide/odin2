@@ -165,10 +165,37 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
           warn_unhandled_analysis(expr, uses)
         }
       }
+    } else if (rlang::is_call(expr, "OdinReduce")) {
+      name <- expr$what
+      idx <- expr$index
+      expr_reduce <- expr$expr[[2]]
+      for (i in seq_along(idx)) {
+        for (v in c("from", "to", "at")) {
+          at <- idx[[i]][[v]]
+          if (!is.null(at)) {
+            uses <- intersect(all.vars(at), INDEX)
+            if (length(uses) == 0) {
+              ret$add(constraint(
+                "access:read", name, expr_reduce, i, at, FALSE, eq$src$index))
+            } else if (length(uses) == 1) {
+              idx_lhs <- eq$lhs$array[[match(uses, INDEX)]]
+              for (v_lhs in c("from", "to", "at")) {
+                v_lhs <- if (!is.null(idx_lhs$to)) "to" else "at"
+                at_i <- substitute_(at, set_names(idx_lhs[v_lhs], uses))
+              }
+              ret$add(constraint(
+                "access:read", name, expr_reduce, i, at_i, FALSE, eq$src$index))
+            } else {
+              warn_unhandled_analysis(expr$expr, uses)
+            }
+          }
+        }
+      }
     } else if (is.recursive(expr)) {
       lapply(expr[-1], extract)
     }
   }
+
   extract(eq$rhs$expr)
   ret$get()
 }

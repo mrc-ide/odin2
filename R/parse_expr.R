@@ -917,7 +917,7 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
   arg <- expr[[2]]
   if (rlang::is_symbol(arg)) {
     name <- as.character(arg)
-    return(call("OdinReduce", fn, name, index = NULL))
+    return(call("OdinReduce", fn = fn, what = name, index = NULL, expr = expr))
   } else if (!rlang::is_call(arg, "[")) {
     odin_parse_error(
       c("Expected argument to '{fn}' to be an array",
@@ -933,7 +933,7 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
 
   ## Handle special case efficiently:
   if (all(vlapply(index, rlang::is_missing))) {
-    return(call("OdinReduce", fn, name, index = NULL))
+    return(call("OdinReduce", fn = fn, what = name, index = NULL, expr = expr))
   }
 
   for (i in seq_along(index)) {
@@ -954,7 +954,7 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
     index[[i]] <- v
   }
 
-  call("OdinReduce", fn, name, index = index)
+  call("OdinReduce", fn = fn, what = name, index = index, expr = expr)
 }
 
 

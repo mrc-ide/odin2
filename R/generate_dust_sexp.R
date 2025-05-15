@@ -238,9 +238,9 @@ flatten_index <- function(idx, name) {
 
 
 generate_dust_sexp_reduce <- function(expr, dat, options) {
-  fn <- expr[[2]]
-  target <- expr[[3]]
-  target_str <- generate_dust_sexp(expr[[3]], dat, options)
+  fn <- expr$fn
+  target <- expr$what
+  target_str <- generate_dust_sexp(target, dat, options)
   if (dat$location[[target]] %in% c("internal", "shared")) {
     target_str <- sprintf("%s.data()", target_str)
   }
