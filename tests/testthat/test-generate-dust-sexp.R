@@ -18,11 +18,24 @@ test_that("can generate min/max expressions", {
   dat <- generate_dust_dat(c(a = "shared", b = "stack"), NULL, NULL, NULL)
   options <- list()
   expect_equal(generate_dust_sexp(quote(min(a, b)), dat, options),
-               "monty::math::min(shared.a, b)")
+               "monty::math::min<real_type>(shared.a, b)")
   expect_equal(generate_dust_sexp(quote(max(a, 1)), dat, options),
-               "monty::math::max(shared.a, static_cast<real_type>(1))")
+               "monty::math::max<real_type>(shared.a, 1)")
   expect_equal(generate_dust_sexp(quote(min(2, 1)), dat, options),
-               "monty::math::min(2, 1)")
+               "monty::math::min<real_type>(2, 1)")
+})
+
+
+test_that("can generate min/max expressions for index", {
+  dat <- generate_dust_dat(c(a = "shared", b = "stack", x = "internal"),
+                           NULL, NULL, NULL)
+  options <- list()
+  expect_equal(generate_dust_sexp(quote(x[min(a, b)]), dat, options),
+               "internal.x[monty::math::min<int>(shared.a, b) - 1]")
+  expect_equal(generate_dust_sexp(quote(x[max(a, 1)]), dat, options),
+               "internal.x[monty::math::max<int>(shared.a, 1) - 1]")
+  expect_equal(generate_dust_sexp(quote(x[min(2, 1)]), dat, options),
+               "internal.x[monty::math::min<int>(2, 1) - 1]")
 })
 
 

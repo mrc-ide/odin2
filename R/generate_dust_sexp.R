@@ -132,14 +132,18 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ## TODO: we'll use our usual fmodr thing here once we get that
       ## into monty's math library, but for now this is ok.
       ret <- sprintf("std::fmod(%s, %s)", args_str[[1]], args_str[[2]])
+    } else if (fn %in% c("min", "max")) {
+      ## Getting the type here correct is hard because we need to
+      ## have both input types be the same (and we will often get
+      ## int/real disagreement) but the reslution of the type should
+      ## depend on how the function is used.  If we are within a `[`
+      ## expression then we're almost certainly wanting an integer
+      ## out but otherwise we are almost certainly wanting a real
+      ## value - regardless of what the inputs are!
+      dest_type <- if (isTRUE(options$array_access)) "int" else "real_type"
+      ret <- sprintf("monty::math::%s<%s>(%s)",
+                     fn, dest_type, paste(args_str, collapse = ", "))
     } else if (fn %in% names(FUNCTIONS_MONTY_MATH)) {
-      if (fn %in% c("min", "max")) {
-        is_integer_like <- grepl("^[0-9]$", args_str)
-        if (any(is_integer_like) && !all(is_integer_like)) {
-          args_str[is_integer_like] <- sprintf("static_cast<real_type>(%s)",
-                                               args_str[is_integer_like])
-        }
-      }
       ret <- sprintf("monty::math::%s(%s)",
                      FUNCTIONS_MONTY_MATH[[fn]],
                      paste(args_str, collapse = ", "))
@@ -217,6 +221,7 @@ generate_dust_dat <- function(location, packing, type, arrays) {
 generate_dust_array_access <- function(expr, dat, options) {
   target <- generate_dust_sexp(expr[[2]], dat, options)
   name <- as.character(expr[[2]])
+  options$array_access <- TRUE
   idx <- generate_dust_sexp(flatten_index(expr[-(1:2)], name), dat, options)
   sprintf("%s[%s]", target, idx)
 }
