@@ -896,6 +896,26 @@ dim(a) <- 10
 
 This is similar to the requirement that array-valued parameters are assigned at once (in contrast to odin version 1).
 
+# `E1071`
+
+Negative indicies (unary minus) are not supported in odin.  You cannot write, for example,
+
+```
+a <- sum(x[-1])
+```
+
+to sum over all the elements of `x` except the first, like you might in R (you would have to write `sum(x[2:length(x)])` in odin at present).
+
+# `E1072`
+
+Unsupported function used within an array access.  Only a limited number of functions are supported (`+`, `-`, `:`, `(`, `length`, `[` and `as.integer`), though we mat expand this list in future.  For example you cannot write:
+
+```
+a <- x[sin(time)]
+```
+
+which is probably a good thing...
+
 # `E2001`
 
 Your system of equations does not include any expressions with `initial()` on the lhs.  This is what we derive the set of variables from, so at least one must be present.
