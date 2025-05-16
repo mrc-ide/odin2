@@ -135,7 +135,7 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
     } else if (fn %in% c("min", "max")) {
       ## Getting the type here correct is hard because we need to
       ## have both input types be the same (and we will often get
-      ## int/real disagreement) but the reslution of the type should
+      ## int/real disagreement) but the resolution of the type should
       ## depend on how the function is used.  If we are within a `[`
       ## expression then we're almost certainly wanting an integer
       ## out but otherwise we are almost certainly wanting a real
