@@ -802,7 +802,7 @@ parse_expr_browser <- function(expr, src, call) {
 
 
 parse_expr_usage <- function(expr, src, call) {
-  if (is.recursive(expr)) {
+  if (!rlang::is_missing(expr) && is.recursive(expr)) {
     fn <- expr[[1]]
     if (!is.symbol(fn)) {
       odin_parse_error(
@@ -1059,8 +1059,8 @@ parse_index <- function(name_data, dim, value) {
 
 
 parse_expr_check_array_access <- function(expr, src, call) {
-  if (is.recursive(expr)) {
-    if (rlang::is_call(expr, "-")) {
+  if (!rlang::is_missing(expr) && is.recursive(expr)) {
+    if (rlang::is_call(expr, "-", n = 1)) {
       odin_parse_error(
         c(paste("Invalid negative index (unary minus) '{deparse1(expr)}'",
                 "in array access"),
