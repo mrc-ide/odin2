@@ -1070,13 +1070,26 @@ parse_expr_check_array_access <- function(expr, src, call) {
                     "odin")),
         "E1071", src, call)
     }
-    deps <- find_dependencies(expr)
-    allowed <- c("-", "+", ":", "(", "length", "dim", "[", "as.integer")
-    err <- setdiff(deps$functions, allowed)
-    if (length(err) > 0) {
-      odin_parse_error(
-        "Invalid function{?s} used in array access: {squote(err)}",
-        "E1072", src, call)
+
+    allowed <- c("-", "+", ":", "(", "length", "dim", "[", "as.integer", "if")
+    check <- function(e) {
+      if (is.recursive(e)) {
+        fn <- deparse(e[[1]])
+        if (!(fn %in% allowed)) {
+          odin_parse_error(
+            "Invalid function used in array access: '{fn}'",
+            "E1072", src, call)
+        }
+        args <- as.list(e[-1])
+        if (fn == "if") {
+          ## Check conditional through usual route; we can use
+          ## anything here.
+          parse_expr_usage(args[[1]], src, call)
+          args <- args[-1]
+        }
+        lapply(args, check)
+      }
     }
+    check(expr)
   }
 }
