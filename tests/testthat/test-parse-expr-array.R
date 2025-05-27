@@ -41,6 +41,14 @@ test_that("can validate array index", {
 })
 
 
+test_that("allow anything in conditionals within arrays", {
+  parse_expr(quote(a <- x[if (sin(time) > 0) 1 else 2]), NULL, NULL)
+  expect_error(
+    parse_expr(quote(a <- x[if (sin(time) > 0) cos(b) else 2]), NULL, NULL),
+    "Invalid function used in array access: 'cos'")
+})
+
+
 test_that("can parse array expression", {
   res <- parse_expr(quote(a[] <- 1), NULL, NULL)
   expect_null(res$special)
