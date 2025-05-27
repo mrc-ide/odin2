@@ -742,7 +742,7 @@ test_that("can't use unary minus in array access", {
     fixed = TRUE)
   expect_error(
     parse_expr(quote(x <- sum(y[-a])), NULL, NULL),
-    "Invalid negative index (unary minus) '-3' in array access",
+    "Invalid negative index (unary minus) '-a' in array access",
     fixed = TRUE)
 })
 
