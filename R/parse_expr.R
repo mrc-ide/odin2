@@ -819,7 +819,7 @@ parse_expr_usage <- function(expr, src, call) {
       expr <- parse_expr_usage_rewrite_stochastic(expr, src, call)
     } else if (fn_str == "[") {
       for (el in as.list(expr[-(1:2)])) {
-        parse_expr_check_array_access(el, src, call)
+        parse_expr_check_array_access(el, FALSE, src, call)
       }
     } else if (fn_str %in% names(FUNCTIONS)) {
       parse_expr_check_call(expr, src, call)
@@ -940,7 +940,7 @@ parse_expr_usage_rewrite_reduce <- function(expr, src, call) {
   }
 
   for (i in seq_along(index)) {
-    parse_expr_check_array_access(index[[i]], src, call)
+    parse_expr_check_array_access(index[[i]], TRUE, src, call)
     v <- parse_index(name, i, index[[i]])
     deps <- v$depends
     if (!is.null(deps)) {
@@ -1058,7 +1058,7 @@ parse_index <- function(name_data, dim, value) {
 }
 
 
-parse_expr_check_array_access <- function(expr, src, call) {
+parse_expr_check_array_access <- function(expr, in_reduction, src, call) {
   if (!rlang::is_missing(expr) && is.recursive(expr)) {
     if (rlang::is_call(expr, "-", n = 1)) {
       odin_parse_error(
@@ -1071,25 +1071,26 @@ parse_expr_check_array_access <- function(expr, src, call) {
         "E1071", src, call)
     }
 
-    allowed <- c("-", "+", ":", "(", "length", "dim", "[", "as.integer", "if")
-    check <- function(e) {
+    allowed <- c("-", "+", "(", "length", "dim", "[", "as.integer")
+    check <- function(e, in_reduction) {
       if (is.recursive(e)) {
         fn <- deparse(e[[1]])
-        if (!(fn %in% allowed)) {
+        args <- as.list(e[-1])
+
+        if (in_reduction && fn == ":") {
+          in_reduction <- FALSE
+        } else if (fn == "if") {
+          parse_expr_usage(args[[1]], src, call)
+          args <- args[-1]
+        } else if (!(fn %in% allowed)) {
           odin_parse_error(
             "Invalid function used in array access: '{fn}'",
             "E1072", src, call)
         }
-        args <- as.list(e[-1])
-        if (fn == "if") {
-          ## Check conditional through usual route; we can use
-          ## anything here.
-          parse_expr_usage(args[[1]], src, call)
-          args <- args[-1]
-        }
-        lapply(args, check)
+        lapply(args, parse_expr_usage, src, call)
+        lapply(args, check, in_reduction)
       }
     }
-    check(expr)
+    check(expr, in_reduction)
   }
 }

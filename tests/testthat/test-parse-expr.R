@@ -752,3 +752,10 @@ test_that("can't use some functions within array access", {
     parse_expr(quote(x <- y[sin(a)]), NULL, NULL),
     "Invalid function used in array access: 'sin'")
 })
+
+
+test_that("can use ':' within sum in array access", {
+  expect_no_error(parse_expr(quote(a <- sum(N[1:5])), NULL, NULL))
+  expect_error(parse_expr(quote(a <- N[1:5]), NULL, NULL),
+               "Invalid function used in array access: ':'")
+})
