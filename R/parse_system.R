@@ -521,6 +521,12 @@ parse_system_phases <- function(exprs, equations, variables, output,
     required <- union(required, delayed_required)
   }
 
+  if (!is.null(data)) {
+    data_required <- unlist(
+      lapply(exprs$data, function(x) x$rhs$depends$variables))
+    required <- union(required, data_required)
+  }
+
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
@@ -649,6 +655,7 @@ parse_system_arrays <- function(exprs, call) {
       is.null(x$lhs$array) &&
         !identical(x$special, "parameter") &&
         !identical(x$special, "delay") &&
+        !identical(x$special, "data") &&
         !(identical(x$special, "output") && isTRUE(x$rhs$expr))
     })
     if (any(err)) {
