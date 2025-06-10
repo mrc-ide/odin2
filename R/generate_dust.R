@@ -159,8 +159,10 @@ generate_dust_system_data_type <- function(dat) {
   if (length(data) == 0) {
     "using data_type = dust2::no_data;"
   } else {
+    type <- ifelse(data %in% dat$storage$arrays$name,
+                   "std::vector<real_type>", "real_type")
     c("struct data_type {",
-      sprintf("  real_type %s;", data),
+      sprintf("  %s %s;", type, data),
       "};")
   }
 }
@@ -253,8 +255,27 @@ generate_dust_system_build_data <- function(dat) {
   ## types, lengths, etc.
   eqs <- dat$phases$create_data$equations
   body <- collector()
-  body$add(sprintf('auto %s = dust2::r::read_real(data, "%s", NA_REAL);',
-                   data, data))
+
+  for (name in data) {
+    if (name %in% dat$storage$arrays$name) {
+      ## Some duplication here with generate_dust_assignment, but we
+      ## don't have an "equation" here for the data element to work
+      ## with.
+      size <- generate_dust_sexp(
+        call("OdinLength", name),
+        dat$sexp_data, list())
+      i <- match(name, dat$storage$arrays$name)
+      dim_name <- dat$storage$arrays$alias[i]
+      dim <- sprintf("shared.dim.%s", dim_name)
+      body$add(sprintf("auto %s = std::vector<real_type>(%s);", name, size))
+      body$add(sprintf(
+        'dust2::r::read_real_array(data, %s, %s.data(), "%s", true);',
+        dim, name, name))
+    } else {
+      body$add(sprintf('auto %s = dust2::r::read_real(data, "%s", NA_REAL);',
+                       data, data))
+    }
+  }
   body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
   args <- c("cpp11::list" = "data",
             "const shared_state&" = "shared")
