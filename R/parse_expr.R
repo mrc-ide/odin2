@@ -20,11 +20,7 @@ parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
   special <- lhs$special
   lhs$special <- NULL
-  if (lhs$name == "pi") {
-    odin_parse_error(
-      "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)
-  } else if (identical(special, "dim")) {
+  if (identical(special, "dim")) {
     lhs$name_data <- lhs$name
     lhs$name <- odin_dim_name(lhs$name)
     rhs <- parse_expr_assignment_rhs_dim(expr[[3]], src, call)
@@ -91,6 +87,10 @@ parse_expr_assignment <- function(expr, src, call) {
     }
   }
 
+  ## TODO: I think this needs pulling somewhere else so that we can
+  ## reuse it within the compare too, otherwise I think we can write
+  ##   x[] ~ F(a[j])
+  ## at the moment but we'll need to prevent that/
   index_used <- intersect(INDEX, rhs$depends$variables)
   if (length(index_used) > 0) {
     n <- length(lhs$array)
@@ -428,6 +428,11 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
       "Invalid name '{name}' starts with reserved prefix '{prefix}'",
       "E1047", src, call)
   }
+  if (name == "pi") {
+    odin_parse_error(
+      "Do not use `pi` on the left-hand-side of an expression",
+      "E1061", src, call)
+  }
 
   name
 }
@@ -643,28 +648,50 @@ parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
 parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
-  if (lhs == "pi") {
-    odin_parse_error(
-      "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)
-  }
-  rhs$args <- c(lhs, rhs$args)
-  rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))
+  rhs$args <- c(lhs$expr, rhs$args)
+  ## See note on parse_expr_assignment for some additional checks
+  ## we'll need to add here.
+  rhs$depends$variables <- setdiff(c(rhs$depends$variables,
+                                     lhs$depends$variables,
+                                     lhs$name),
+                                   INDEX)
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
-  list(rhs = rhs,
-       src = src)
+  list(FIXME = list(name = lhs$name),
+       rhs = rhs,
+       src = src,
+       array = lhs$array)
 }
 
 
 parse_expr_compare_lhs <- function(lhs, src, call) {
-  if (!is.symbol(lhs)) {
-    odin_parse_error(
-      "The left hand side of a `~` comparison must be a symbol",
-      "E1012", src, call)
+  is_array <- rlang::is_call(lhs, "[")
+
+  ## Duplicates a little code within parse_expr_assignment_lhs(); we
+  ## might want to split the end of that off?
+  if (is_array) {
+    name <- parse_expr_check_lhs_name(lhs[[2]], NULL, is_array, src, call)
+    array <- Map(parse_expr_check_lhs_index,
+                 seq_len(length(lhs) - 2),
+                 lhs[-(1:2)],
+                 MoreArgs = list(name = name, src = src, call = call))
+    depends <- join_dependencies(
+      lapply(array, function(x)
+        join_dependencies(lapply(x[c("at", "from", "to")], find_dependencies))))
+    expr <- lhs
+    expr[-(1:2)] <- lapply(INDEX[seq_len(length(expr) - 2)], as.symbol)
+  } else {
+    name <- parse_expr_check_lhs_name(lhs, NULL, is_array, src, call)
+    expr <- lhs
+    array <- NULL
+    depends <- NULL
   }
-  lhs
+
+  list(name = name,
+       expr = expr,
+       array = array,
+       depends = depends)
 }
 
 

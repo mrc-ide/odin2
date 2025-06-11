@@ -675,6 +675,9 @@ parse_system_arrays <- function(exprs, call) {
     unlist(lapply(dim_nms, odin_dim_name)),
     dim_nms)
 
+  ## NOTE: this is where we work out that 'd' is an array equation,
+  ## and that dim_d is an equation that stores the dimension.  We need
+  ## to push this into creation though.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
@@ -704,7 +707,7 @@ parse_system_arrays <- function(exprs, call) {
   if (any(is_compare)) {
     id[is_compare] <- paste0(
       "compare:",
-      vcapply(exprs[is_compare], function(x) as.character(x$rhs$args[[1]])))
+      vcapply(exprs[is_compare], function(x) x$FIXME$name))
   }
   ## Need to treat browser here, as the error we get below is poor if
   ## we have multiple browser calls.

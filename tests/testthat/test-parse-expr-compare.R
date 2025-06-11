@@ -36,6 +36,17 @@ test_that("comparison calls must wrap symbols", {
 })
 
 
+test_that("can process arrays within compare calls", {
+  res <- parse_expr(quote(x[] ~ Normal(0, 1)), NULL, NULL)
+  expect_null(res$lhs)
+  expect_equal(res$array,
+               list(list(name = "i",
+                         type = "range",
+                         from = 1,
+                         to = quote(OdinDim("x", 1L)))))
+})
+
+
 test_that("parse compare call rhs as distributions", {
   expect_error(
     parse_expr(quote(x ~ 1), NULL, NULL),
