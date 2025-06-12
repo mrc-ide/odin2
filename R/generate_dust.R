@@ -273,7 +273,7 @@ generate_dust_system_build_data <- function(dat) {
         dim, name, name))
     } else {
       body$add(sprintf('auto %s = dust2::r::read_real(data, "%s", NA_REAL);',
-                       data, data))
+                       name, name))
     }
   }
   body$add(sprintf("return data_type{%s};", paste(data, collapse = ", ")))
@@ -824,32 +824,9 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     res <- sprintf("%s = %s;", lhs, rhs)
     is_array <- !is.null(eq$lhs$array)
     if (is_array) {
-      for (idx in rev(eq$lhs$array)) {
-        if (idx$type == "range") {
-          from <- generate_dust_sexp(idx$from, dat$sexp_data, options)
-          to <- generate_dust_sexp(idx$to, dat$sexp_data, options)
-          size_fns <- c("length", "dim", "OdinDim", "OdinLength")
-          if (!rlang::is_call(idx$to, size_fns) && !is.numeric(idx$to)) {
-            to <- sprintf("static_cast<size_t>(%s)", to)
-          }
-          res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
-                           idx$name, from, idx$name, to, idx$name),
-                   res,
-                   "}")
-        } else if (idx$name %in% find_dependencies(eq$rhs$expr)$variables) {
-          at <- generate_dust_sexp(idx$at, dat$sexp_data, options)
-          res <- c("{",
-                   sprintf("const size_t %s = %s;", idx$name, at),
-                   res,
-                   "}")
-        }
-      }
-      if (length(res) > 1) {
-        i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)]))
-        i_end <- grepl("^}", res)
-        indent <- strrep("  ", cumsum(i_start - i_end))
-        res <- paste0(indent, res)
-      }
+      depends <- find_dependencies(eq$rhs$expr)$variables
+      res <- generate_array_loops(
+        res, depends, eq$lhs$array, dat$sexp_data, options)
     }
   }
 
