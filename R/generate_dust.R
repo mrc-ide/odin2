@@ -551,7 +551,7 @@ generate_dust_system_compare_data <- function(dat) {
 
   ## Then the actual comparison:
   for (eq in dat$phases$compare$compare) {
-    eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
+    is_array <- !is.null(eq$array)
 
     ## TODO: when we refactor things, this probably belongs in the parse phase.
     ##
@@ -565,12 +565,23 @@ generate_dust_system_compare_data <- function(dat) {
                      function(eq) eq$rhs$depends$variables_recursive)))
     nms_data <- intersect(vars, dat$data$name)
 
-    check_data <- sprintf("!std::isnan(%s)",
-                          vcapply(nms_data, generate_dust_sexp, dat$sexp_data))
-    body$add(sprintf("if (%s) {", paste(check_data, collapse = " && ")))
-    body$add(sprintf("  odin_ll += monty::density::%s(%s, true);",
-                     eq$rhs$density$cpp, paste(eq_args, collapse = ", ")))
-    body$add("}")
+    eq_args <- vcapply(eq$rhs$args, generate_dust_sexp, dat$sexp_data)
+    eq_str <- sprintf("odin_ll += monty::density::%s(%s, true);",
+                      eq$rhs$density$cpp, paste(eq_args, collapse = ", "))
+
+    if (is_array) {
+      options <- NULL
+      depends <- find_dependencies(eq$rhs$expr)$variables
+      body$add(
+        generate_array_loops(eq_str, depends, eq$array, dat$sexp_data, options))
+    } else {
+      check_data <- sprintf(
+        "!std::isnan(%s)",
+        vcapply(nms_data, generate_dust_sexp, dat$sexp_data))
+      body$add(sprintf("if (%s) {", paste(check_data, collapse = " && ")))
+      body$add(paste0("  ", eq_str))
+      body$add("}")
+    }
   }
 
   body$add("return odin_ll;")
@@ -1051,4 +1062,37 @@ generate_dust_system_delay_equation <- function(nm, dat) {
   }
 
   ret
+}
+
+
+generate_array_loops <- function(inner, depends, array, sexp_data, options) {
+  res <- inner
+  for (idx in rev(array)) {
+    if (idx$type == "range") {
+      from <- generate_dust_sexp(idx$from, sexp_data, options)
+      to <- generate_dust_sexp(idx$to, sexp_data, options)
+      size_fns <- c("length", "dim", "OdinDim", "OdinLength")
+      if (!rlang::is_call(idx$to, size_fns) && !is.numeric(idx$to)) {
+        to <- sprintf("static_cast<size_t>(%s)", to)
+      }
+      res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
+                       idx$name, from, idx$name, to, idx$name),
+               res,
+               "}")
+    } else if (idx$name %in% depends) {
+      at <- generate_dust_sexp(idx$at, sexp_data, options)
+      res <- c("{",
+               sprintf("const size_t %s = %s;", idx$name, at),
+               res,
+               "}")
+    }
+  }
+  if (length(res) > 1) {
+    i_start <- c(FALSE, grepl("^(for|\\{)", res[-length(res)]))
+    i_end <- grepl("^}", res)
+    indent <- strrep("  ", cumsum(i_start - i_end))
+    res <- paste0(indent, res)
+  }
+
+  res
 }
