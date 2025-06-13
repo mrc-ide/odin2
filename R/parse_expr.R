@@ -355,7 +355,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
         context <- "on the lhs of a `~` comparison"
       } else if (is.null(special)) {
         context <- "on the lhs of assignment"
-      } else  {
+      } else {
         context <- sprintf("within '%s()' on the lhs of assignment", special)
       }
     }
