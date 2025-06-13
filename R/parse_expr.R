@@ -154,11 +154,11 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
             "Invalid call to 'dim()' on lhs; '{deparse1(x)}' is not a symbol",
             "E1005", src, call)
         }
-        deparse(x)
+        parse_expr_check_lhs_name(x, special, is_array, src, call)
       })
 
       return(list(
-        name = lhs[1],
+        name = lhs[[1]], # may be more than one if dims are aliased
         names = lhs,
         special = special))
     }
@@ -337,19 +337,25 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
 
 
 parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
+  is_compare <- identical(special, "~")
+
   if (!rlang::is_symbol(lhs)) {
     ## We will error, the only question is how.
     if (is_array) {
-      if (is.null(special)) {
+      if (is_compare) {
+        context <- "on the lhs of a `~` array comparison"
+      } else if (is.null(special)) {
         context <- "on the lhs of array assignment"
       } else {
         context <- sprintf("within '%s()' on the lhs of array assignment",
                            special)
       }
     } else {
-      if (is.null(special)) {
+      if (is_compare) {
+        context <- "on the lhs of a `~` comparison"
+      } else if (is.null(special)) {
         context <- "on the lhs of assignment"
-      } else {
+      } else  {
         context <- sprintf("within '%s()' on the lhs of assignment", special)
       }
     }
@@ -361,8 +367,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
     }
 
     fn_str <- deparse1(lhs[[1]])
-
-    if (is.null(special)) {
+    if (is_compare || is.null(special)) {
       if (is_array && rlang::is_call(lhs, SPECIAL_LHS) && length(lhs) >= 2) {
         target <- deparse1(lhs[[2]])
         hint <- paste("Did you mean '{fn_str}({target}[...])' rather than",
@@ -373,7 +378,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
           "E1005", src, call)
       }
       fn_near <- near_match(fn_str, SPECIAL_LHS)
-      if (length(fn_near) == 1) {
+      if (!is_compare && length(fn_near) == 1) {
         hint <- c(i = "Did you mean '{fn_near}()'?")
       } else {
         hint <- NULL
@@ -663,7 +668,7 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
     expr <- lhs
     expr[-(1:2)] <- lapply(INDEX[seq_len(length(expr) - 2)], as.symbol)
   } else {
-    name <- parse_expr_check_lhs_name(lhs, NULL, is_array, src, call)
+    name <- parse_expr_check_lhs_name(lhs, "~", is_array, src, call)
     expr <- lhs
     array <- NULL
     depends <- NULL

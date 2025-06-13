@@ -11,7 +11,7 @@ test_that("Can parse compare expression", {
 test_that("Suitable lhs and rhs on a '~' comparison", {
   expect_error(
     parse_expr(quote(initial(x) ~ 1), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",,
+    "Invalid special function 'initial()' on the lhs of a `~` comparison",
     fixed = TRUE)
   expect_error(
     parse_expr(quote(x ~ 1), NULL, NULL),
@@ -23,15 +23,11 @@ test_that("Suitable lhs and rhs on a '~' comparison", {
 test_that("comparison calls must wrap symbols", {
   expect_error(
     parse_expr(quote(1 ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
+    "Invalid target '1' on the lhs of a `~` comparison",
     fixed = TRUE)
   expect_error(
     parse_expr(quote(f(x) ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
-    fixed = TRUE)
-  expect_error(
-    parse_expr(quote(x[] ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
+    "Invalid special function 'f()' on the lhs of a `~` comparison",
     fixed = TRUE)
 })
 

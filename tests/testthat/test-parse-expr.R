@@ -666,7 +666,7 @@ test_that("Can't parse with pi on lhs", {
     "Do not use `pi` on the left-hand-side of an expression",
     fixed = TRUE)
   expect_error(
-    parse_expr(quote(dim(pi) <- c(2,2)), NULL, NULL),
+    parse_expr(quote(dim(pi) <- c(2, 2)), NULL, NULL),
     "Do not use `pi` on the left-hand-side of an expression",
     fixed = TRUE)
   expect_error(
