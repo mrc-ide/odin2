@@ -657,7 +657,7 @@ parse_expr_compare_lhs <- function(lhs, src, call) {
   ## Duplicates a little code within parse_expr_assignment_lhs(); we
   ## might want to split the end of that off?
   if (is_array) {
-    name <- parse_expr_check_lhs_name(lhs[[2]], NULL, is_array, src, call)
+    name <- parse_expr_check_lhs_name(lhs[[2]], "~", is_array, src, call)
     array <- Map(parse_expr_check_lhs_index,
                  seq_len(length(lhs) - 2),
                  lhs[-(1:2)],
