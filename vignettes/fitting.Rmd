@@ -288,7 +288,7 @@ likelihood <- dust_likelihood_monty(filter, sir_packer)
 vcv <- matrix(c(0.0005, 0.0003, 0.0003, 0.0003), 2, 2)
 sampler <- monty_sampler_random_walk(vcv)
 samples <- monty_sample(posterior, sampler, 1000,
-                               initial = sir_packer$pack(pars))
+                        initial = sir_packer$pack(pars))
 ```
 
 The likelihood now quickly rises up to a stable range and is clearly mixing:
@@ -301,6 +301,39 @@ The parameters `beta` (per-contact transmission rate) and `gamma` (recovery rate
 
 ```{r}
 plot(t(drop(samples$pars)), pch = 19, col = "#00000055")
+```
+
+# Comparing against vectors of data
+
+Above, we were comparing against a single point of data (per interval), but in some cases you will have vectors or higher-dimensional objects of data.  This might be the case if you were fitting to age-disaggregated data.  In this case you might write something like
+
+```r
+  cases <- data()
+  dim(cases) <- n_age
+  cases[] ~ Poisson(incidence[i])
+```
+
+where the syntax generalises our approach to handling arrays for the rest of the odin code:
+
+* `cases` is still defined as coming as data
+* We add a `dim()` equation to say that `cases` has `n_age` elements
+* The actual comparison is now processed element-wise over all age groups, with observed cases per age group being compared to the corresponding modelled `incidence` value.
+
+Missing data will be handled elementwise, so this calculation is applied to every age group that has data.
+
+Passing this data into the systen is a bit awkward as we no longer have a nice time-by-datastream variable.  The way we support this is by "list columns", which you may have seen in tidyverse packages (for example [`tidyr::nest`](https://tidyr.tidyverse.org/reference/nest.html) and [its vignette](https://tidyr.tidyverse.org/articles/nest.html)).
+
+Normally, you might make a time-by-incidence `data.frame` by writing:
+
+```{r}
+data.frame(time = c(1, 2, 3, 4), incidence = c(0, 4, 6, 10))
+```
+
+to make a list-column for incidence we pass in a *list* with the same number of elements as they are rows, and with the same number of elements *per list element* as there are age groups.  We then have to wrap this with `I()`, for example:
+
+```{r}
+data.frame(time = c(1, 2, 3, 4),
+           incidence = I(list(c(0, 1), c(4, 3), c(6, 7), c(10, 11))))
 ```
 
 # Deterministic models from stochastic
