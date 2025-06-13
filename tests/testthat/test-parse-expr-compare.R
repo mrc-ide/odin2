@@ -14,6 +14,10 @@ test_that("Suitable lhs and rhs on a '~' comparison", {
     "Invalid special function 'initial()' on the lhs of a `~` comparison",
     fixed = TRUE)
   expect_error(
+    parse_expr(quote(f(x)[] ~ 1), NULL, NULL),
+    "Invalid special function 'f()' on the lhs of array assignment",
+    fixed = TRUE)
+  expect_error(
     parse_expr(quote(x ~ 1), NULL, NULL),
     "The rhs of '~' is not a function call",
     fixed = TRUE)
