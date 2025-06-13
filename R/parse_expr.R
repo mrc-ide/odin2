@@ -87,26 +87,8 @@ parse_expr_assignment <- function(expr, src, call) {
     }
   }
 
-  ## TODO: I think this needs pulling somewhere else so that we can
-  ## reuse it within the compare too, otherwise I think we can write
-  ##   x[] ~ F(a[j])
-  ## at the moment but we'll need to prevent that/
-  index_used <- intersect(INDEX, rhs$depends$variables)
-  if (length(index_used) > 0) {
-    n <- length(lhs$array)
-    err <- if (n == 0) index_used else intersect(index_used, INDEX[-seq_len(n)])
-    if (length(err) > 0) {
-      v <- err[length(err)]
-      i <- match(v, INDEX)
-      odin_parse_error(
-        c("Invalid index access used on rhs of equation: {squote(err)}",
-          i = paste("Your lhs has only {n} dimension{?s}, but index '{v}'",
-                    "would require {match(v, INDEX)}")),
-        "E1021", src, call)
-    }
-    ## index variables are not real dependencies, so remove them:
-    rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
-  }
+  rhs$depends$variables <- parse_expr_check_index_usage(
+    rhs$depends$variables, lhs$array, src, call)
 
   if (lhs$name %in% rhs$depends$variables) {
     allow_self_reference <-
@@ -649,12 +631,11 @@ parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
   rhs$args <- c(lhs$expr, rhs$args)
-  ## See note on parse_expr_assignment for some additional checks
-  ## we'll need to add here.
-  rhs$depends$variables <- setdiff(c(rhs$depends$variables,
-                                     lhs$depends$variables,
-                                     lhs$name),
-                                   INDEX)
+  rhs$depends$variables <- unique(c(rhs$depends$variables,
+                                    lhs$depends$variables,
+                                    lhs$name))
+  rhs$depends$variables <- parse_expr_check_index_usage(
+    rhs$depends$variables, lhs$array, src, call)
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
@@ -1078,4 +1059,25 @@ parse_index <- function(name_data, dim, value) {
   } else {
     NULL
   }
+}
+
+
+parse_expr_check_index_usage <- function(variables, array, src, call) {
+  index_used <- intersect(INDEX, variables)
+  if (length(index_used) > 0) {
+    n <- length(array)
+    err <- if (n == 0) index_used else intersect(index_used, INDEX[-seq_len(n)])
+    if (length(err) > 0) {
+      v <- err[length(err)]
+      i <- match(v, INDEX)
+      odin_parse_error(
+        c("Invalid index access used on rhs of equation: {squote(err)}",
+          i = paste("Your lhs has only {n} dimension{?s}, but index '{v}'",
+                    "would require {match(v, INDEX)}")),
+        "E1021", src, call)
+    }
+    ## index variables are not real dependencies, so remove them:
+    variables <- setdiff(variables, INDEX)
+  }
+  variables
 }

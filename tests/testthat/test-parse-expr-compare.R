@@ -93,3 +93,10 @@ test_that("data can only be used within the compare phase", {
     }),
     "Data may only be referenced from equations used in comparison")
 })
+
+
+test_that("compare expressions use correct array index", {
+  expect_error(
+    parse_expr(quote(x[] ~ Normal(a[j], 1)), NULL, NULL),
+    "Invalid index access used on rhs of equation: 'j'")
+})
