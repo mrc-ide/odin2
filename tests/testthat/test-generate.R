@@ -2936,3 +2936,43 @@ test_that("can use depend on output variables correctly", {
       "  state[2] = b;",
       "}"))
 })
+
+
+test_that("can use vector data", {
+  dat <- odin_parse({
+    initial(y[]) <- 0
+    update(y[]) <- Normal(y[i], sd)
+    dim(y) <- len
+    len <- parameter()
+    sd <- parameter()
+    observed <- data()
+    dim(observed) <- len
+    observed[] ~ Normal(y[i], sd)
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
+      "  const auto * y = state + 0;",
+      "  real_type odin_ll = 0;",
+      "  for (size_t i = 1; i <= shared.dim.observed.size; ++i) {",
+      "    odin_ll += unless_nan(monty::density::normal(data.observed[i - 1], y[i - 1], shared.sd, true));",
+      "  }",
+      "  return odin_ll;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_data_type(dat),
+    c("struct data_type {",
+      "  std::vector<real_type> observed;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_data(dat),
+    c(method_args$build_data,
+      "  auto observed = std::vector<real_type>(shared.dim.observed.size);",
+      '  dust2::r::read_real_array(data, shared.dim.observed, observed.data(), "observed", true);',
+      "  return data_type{observed};",
+      "}"))
+})
