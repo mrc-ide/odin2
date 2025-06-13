@@ -644,7 +644,7 @@ parse_expr_compare <- function(expr, src, call) {
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
-  list(FIXME = list(name = lhs$name),
+  list(target = list(name = lhs$name),
        rhs = rhs,
        src = src,
        array = lhs$array)

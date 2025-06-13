@@ -707,7 +707,7 @@ parse_system_arrays <- function(exprs, call) {
   if (any(is_compare)) {
     id[is_compare] <- paste0(
       "compare:",
-      vcapply(exprs[is_compare], function(x) x$FIXME$name))
+      vcapply(exprs[is_compare], function(x) x$target$name))
   }
   ## Need to treat browser here, as the error we get below is poor if
   ## we have multiple browser calls.
