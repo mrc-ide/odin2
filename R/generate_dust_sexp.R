@@ -246,7 +246,7 @@ generate_dust_sexp_reduce <- function(expr, dat, options) {
   fn <- expr$fn
   target <- expr$what
   target_str <- generate_dust_sexp(target, dat, options)
-  if (dat$location[[target]] %in% c("internal", "shared")) {
+  if (dat$location[[target]] %in% c("internal", "shared", "data")) {
     target_str <- sprintf("%s.data()", target_str)
   }
   index <- expr$index

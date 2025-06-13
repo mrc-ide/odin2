@@ -2976,3 +2976,29 @@ test_that("can use vector data", {
       "  return data_type{observed};",
       "}"))
 })
+
+
+test_that("can reduce over data", {
+  dat <- odin_parse({
+    initial(y[]) <- 0
+    update(y[]) <- Normal(y[i], sd)
+    dim(y) <- len
+    len <- parameter()
+    sd <- parameter()
+    d <- data()
+    dim(d) <- len
+    d[] ~ Normal(y[i], d[i] / sum(d))
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
+      "  const auto * y = state + 0;",
+      "  real_type odin_ll = 0;",
+      "  for (size_t i = 1; i <= shared.dim.d.size; ++i) {",
+      "    odin_ll += unless_nan(monty::density::normal(data.d[i - 1], y[i - 1], data.d[i - 1] / dust2::array::sum<real_type>(data.d.data(), shared.dim.d), true));",
+      "  }",
+      "  return odin_ll;",
+      "}"))
+})
