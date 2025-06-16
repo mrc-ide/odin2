@@ -11,7 +11,11 @@ test_that("Can parse compare expression", {
 test_that("Suitable lhs and rhs on a '~' comparison", {
   expect_error(
     parse_expr(quote(initial(x) ~ 1), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",,
+    "Invalid special function 'initial()' on the lhs of a `~` comparison",
+    fixed = TRUE)
+  expect_error(
+    parse_expr(quote(f(x)[] ~ 1), NULL, NULL),
+    "Invalid special function 'f()' on the lhs of a `~` array comparison",
     fixed = TRUE)
   expect_error(
     parse_expr(quote(x ~ 1), NULL, NULL),
@@ -23,16 +27,23 @@ test_that("Suitable lhs and rhs on a '~' comparison", {
 test_that("comparison calls must wrap symbols", {
   expect_error(
     parse_expr(quote(1 ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
+    "Invalid target '1' on the lhs of a `~` comparison",
     fixed = TRUE)
   expect_error(
     parse_expr(quote(f(x) ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
+    "Invalid special function 'f()' on the lhs of a `~` comparison",
     fixed = TRUE)
-  expect_error(
-    parse_expr(quote(x[] ~ Normal(0, 1)), NULL, NULL),
-    "The left hand side of a `~` comparison must be a symbol",
-    fixed = TRUE)
+})
+
+
+test_that("can process arrays within compare calls", {
+  res <- parse_expr(quote(x[] ~ Normal(0, 1)), NULL, NULL)
+  expect_null(res$lhs)
+  expect_equal(res$array,
+               list(list(name = "i",
+                         type = "range",
+                         from = 1,
+                         to = quote(OdinDim("x", 1L)))))
 })
 
 
@@ -81,4 +92,11 @@ test_that("data can only be used within the compare phase", {
       d <- data()
     }),
     "Data may only be referenced from equations used in comparison")
+})
+
+
+test_that("compare expressions use correct array index", {
+  expect_error(
+    parse_expr(quote(x[] ~ Normal(a[j], 1)), NULL, NULL),
+    "Invalid index access used on rhs of equation: 'j'")
 })

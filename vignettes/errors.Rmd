@@ -114,7 +114,7 @@ This is an error because [`new` is a keyword in C++](https://en.cppreference.com
 
 # `E1005`
 
-Invalid target on lhs of assignment.  There are quite a few ways of being an invalid assignment target, and at present they are all grouped within this error.    We may split these into different errors in future where particular types of error are both common and difficult to understand.
+Invalid target on lhs of assignment or comparison relationship (`~`).  There are quite a few ways of being an invalid assignment target, and at present they are all grouped within this error.    We may split these into different errors in future where particular types of error are both common and difficult to understand.
 
 Examples:
 
@@ -214,6 +214,8 @@ d <- data(integer = TRUE)
 Here, you have somewhat hopefully requested that `d` will be data as an integer but we don't yet support that.  Probably this will be supported in future, but the interface is not yet decided.  For now all data elements are assumed to be scalar reals.
 
 # `E1012`
+
+**Obsolete since 0.3.27, these problems are now included within [E1005](#e1005)**
 
 Invalid argument on the lhs of a `~` comparison.
 

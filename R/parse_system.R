@@ -521,6 +521,12 @@ parse_system_phases <- function(exprs, equations, variables, output,
     required <- union(required, delayed_required)
   }
 
+  if (!is.null(data)) {
+    data_required <- unlist(
+      lapply(exprs$data, function(x) x$rhs$depends$variables))
+    required <- union(required, data_required)
+  }
+
   eqs_shared <- intersect(names(equations), required)
   phases$build_shared <- list(equations = eqs_shared)
   phases$update_shared <- list(
@@ -649,6 +655,7 @@ parse_system_arrays <- function(exprs, call) {
       is.null(x$lhs$array) &&
         !identical(x$special, "parameter") &&
         !identical(x$special, "delay") &&
+        !identical(x$special, "data") &&
         !(identical(x$special, "output") && isTRUE(x$rhs$expr))
     })
     if (any(err)) {
@@ -668,6 +675,9 @@ parse_system_arrays <- function(exprs, call) {
     unlist(lapply(dim_nms, odin_dim_name)),
     dim_nms)
 
+  ## NOTE: this is where we work out that 'd' is an array equation,
+  ## and that dim_d is an equation that stores the dimension.  We need
+  ## to push this into creation though.
   is_array_assignment <- is_array | (nms %in% dim_nms)
   for (i in which(is_array_assignment)) {
     eq <- exprs[[i]]
@@ -697,7 +707,7 @@ parse_system_arrays <- function(exprs, call) {
   if (any(is_compare)) {
     id[is_compare] <- paste0(
       "compare:",
-      vcapply(exprs[is_compare], function(x) as.character(x$rhs$args[[1]])))
+      vcapply(exprs[is_compare], function(x) x$target$name))
   }
   ## Need to treat browser here, as the error we get below is poor if
   ## we have multiple browser calls.

@@ -376,11 +376,10 @@ test_that("can build simple compare function", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
-      "  if (!std::isnan(data.d)) {",
-      "    odin_ll += monty::density::normal(data.d, x, 1, true);",
-      "  }",
+      "  odin_ll += unless_nan(monty::density::normal(data.d, x, 1, true));",
       "  return odin_ll;",
       "}"))
 })
@@ -398,12 +397,11 @@ test_that("can build more complex compare function", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type a = x / data.d;",
-      "  if (!std::isnan(data.d)) {",
-      "    odin_ll += monty::density::normal(data.d, x, a, true);",
-      "  }",
+      "  odin_ll += unless_nan(monty::density::normal(data.d, x, a, true));",
       "  return odin_ll;",
       "}"))
 })
@@ -460,12 +458,11 @@ test_that("variables involving data are computed within compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type a = data.d1 / data.d2;",
-      "  if (!std::isnan(data.d1) && !std::isnan(data.d2)) {",
-      "    odin_ll += monty::density::normal(data.d1, x, a, true);",
-      "  }",
+      "  odin_ll += unless_nan(monty::density::normal(data.d1, x, a, true));",
       "  return odin_ll;",
       "}"))
 
@@ -520,12 +517,11 @@ test_that("pull recursive dependencies into compare_data", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
       "  const real_type p = monty::math::exp(x);",
-      "  if (!std::isnan(data.d)) {",
-      "    odin_ll += monty::density::poisson(data.d, p, true);",
-      "  }",
+      "  odin_ll += unless_nan(monty::density::poisson(data.d, p, true));",
       "  return odin_ll;",
       "}"))
 })
@@ -974,12 +970,11 @@ test_that("can generate system with array variable used in compare", {
   expect_equal(
     generate_dust_system_compare_data(dat),
     c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto * x = state + 0;",
       "  const auto y = state[2];",
       "  real_type odin_ll = 0;",
-      "  if (!std::isnan(data.d)) {",
-      "    odin_ll += monty::density::normal(data.d, x[0] + x[1], y, true);",
-      "  }",
+      "  odin_ll += unless_nan(monty::density::normal(data.d, x[0] + x[1], y, true));",
       "  return odin_ll;",
       "}"))
 })
@@ -2939,5 +2934,71 @@ test_that("can use depend on output variables correctly", {
       "  const real_type b = 2 * a;",
       "  state[1] = a;",
       "  state[2] = b;",
+      "}"))
+})
+
+
+test_that("can use vector data", {
+  dat <- odin_parse({
+    initial(y[]) <- 0
+    update(y[]) <- Normal(y[i], sd)
+    dim(y) <- len
+    len <- parameter()
+    sd <- parameter()
+    observed <- data()
+    dim(observed) <- len
+    observed[] ~ Normal(y[i], sd)
+  })
+  dat <- generate_prepare(dat)
+
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
+      "  const auto * y = state + 0;",
+      "  real_type odin_ll = 0;",
+      "  for (size_t i = 1; i <= shared.dim.observed.size; ++i) {",
+      "    odin_ll += unless_nan(monty::density::normal(data.observed[i - 1], y[i - 1], shared.sd, true));",
+      "  }",
+      "  return odin_ll;",
+      "}"))
+
+  expect_equal(
+    generate_dust_system_data_type(dat),
+    c("struct data_type {",
+      "  std::vector<real_type> observed;",
+      "};"))
+  expect_equal(
+    generate_dust_system_build_data(dat),
+    c(method_args$build_data,
+      "  auto observed = std::vector<real_type>(shared.dim.observed.size);",
+      '  dust2::r::read_real_array(data, shared.dim.observed, observed.data(), "observed", true);',
+      "  return data_type{observed};",
+      "}"))
+})
+
+
+test_that("can reduce over data", {
+  dat <- odin_parse({
+    initial(y[]) <- 0
+    update(y[]) <- Normal(y[i], sd)
+    dim(y) <- len
+    len <- parameter()
+    sd <- parameter()
+    d <- data()
+    dim(d) <- len
+    d[] ~ Normal(y[i], d[i] / sum(d))
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_compare_data(dat),
+    c(method_args$compare_data,
+      "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
+      "  const auto * y = state + 0;",
+      "  real_type odin_ll = 0;",
+      "  for (size_t i = 1; i <= shared.dim.d.size; ++i) {",
+      "    odin_ll += unless_nan(monty::density::normal(data.d[i - 1], y[i - 1], data.d[i - 1] / dust2::array::sum<real_type>(data.d.data(), shared.dim.d), true));",
+      "  }",
+      "  return odin_ll;",
       "}"))
 })

@@ -20,11 +20,7 @@ parse_expr_assignment <- function(expr, src, call) {
   lhs <- parse_expr_assignment_lhs(expr[[2]], src, call)
   special <- lhs$special
   lhs$special <- NULL
-  if (lhs$name == "pi") {
-    odin_parse_error(
-      "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)
-  } else if (identical(special, "dim")) {
+  if (identical(special, "dim")) {
     lhs$name_data <- lhs$name
     lhs$name <- odin_dim_name(lhs$name)
     rhs <- parse_expr_assignment_rhs_dim(expr[[3]], src, call)
@@ -91,22 +87,8 @@ parse_expr_assignment <- function(expr, src, call) {
     }
   }
 
-  index_used <- intersect(INDEX, rhs$depends$variables)
-  if (length(index_used) > 0) {
-    n <- length(lhs$array)
-    err <- if (n == 0) index_used else intersect(index_used, INDEX[-seq_len(n)])
-    if (length(err) > 0) {
-      v <- err[length(err)]
-      i <- match(v, INDEX)
-      odin_parse_error(
-        c("Invalid index access used on rhs of equation: {squote(err)}",
-          i = paste("Your lhs has only {n} dimension{?s}, but index '{v}'",
-                    "would require {match(v, INDEX)}")),
-        "E1021", src, call)
-    }
-    ## index variables are not real dependencies, so remove them:
-    rhs$depends$variables <- setdiff(rhs$depends$variables, INDEX)
-  }
+  rhs$depends$variables <- parse_expr_check_index_usage(
+    rhs$depends$variables, lhs$array, src, call)
 
   if (lhs$name %in% rhs$depends$variables) {
     allow_self_reference <-
@@ -172,11 +154,11 @@ parse_expr_assignment_lhs <- function(lhs, src, call) {
             "Invalid call to 'dim()' on lhs; '{deparse1(x)}' is not a symbol",
             "E1005", src, call)
         }
-        deparse(x)
+        parse_expr_check_lhs_name(x, special, is_array, src, call)
       })
 
       return(list(
-        name = lhs[1],
+        name = lhs[[1]], # may be more than one if dims are aliased
         names = lhs,
         special = special))
     }
@@ -355,17 +337,23 @@ parse_expr_assignment_rhs_dim <- function(rhs, src, call) {
 
 
 parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
+  is_compare <- identical(special, "~")
+
   if (!rlang::is_symbol(lhs)) {
     ## We will error, the only question is how.
     if (is_array) {
-      if (is.null(special)) {
+      if (is_compare) {
+        context <- "on the lhs of a `~` array comparison"
+      } else if (is.null(special)) {
         context <- "on the lhs of array assignment"
       } else {
         context <- sprintf("within '%s()' on the lhs of array assignment",
                            special)
       }
     } else {
-      if (is.null(special)) {
+      if (is_compare) {
+        context <- "on the lhs of a `~` comparison"
+      } else if (is.null(special)) {
         context <- "on the lhs of assignment"
       } else {
         context <- sprintf("within '%s()' on the lhs of assignment", special)
@@ -379,8 +367,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
     }
 
     fn_str <- deparse1(lhs[[1]])
-
-    if (is.null(special)) {
+    if (is_compare || is.null(special)) {
       if (is_array && rlang::is_call(lhs, SPECIAL_LHS) && length(lhs) >= 2) {
         target <- deparse1(lhs[[2]])
         hint <- paste("Did you mean '{fn_str}({target}[...])' rather than",
@@ -391,7 +378,7 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
           "E1005", src, call)
       }
       fn_near <- near_match(fn_str, SPECIAL_LHS)
-      if (length(fn_near) == 1) {
+      if (!is_compare && length(fn_near) == 1) {
         hint <- c(i = "Did you mean '{fn_near}()'?")
       } else {
         hint <- NULL
@@ -427,6 +414,11 @@ parse_expr_check_lhs_name <- function(lhs, special, is_array, src, call) {
     odin_parse_error(
       "Invalid name '{name}' starts with reserved prefix '{prefix}'",
       "E1047", src, call)
+  }
+  if (name == "pi") {
+    odin_parse_error(
+      "Do not use `pi` on the left-hand-side of an expression",
+      "E1061", src, call)
   }
 
   name
@@ -643,28 +635,49 @@ parse_expr_assignment_rhs_delay <- function(rhs, src, call) {
 parse_expr_compare <- function(expr, src, call) {
   lhs <- parse_expr_compare_lhs(expr[[2]], src, call)
   rhs <- parse_expr_compare_rhs(expr[[3]], src, call)
-  if (lhs == "pi") {
-    odin_parse_error(
-      "Do not use `pi` on the left-hand-side of an expression",
-      "E1061", src, call)
-  }
-  rhs$args <- c(lhs, rhs$args)
-  rhs$depends$variables <- union(rhs$depends$variables, as.character(lhs))
+  rhs$args <- c(lhs$expr, rhs$args)
+  rhs$depends$variables <- unique(c(rhs$depends$variables,
+                                    lhs$depends$variables,
+                                    lhs$name))
+  rhs$depends$variables <- parse_expr_check_index_usage(
+    rhs$depends$variables, lhs$array, src, call)
   rhs$density$expr <- substitute_(
     rhs$density$expr,
     list2env(set_names(rhs$args, rhs$density$args)))
-  list(rhs = rhs,
-       src = src)
+  list(target = list(name = lhs$name),
+       rhs = rhs,
+       src = src,
+       array = lhs$array)
 }
 
 
 parse_expr_compare_lhs <- function(lhs, src, call) {
-  if (!is.symbol(lhs)) {
-    odin_parse_error(
-      "The left hand side of a `~` comparison must be a symbol",
-      "E1012", src, call)
+  is_array <- rlang::is_call(lhs, "[")
+
+  ## Duplicates a little code within parse_expr_assignment_lhs(); we
+  ## might want to split the end of that off?
+  if (is_array) {
+    name <- parse_expr_check_lhs_name(lhs[[2]], "~", is_array, src, call)
+    array <- Map(parse_expr_check_lhs_index,
+                 seq_len(length(lhs) - 2),
+                 lhs[-(1:2)],
+                 MoreArgs = list(name = name, src = src, call = call))
+    depends <- join_dependencies(
+      lapply(array, function(x)
+        join_dependencies(lapply(x[c("at", "from", "to")], find_dependencies))))
+    expr <- lhs
+    expr[-(1:2)] <- lapply(INDEX[seq_len(length(expr) - 2)], as.symbol)
+  } else {
+    name <- parse_expr_check_lhs_name(lhs, "~", is_array, src, call)
+    expr <- lhs
+    array <- NULL
+    depends <- NULL
   }
-  lhs
+
+  list(name = name,
+       expr = expr,
+       array = array,
+       depends = depends)
 }
 
 
@@ -1051,4 +1064,25 @@ parse_index <- function(name_data, dim, value) {
   } else {
     NULL
   }
+}
+
+
+parse_expr_check_index_usage <- function(variables, array, src, call) {
+  index_used <- intersect(INDEX, variables)
+  if (length(index_used) > 0) {
+    n <- length(array)
+    err <- if (n == 0) index_used else intersect(index_used, INDEX[-seq_len(n)])
+    if (length(err) > 0) {
+      v <- err[length(err)]
+      i <- match(v, INDEX)
+      odin_parse_error(
+        c("Invalid index access used on rhs of equation: {squote(err)}",
+          i = paste("Your lhs has only {n} dimension{?s}, but index '{v}'",
+                    "would require {match(v, INDEX)}")),
+        "E1021", src, call)
+    }
+    ## index variables are not real dependencies, so remove them:
+    variables <- setdiff(variables, INDEX)
+  }
+  variables
 }

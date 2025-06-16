@@ -941,14 +941,13 @@ test_that("LHS of assignment with [] on sum is accepted", {
 
 
 test_that("LHS of compare must use correct rank", {
-  skip(message = "Arrays in data not implemented - see mrc-5711")
-
   expect_error(
     odin_parse({
       initial(x) <- 0
-      update(x) <- a[1, 1] + 1
+      update(x) <- 1
       a[1] ~ Poisson(2)
       dim(a) <- c(2, 2)
+      a <- data()
     }),
     "Array rank in expression differs from the rank")
 })
