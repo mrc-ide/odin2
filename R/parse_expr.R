@@ -857,7 +857,7 @@ parse_expr_usage <- function(expr, src, call) {
 }
 
 
-parse_expr_check_call <- function(expr, usage, src, call) {
+parse_expr_check_call <- function(expr, src, call) {
   fn <- as.character(expr[[1]])
   usage <- FUNCTIONS[[fn]]
   if (is.function(usage)) {
