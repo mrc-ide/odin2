@@ -93,7 +93,10 @@ parse_check_usage_find_unknown <- function(dat, call) {
       })
   }
 
-  unknown <- lapply(eqs, function(eq) setdiff(eq$rhs$depends$variables, known))
+  unknown <- lapply(eqs, function(eq) {
+    used <- c(eq$rhs$depends$variables, eq$lhs$depends$variables)
+    setdiff(used, known)
+  })
 
   err <- lengths(unknown) > 0
   if (!any(err)) {
