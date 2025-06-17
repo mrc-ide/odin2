@@ -1379,3 +1379,14 @@ test_that("require that time for interpolation is reasonable", {
     err$body[[1]],
     "The last dimension of 'ay' must be the same as the length of 'at'")
 })
+
+
+test_that("throw incorrect if/else errors correctly", {
+  ## Regression test for bug reported by Ed and Keith
+  expect_error(
+    odin_parse({
+      initial(X) <- 0
+      update(X) <- if (X < 10) X + 1
+    }),
+    "All 'if' statements must have an 'else' clause")
+})
