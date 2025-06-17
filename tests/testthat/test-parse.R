@@ -1329,6 +1329,18 @@ test_that("don't error if array sizes are not provably correct for interp", {
 })
 
 
+test_that("sensible error if given invalid array index", {
+  expect_error(
+    odin_parse({
+      a <- parameter(10)
+      initial(X[1:a]) <- 0
+      dim(X) <- a
+      update(X[1:b]) <- X[i]+1
+    }),
+    "Unknown variable used in odin code: 'b'")
+})
+
+
 test_that("require that time for interpolation is reasonable", {
   err <- expect_error(
     odin_parse({
