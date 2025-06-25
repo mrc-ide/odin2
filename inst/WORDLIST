@@ -3,6 +3,7 @@ MVP
 ODEs
 Poisson
 R's
+RStudio
 WIP
 cdot
 codecov
@@ -11,6 +12,7 @@ cpp
 dI
 dR
 dS
+datastream
 discretising
 dt
 etc
@@ -33,6 +35,7 @@ rethrown
 sim
 stochasticity
 susceptibles
+tidyverse
 unfilter
 unfilters
 unintrusive

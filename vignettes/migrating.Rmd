@@ -289,7 +289,7 @@ to provide a default argument to the delayed value before `tau` time had elapsed
 
 ## The delay time must be constant
 
-We require that the delay time is known at first model initialisation and not updated subsequently (i.e., that it is numeric, a literal value assigned to symbol or a paramter with `constant = TRUE`).
+We require that the delay time is known at first model initialisation and not updated subsequently (i.e., that it is numeric, a literal value assigned to symbol or a parameter with `constant = TRUE`).
 
 # General changes
 
