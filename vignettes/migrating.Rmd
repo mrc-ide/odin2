@@ -420,4 +420,4 @@ y <- dust_system_simulate(sys, 0:5)
 dust_unpack_state(sys, y)
 ```
 
-Here, the variable `x` is updated as for the original output. The variable `y1` column computes the relationship with the `x` at the beginning of the time step, while `y2` is most equivalent to our previous `output` command and requires storing the that will become the updated `x` in order to use that value to both update `x` and `y2`.
+Here, the variable `x` is updated as for the original output. The variable `y1` column computes the relationship with the `x` at the beginning of the time step, while `y2` is most equivalent to our previous `output` command and requires storing the value that will become the updated `x` in order to use that value to both update `x` and `y2`.
