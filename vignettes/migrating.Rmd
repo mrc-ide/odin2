@@ -16,10 +16,11 @@ source("helpers.R")
 fast_and_quiet_dust()
 ```
 
-This vignette discusses key differences with odin version 1.
+This vignette discusses key differences with odin version 1, and with `odin.dust`.
 
 ```{r}
 library(odin2)
+library(dust2)
 ```
 
 # New features
@@ -98,7 +99,6 @@ d ~ Normal(0, 1)
 ```
 
 which reads as: `d` is normally distributed with a mean of 0 and standard deviation of 1.
-
 
 ## Vector parameters assign without array indices
 
@@ -303,6 +303,15 @@ The relationship between packages has changed.  Previously `mcstate` "knew" abou
 
 Because we now compile to C++ via `dust2`, the compilation times have massively increased.  Previously, compilation of a simple model took less than a second, but now this will take 6 seconds or so.  You can alleviate this to a degree during development by specifying `debug = TRUE` when compiling, which reduces this down to about 3 seconds.  These times are from my workstation but I expect the relative differences to hold (we're probably 10x slower than previously but can be "only" 5x slower if you turn off optimisation).  If you were previously using `odin.dust` you should notice little change here.
 
+## Loss of features from odin 1.x
+
+Some original odin 1.x features have been lost:
+
+For discrete-time systems:
+
+* **You may not use `output()`**; see below for workarounds and the reasons for this change.
+* **Delays are not supported**; they never worked well, particularly for stochastic systems.
+
 # Updating old code
 
 If you compile odin code that contains any of the changes above, it will try and update the code to the new version and keep going:
@@ -357,3 +366,58 @@ and now the code contains:
 ```{r echo = FALSE, results = "asis"}
 r_output(readLines(path))
 ```
+
+## Avoiding `output()` in discrete-time systems
+
+If you have odin 1.x code, you may have a system that uses `output()` in discrete-time; this will fail to compile.
+
+```{r, error = TRUE}
+odin({
+  initial(x) <- 1
+  update(x) <- x + 1
+  output(y) <- x / 2
+})
+```
+
+Previously, this would have worked to create a system where you have one input variable (on which the system depends) and one output variable (entirely derived from the inputs), producing output like
+
+```
+#>      step x   y
+#> [1,]    0 1 0.5
+#> [2,]    1 2 1.0
+#> [3,]    2 3 1.5
+#> [4,]    3 4 2.0
+#> [5,]    4 5 2.5
+#> [6,]    5 6 3.0
+```
+
+(this comes from [the `odin.dust` migration guide](https://mrc-ide.github.io/odin.dust/articles/porting.html#avoiding-output))
+
+This is important in ODE models because there are often things that you want to observe that are functions of the system but for which you can't write out equations to describe them in terms of their rates --- the sum over a set of variables for example.
+
+Note here how the `x` used in the calculation is really the `x` at the *end* of a time step, not the `x` on inputs, which means that the output column satisfies `y == x / 2`.  This turns out to be very hard to get right and reason about, and involved some fairly unpleasant bookkeeping in `dde` (the package that we used to drive these systems); in effect we run an additional time step at the end of the run in order to compute these `output` variables, and that is inefficient for `dust`'s use within a particle filter, and poorly behaved with anything that used random numbers.
+
+Additionally, there is no great need for `output` for discrete time models, as we can treat `y` above as just another variable.  This also allows us to be more explicit about when within the time step this output is being computed:
+
+```{r}
+gen <- odin({
+  initial(x) <- 1
+  new_x <- x + 1
+  update(x) <- new_x
+  initial(y1) <- 0
+  initial(y2) <- 0
+  update(y1) <- x / 2
+  update(y2) <- new_x / 2
+})
+```
+
+We can run this:
+
+```{r}
+sys <- dust_system_create(gen)
+y <- dust_system_set_state_initial(sys)
+y <- dust_system_simulate(sys, 0:5)
+dust_unpack_state(sys, y)
+```
+
+Here, the variable `x` is updated as for the original output. The variable `y1` column computes the relationship with the `x` at the beginning of the time step, while `y2` is most equivalent to our previous `output` command and requires storing the that will become the updated `x` in order to use that value to both update `x` and `y2`.
