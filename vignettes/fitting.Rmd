@@ -321,7 +321,7 @@ where the syntax generalises our approach to handling arrays for the rest of the
 
 Missing data will be handled elementwise, so this calculation is applied to every age group that has data.
 
-Passing this data into the systen is a bit awkward as we no longer have a nice time-by-datastream variable.  The way we support this is by "list columns", which you may have seen in tidyverse packages (for example [`tidyr::nest`](https://tidyr.tidyverse.org/reference/nest.html) and [its vignette](https://tidyr.tidyverse.org/articles/nest.html)).
+Passing this data into the system is a bit awkward as we no longer have a nice time-by-datastream variable.  The way we support this is by "list columns", which you may have seen in tidyverse packages (for example [`tidyr::nest`](https://tidyr.tidyverse.org/reference/nest.html) and [its vignette](https://tidyr.tidyverse.org/articles/nest.html)).
 
 Normally, you might make a time-by-incidence `data.frame` by writing:
 

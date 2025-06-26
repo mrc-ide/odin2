@@ -60,7 +60,7 @@ initial(x) <- 0
 
 which describes a counter.
 
-## Continous time models
+## Continuous time models
 
 There are two special considerations for ODE models.
 
