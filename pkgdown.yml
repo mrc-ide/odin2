@@ -1,0 +1,16 @@
+pandoc: 3.1.11
+pkgdown: 2.1.3
+pkgdown_sha: ~
+articles:
+  debugging: debugging.html
+  details: details.html
+  errors: errors.html
+  fitting: fitting.html
+  functions: functions.html
+  migrating: migrating.html
+  odin2: odin2.html
+  packaging: packaging.html
+last_built: 2025-06-26T13:40Z
+urls:
+  reference: https://mrc-ide.github.io/odin2/reference
+  article: https://mrc-ide.github.io/odin2/articles
