@@ -20,6 +20,7 @@ generate_dust_system <- function(dat) {
 
 generate_dust_parts <- function() {
   list(
+    state_struct = generate_dust_system_state_struct,
     shared_state = generate_dust_system_shared_state,
     internal_state = generate_dust_system_internal_state,
     data_type = generate_dust_system_data_type,
@@ -87,13 +88,59 @@ generate_dust_system_attributes <- function(dat) {
 }
 
 
+generate_dust_system_state_struct <- function(dat) {
+  ## TODO: make sure that we cope here with output and special (the
+  ## latter not yet handled directly in odin, actually)
+  ##
+  ## TODO: same treatment for adjoint
+  ##
+  ## TODO: we can do this for each packing, I think
+  stopifnot(length(dat$storage$contents$output) == 0)
+
+  location <- "state"
+  packing <- dat$storage$packing[[location]]
+  arrays <- dat$storage$arrays
+  type <- vcapply(packing$rank, function(r) {
+    if (r == 0) {
+      "T &"
+    } else if (r == 1) {
+      "T *"
+    } else {
+      sprintf("nda::array_of_rank<T, %d> &", r)
+    }
+  })
+
+  access <- vcapply(seq_len(nrow(packing)), function(i) {
+    rank <- packing$rank[[i]]
+    name <- packing$name[[i]]
+    offset <- generate_dust_sexp(call("OdinOffset", "state", name),
+                                 dat$sexp_data)
+    if (rank == 0) {
+      sprintf("%s[%s]", location, offset)
+    } else if (rank == 1) {
+      sprintf("%s + %s", location, offset)
+    } else {
+      sprintf("nda::array_ref_of_rank<%d, T>(%s + %s)", location, offset)
+    }
+  })
+  init <- sprintf("%s(%s)", packing$name, access)
+
+  body <- collector()
+  body$add("template <typename T>")
+  body$add(sprintf("struct unpack_%s_type {", location))
+  body$add(sprintf("  %s%s;", type, packing$name))
+  body$add(sprintf("  unpack_%s_type(T * %s) : %s {}",
+                   location, location, paste(init, collapse = ", ")))
+  body$add("};")
+  body$get()
+}
+
+
 generate_dust_system_shared_state <- function(dat) {
   nms <- dat$storage$contents$shared
-  type <- dat$storage$type[nms]
-  is_array <- nms %in% dat$storage$arrays$name
-  type[is_array] <- sprintf("std::vector<%s>", type[is_array])
+  type <- generate_array_storage_type(nms, dat)
 
-  is_interpolator <- type == "interpolator"
+  is_interpolator <- dat$storage$type[nms] == "interpolator"
   if (any(is_interpolator)) {
     type[is_interpolator] <- vcapply(
       dat$equations[names(which(is_interpolator))], function(eq) {
@@ -111,11 +158,12 @@ generate_dust_system_shared_state <- function(dat) {
 
   not_aliased <- dat$storage$arrays$alias == dat$storage$arrays$name
   if (any(not_aliased)) {
+    name <- dat$storage$arrays$name[not_aliased]
+    rank <- dat$storage$arrays$rank[not_aliased]
+    type <- ifelse(rank == 1, "size_t", sprintf("nda::shape_of_rank<%d>", rank))
     dims <- c(
       "struct dim_type {",
-      sprintf("  dust2::array::dimensions<%d> %s;",
-              dat$storage$arrays$rank[not_aliased],
-              dat$storage$arrays$name[not_aliased]),
+      sprintf("  %s %s;", type, name),
       "} dim;")
   } else {
     dims <- NULL
@@ -146,25 +194,36 @@ generate_dust_system_internal_state <- function(dat) {
     "struct internal_state {};"
   } else {
     nms <- dat$storage$contents$internal
-    stopifnot(all(nms %in% dat$storage$arrays$name)) # just assert for now
+    type <- generate_array_storage_type(nms, dat)
     c("struct internal_state {",
-      sprintf("  std::vector<%s> %s;", dat$storage$type[nms], nms),
+      sprintf("   %s %s;", type, nms),
       "};")
   }
 }
 
 
 generate_dust_system_data_type <- function(dat) {
-  data <- dat$storage$contents$data
-  if (length(data) == 0) {
+  nms <- dat$storage$contents$data
+  if (length(nms) == 0) {
     "using data_type = dust2::no_data;"
   } else {
-    type <- ifelse(data %in% dat$storage$arrays$name,
-                   "std::vector<real_type>", "real_type")
+    type <- generate_array_storage_type(nms, dat)
     c("struct data_type {",
-      sprintf("  %s %s;", type, data),
+      sprintf("  %s %s;", type, nms),
       "};")
   }
+}
+
+
+generate_array_storage_type <- function(nms, dat) {
+  arrays <- dat$storage$arrays
+  stopifnot(all(nms %in% arrays$name)) # just assert for now
+  i <- match(nms, arrays$name)
+  rank <- arrays$rank[i]
+  storage_type <- unname(dat$storage$type[nms])
+  ifelse(rank == 1,
+         sprintf("std::vector<%s>", storage_type),
+         sprintf("nda::array_of_rank<%s, %d>", storage_type, rank))
 }
 
 
@@ -202,23 +261,34 @@ generate_dust_system_packing <- function(name, dat) {
 
 generate_dust_system_build_shared <- function(dat) {
   options <- list(shared_exists = FALSE)
+  arrays <- dat$storage$arrays
   body <- collector()
-  if (nrow(dat$storage$arrays) > 0) {
+  if (nrow(arrays) > 0) {
     body$add("shared_state::dim_type dim;");
   }
   eqs <- get_phase_equations("build_shared", dat)
   allocated <- character()
   for (eq in eqs) {
     name <- eq$lhs$name
-    if (name %in% dat$storage$arrays$name && !(name %in% allocated)) {
-      size <- generate_dust_sexp(
-        call("OdinLength", name),
-        dat$sexp_data, options)
-      body$add(sprintf("std::vector<%s> %s(%s);",
-                       dat$storage$type[[name]], name, size))
+    ## TODO: What is going on with allocated? something with aliases?
+    if (name %in% arrays$name && !(name %in% allocated)) {
+      i <- match(name, arrays$name)
+      rank <- arrays$rank[[i]]
+      storage_type <- dat$storage$type[[name]]
+      if (rank == 1) {
+        size <- generate_dust_sexp(
+          call("OdinLength", name),
+          dat$sexp_data, options)
+        body$add(sprintf("std::vector<%s> %s(%s);",
+                         storage_type, name, size))
+      } else {
+        dim_name <- arrays$alias[[i]]
+        body$add(sprintf("nda::array_of_rank<%s, %d> %s(dim.%s);",
+                         storage_type, rank, name, dim_name))
+      }
       allocated <- c(allocated, name)
     }
-    body$add(generate_dust_assignment(eq, "state", dat, options))
+    body$add(generate_dust_assignment(eq, NULL, dat, options))
   }
 
   is_dim <- vlapply(eqs, function(x) identical(x$special, "dim"))
@@ -267,6 +337,8 @@ generate_dust_system_build_data <- function(dat) {
       i <- match(name, dat$storage$arrays$name)
       dim_name <- dat$storage$arrays$alias[i]
       dim <- sprintf("shared.dim.%s", dim_name)
+      message("updates required here for data")
+      browser()
       body$add(sprintf("auto %s = std::vector<real_type>(%s);", name, size))
       body$add(sprintf(
         'dust2::r::read_real_array(data, %s, %s.data(), "%s", true);',
@@ -288,13 +360,22 @@ generate_dust_system_build_internal <- function(dat) {
   if (length(dat$storage$contents$internal) == 0) {
     body <- "return internal_state{};"
   } else {
+    arrays <- dat$storage$arrays
     nms <- dat$storage$contents$internal
-    type <- dat$storage$type[nms]
-    size <- vcapply(nms, function(nm) {
-      generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+    allocate <- vcapply(nms, function(nm) {
+      i <- match(nm, arrays$name)
+      rank <- arrays$rank[i]
+      type <- dat$storage$type[[nm]]
+      if (rank == 1) {
+        size <- generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+        sprintf("std::vector<%s> %s(%s);", type, nm, size)
+      } else {
+        sprintf("nda::array_of_rank<%s, %d> %s(shared.dim.%s);",
+                type, rank, nm, nm)
+      }
     })
     body <- c(
-      sprintf("std::vector<%s> %s(%s);", type, nms, size),
+      allocate,
       sprintf("return internal_state{%s};", paste(nms, collapse = ", ")))
   }
   cpp_function("internal_state", "build_internal", args, body, static = TRUE)
@@ -305,7 +386,7 @@ generate_dust_system_update_shared <- function(dat) {
   body <- collector()
   eqs <- get_phase_equations("update_shared", dat)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state", dat))
+    body$add(generate_dust_assignment(eq, NULL, dat))
   }
   args <- c("cpp11::list" = "parameters", "shared_state&" = "shared")
   cpp_function("void", "update_shared", args, body$get(), static = TRUE)
@@ -333,11 +414,13 @@ generate_dust_system_initial <- function(dat) {
               "rng_state_type&" = "rng_state",
               "real_type*" = "state")
   }
+
   body <- collector()
+  body$add("unpack_state_type<real_type> odin_state(state);")
   eqs <- c(get_phase_equations("initial", dat),
            dat$phases$initial$variables)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state", dat))
+    body$add(generate_dust_assignment(eq, "odin_state", dat))
   }
   cpp_function("void", "initial", args, body$get(), static = TRUE)
 }
@@ -357,13 +440,20 @@ generate_dust_system_update <- function(dat) {
             "rng_state_type&" = "rng_state",
             "real_type*" = "state_next")
   body <- collector()
+
+  ## This is where we will write to at the end:
+  body$add("unpack_state_type<real_type> odin_state_next(state_next);")
+
+  ## For now at least, we'll retain the manually unpacked read-only
+  ## variables.  This could be changed to map things into the struct
+  ## too perhaps?
   unpack <- intersect(dat$variables, dat$phases$update$unpack)
   body$add(
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
   eqs <- c(get_phase_equations("update", dat),
            dat$phases$update$variables)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state_next", dat))
+    body$add(generate_dust_assignment(eq, "odin_state_next", dat))
   }
 
   body$add(generate_dust_print(dat, "update"))
@@ -385,6 +475,7 @@ generate_dust_system_rhs <- function(dat) {
             "real_type*" = "state_deriv")
 
   body <- collector()
+  body$add("unpack_state_type<real_type> odin_state_deriv(state_deriv);")
 
   if (any(dat$delays$in_rhs)) {
     arg_delays <- c(
@@ -399,7 +490,7 @@ generate_dust_system_rhs <- function(dat) {
   eqs <- c(get_phase_equations("deriv", dat),
            dat$phases$deriv$variables)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state_deriv", dat))
+    body$add(generate_dust_assignment(eq, "odin_state_deriv", dat))
   }
 
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
@@ -417,6 +508,8 @@ generate_dust_system_output <- function(dat) {
 
   body <- collector()
 
+  body$add("unpack_state_type<real_type> odin_state(state);")
+
   if (any(dat$delays$in_output)) {
     arg_delays <- c(
       "const dust2::ode::delay_result_type<real_type>&" = "delays")
@@ -429,7 +522,7 @@ generate_dust_system_output <- function(dat) {
     generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
   eqs <- get_phase_equations("output", dat)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state", dat))
+    body$add(generate_dust_assignment(eq, "odin_state", dat))
   }
 
   packing <- dat$storage$packing$state
@@ -550,7 +643,7 @@ generate_dust_system_compare_data <- function(dat) {
 
   eqs <- get_phase_equations("compare", dat)
   for (eq in eqs) {
-    body$add(generate_dust_assignment(eq, "state", dat))
+    body$add(generate_dust_assignment(eq, NULL, dat))
   }
 
   ## Then the actual comparison:
@@ -682,13 +775,12 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   name <- lhs$name
   is_array <- !is.null(lhs$array)
   if (is_array) {
-    idx <- flatten_index(
-      lapply(lhs$array, function(x) {
-        if (x$type == "range") as.name(x$name) else x$at
-      }),
-      name)
+    idx_parts <- lapply(lhs$array, function(x) {
+      if (x$type == "range") as.name(x$name) else x$at
+    })
+    idx <- build_index(idx_parts, "", dat, options)
   } else {
-    idx <- NULL
+    idx <- ""
   }
 
   location <- dat$storage$location[[name]]
@@ -698,27 +790,23 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
     }
     sprintf("const %s %s", dat$storage$type[[name]], name)
   } else if (location %in% c("shared", "internal")) {
-    if (is_array) {
-      stopifnot(!(name %in% dat$parameters$name))
-      sprintf("%s[%s]",
-              generate_dust_sexp(name, dat$sexp_data, options),
-              generate_dust_sexp(idx, dat$sexp_data, options))
-    } else if (location == "shared" && isFALSE(options$shared_exists)) {
+    name_write <- generate_dust_sexp(name, dat$sexp_data, options)
+    if (location == "shared" && isFALSE(options$shared_exists)) {
       sprintf("const %s %s",
               dat$storage$type[[name]],
-              generate_dust_sexp(name, dat$sexp_data, options))
+              name_write)
     } else {
-      generate_dust_sexp(name, dat$sexp_data, options)
+      sprintf("%s%s", name_write, idx)
     }
   } else if (location == "state") {
-    offset <- call("OdinOffset", "state", name)
-    if (is_array) {
-      offset <- expr_plus(idx, offset)
-    }
-    sprintf("%s[%s]",
-            name_state,
-            generate_dust_sexp(offset, dat$sexp_data, options))
+    stopifnot(!is.null(name_state))
+    ## This will be the *writable* state; for ode models this is
+    ## state_deriv and for discrete time models it is state_next
+    suffix <- if (dat$time == "discrete") "next" else "deriv"
+    sprintf("%s.%s%s", name_state, name, idx)
   } else if (location == "adjoint") {
+    stop("rewrite to use state struct")
+    stopifnot(!is.null(name_state))
     offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
       ## Something like
@@ -801,9 +889,13 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     } else {
       dims <- vcapply(dat$storage$arrays$dims[[i]], generate_dust_sexp,
                       dat$sexp_data, options)
-      dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims),
-                        collapse = ", ")
-      res <- sprintf("dim.%s.set({%s});", eq$lhs$name_data, dims_str)
+      if (rank == 1) {
+      } else {
+        dims_str <- paste(sprintf("static_cast<size_t>(%s)", dims),
+                          collapse = ", ")
+        res <- sprintf("dim.%s = nda::shape_of_rank<%d>{%s};",
+                       eq$lhs$name_data, length(dims), dims_str)
+      }
     }
   } else if (identical(eq$rhs$type, "interpolate")) {
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
@@ -1018,7 +1110,9 @@ generate_dust_system_delay_equation <- function(nm, dat) {
 
     eqs <- dat$delays$value[[i]]$equations
     for (eq in dat$equations[names(dat$equations) %in% eqs]) {
-      body$add(generate_dust_assignment(eq, "state_deriv", dat))
+      ## odin_state_deriv would be the alternative, but these should
+      ## not write derivatives so this is more accurate:
+      body$add(generate_dust_assignment(eq, NULL, dat))
     }
     body$add(assign)
     ret <- c(declare, cpp_body(body$get()))
@@ -1035,9 +1129,10 @@ generate_array_loops <- function(inner, depends, array, sexp_data, options) {
       from <- generate_dust_sexp(idx$from, sexp_data, options)
       to <- generate_dust_sexp(idx$to, sexp_data, options)
       size_fns <- c("length", "dim", "OdinDim", "OdinLength")
-      if (!rlang::is_call(idx$to, size_fns) && !is.numeric(idx$to)) {
-        to <- sprintf("static_cast<size_t>(%s)", to)
-      }
+      ## if (!rlang::is_call(idx$to, size_fns) && !is.numeric(idx$to)) {
+      ## We can relax this soon
+      to <- sprintf("static_cast<size_t>(%s)", to)
+      ##}
       res <- c(sprintf("for (size_t %s = %s; %s <= %s; ++%s) {",
                        idx$name, from, idx$name, to, idx$name),
                res,

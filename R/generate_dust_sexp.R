@@ -20,15 +20,23 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
       rank <- dat$arrays$rank[[match(name, dat$arrays$name)]]
       if (rank == 1) {
-        return(sprintf("%s%s.size", dim, name))
+        return(sprintf("%s%s", dim, name))
       } else {
-        return(sprintf("%s%s.dim[%d]", dim, name, expr[[3]] - 1))
+        return(sprintf("%s%s.dim(%d).extent()", dim, name, expr[[3]] - 1))
       }
     } else if (fn == "OdinLength") {
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
-      name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
-      return(sprintf("%s%s.size", dim, name))
+      i <- match(expr[[2]], dat$arrays$name)
+      name <- dat$arrays$alias[[i]]
+      rank <- dat$arrays$rank[[i]]
+      if (rank == 1) {
+        return(sprintf("%s%s", dim, name))
+      } else {
+        stop("write size for nda")
+        # return(sprintf("%s%s.size", dim, name))
+      }
     } else if (fn == "OdinMult") {
+      stop("We should no longer need top call OdinMult")
       dim <- if (isFALSE(options$shared_exists)) "dim." else "shared.dim."
       name <- dat$arrays$alias[match(expr[[2]], dat$arrays$name)]
       return(sprintf("%s%s.mult[%d]", dim, name, expr[[3]] - 1))
@@ -220,10 +228,21 @@ generate_dust_dat <- function(location, packing, type, arrays) {
 
 generate_dust_array_access <- function(expr, dat, options) {
   target <- generate_dust_sexp(expr[[2]], dat, options)
-  name <- as.character(expr[[2]])
   options$array_access <- TRUE
-  idx <- generate_dust_sexp(flatten_index(expr[-(1:2)], name), dat, options)
-  sprintf("%s[%s]", target, idx)
+  build_index(expr[-(1:2)], target, dat, options)
+}
+
+
+build_index <- function(idx, target, dat, options) {
+  idx_str <- vcapply(idx, function(el) {
+    generate_dust_sexp(expr_minus(el, 1), dat, options)
+  })
+  if (length(idx) == 1) {
+    sprintf("%s[%s]", target, idx_str)
+  } else {
+    ## or we could try "%s[{%s}]" but it should be the same
+    sprintf("%s(%s)", target, paste(idx_str, collapse = ", "))
+  }
 }
 
 
