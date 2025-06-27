@@ -188,41 +188,41 @@ test_that("can deparse constraints", {
 
 
 test_that("solve simple constraints", {
-  expect_equal(constraint_solve(1, 2, FALSE), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 2, FALSE), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 1, FALSE), list(valid = FALSE))
-  expect_equal(constraint_solve(quote(a), quote(a), FALSE),
+  expect_equal(constraint_solve(1, 2, "max"), list(valid = TRUE))
+  expect_equal(constraint_solve(2, 2, "max"), list(valid = TRUE))
+  expect_equal(constraint_solve(2, 1, "max"), list(valid = FALSE))
+  expect_equal(constraint_solve(quote(a), quote(a), "max"),
                list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + b), quote(a + b), FALSE),
+  expect_equal(constraint_solve(quote(a + b), quote(a + b), "max"),
                list(valid = TRUE))
 
-  expect_equal(constraint_solve(quote(a - 1), quote(a), FALSE),
+  expect_equal(constraint_solve(quote(a - 1), quote(a), "max"),
                list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + 1), quote(a), FALSE),
+  expect_equal(constraint_solve(quote(a + 1), quote(a), "max"),
                list(valid = FALSE))
 
   expect_equal(
     constraint_solve(quote(OdinParameter("a") - 1),
                      quote(OdinParameter("a")),
-                     FALSE),
+                     "max"),
     list(valid = TRUE))
   expect_equal(
     constraint_solve(quote(OdinParameter("a") + 1),
                      quote(OdinParameter("a")),
-                     FALSE),
+                     "max"),
     list(valid = FALSE))
   expect_equal(
     constraint_solve(quote(OdinParameter("a")),
                      quote(OdinParameter("b")),
-                     FALSE),
+                     "max"),
     list(valid = NA,
          constraint = quote(OdinParameter("b") >= OdinParameter("a"))))
 })
 
 
 test_that("tidy expression", {
-  expect_equal(constraint_tidy(quote(a + 1), FALSE), quote(a + 1 >= 0))
-  expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x")), FALSE),
+  expect_equal(constraint_tidy(quote(a + 1), "max"), quote(a + 1 >= 0))
+  expect_equal(constraint_tidy(quote(-a - 1 + OdinParameter("x")), "max"),
                quote(OdinParameter("x") >= 1 + a))
 })
 
@@ -265,4 +265,70 @@ test_that("difficult constraints in sum expressions", {
       dim(a) <- c(2, 2)
     }),
     "Cannot validate array access")
+})
+
+
+test_that("can identify trivial negative array access", {
+  err <- expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[-2]
+      dim(b) <- 3
+      b <- parameter()
+    }),
+    "Out of range read of 'b' in 'b[-2]'",
+    fixed = TRUE)
+  expect_equal(
+    err$body,
+    c(i = "Attempting to read before the start of 'b'",
+      x = "Trying to read element: -2"))
+})
+
+
+test_that("can identify simple negative array access", {
+  err <- expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[v - 2]
+      v <- 1
+      dim(b) <- 3
+      b <- parameter()
+    }),
+    "Out of range read of 'b' in 'b[v - 2]'",
+    fixed = TRUE)
+  expect_equal(
+    err$body,
+    c(i = "Attempting to read before the start of 'b'",
+      x = "Trying to read element: -1"))
+})
+
+
+test_that("can identify simple negative matrix access", {
+  err <- expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[v - 2, 2]
+      v <- 1
+      dim(b) <- c(3, 2)
+      b <- parameter()
+    }),
+    "Out of range read of 'b' in dimension 1 of 'b[v - 2, 2]'",
+    fixed = TRUE)
+  expect_equal(
+    err$body,
+    c(i = "Attempting to read before the start of dimension 1 of 'b'",
+      x = "Trying to read element: -1"))
+})
+
+
+test_that("can prevent writing to negative index", {
+  expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[1]
+      dim(b) <- 4
+      b[length(b) - 5] <- 1
+    }),
+    "Out of range write of 'b' in 'b[length(b) - 5]'",
+    fixed = TRUE)
 })
