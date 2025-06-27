@@ -94,7 +94,7 @@ parse_array_bounds_extract_constraint_lhs <- function(eq) {
       for (v in c("from", "to", "at")) {
         if (!is.null(idx[[v]])) {
           ret$add(constraint(
-            "access:write", name, expr, i, idx[[v]], FALSE, eq$src$index))
+            "access:write", name, expr, i, idx[[v]], "max", eq$src$index))
         }
       }
     }
@@ -159,10 +159,15 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
           idx <- eq$lhs$array[[match(uses, INDEX)]]
           for (v in c("from", "to", "at")) {
             if (!is.null(idx[[v]])) {
-              stop("writeme")
               at_i <- substitute_(at[[i]], set_names(idx[v], uses))
-              ret$add(constraint(
-                "access:read", name, expr, i, at_i, "max", eq$src$index))
+              if (v != "to") {
+                ret$add(constraint(
+                  "access:read", name, expr, i, at_i, "min", eq$src$index))
+              }
+              if (v != "from") {
+                ret$add(constraint(
+                  "access:read", name, expr, i, at_i, "max", eq$src$index))
+              }
             }
           }
         } else {
@@ -342,18 +347,15 @@ constraint_solve <- function(at, size, mode) {
   }
   maths <- monty::monty_differentiation()$maths
 
-  at <- maths$plus_fold(lapply(expr_to_sum_of_parts(at), maths$uminus))
-  expr <- expr_factorise(maths$plus(size, at))
+  if (mode == "min") {
+    stop("WRITEME")
+  } else {
+    at <- maths$plus_fold(lapply(expr_to_sum_of_parts(at), maths$uminus))
+    expr <- expr_factorise(maths$plus(size, at))
+  }
 
   if (is.numeric(expr)) {
-    if (mode == "min") {
-      browser()
-    }
-    valid <- switch(mode,
-                    exact = expr == 0,
-                    max = expr >= 0,
-                    min = expr <= 0) # unsure about this, we'll see soon
-    return(list(valid = valid))
+    return(list(valid = if (mode == "exact") expr == 0 else expr >= 0))
   }
 
   list(valid = NA, constraint = constraint_tidy(expr, mode))
