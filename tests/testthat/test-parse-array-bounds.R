@@ -319,3 +319,16 @@ test_that("can identify simple negative matrix access", {
     c(i = "Attempting to read before the start of dimension 1 of 'b'",
       x = "Trying to read element: -1"))
 })
+
+
+test_that("can prevent writing to negative index", {
+  expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[1]
+      dim(b) <- 4
+      b[length(b) - 5] <- 1
+    }),
+    "Out of range write of 'b' in 'b[length(b) - 5]'",
+    fixed = TRUE)
+})
