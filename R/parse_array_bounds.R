@@ -93,8 +93,14 @@ parse_array_bounds_extract_constraint_lhs <- function(eq) {
       idx <- eq$lhs$array[[i]]
       for (v in c("from", "to", "at")) {
         if (!is.null(idx[[v]])) {
-          ret$add(constraint(
-            "access:write", name, expr, i, idx[[v]], "max", eq$src$index))
+          if (v != "to") {
+            ret$add(constraint(
+              "access:write", name, expr, i, idx[[v]], "min", eq$src$index))
+          }
+          if (v != "from") {
+            ret$add(constraint(
+              "access:write", name, expr, i, idx[[v]], "max", eq$src$index))
+          }
         }
       }
     }
