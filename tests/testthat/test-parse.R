@@ -1390,3 +1390,28 @@ test_that("throw incorrect if/else errors correctly", {
     }),
     "All 'if' statements must have an 'else' clause")
 })
+
+
+test_that("Throw sensible error on invalid call to output()", {
+  ## Reported by Paul Huxley (#155), we throw an error while
+  ## processing the compatibility checks that prevented the real error
+  ## being thrown
+  expect_error(
+    odin_parse({
+      y <- 1
+      output() <- y
+    }),
+    "Invalid call to special function 'output'")
+})
+
+
+test_that("Throw sensible error on invalid call to compare()", {
+  ## Previously, the same basic error as #155
+  expect_error(
+    odin_parse({
+      y <- 1
+      compare() ~ y
+    }),
+    "Invalid special function 'compare()' on the lhs of a `~` comparison",
+    fixed = TRUE)
+})

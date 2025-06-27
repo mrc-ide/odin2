@@ -248,7 +248,8 @@ parse_compat_fix_output_self <- function(expr, call) {
   is_output_expr <-
     rlang::is_call(expr$value, c("<-", "=")) &&
     rlang::is_call(expr$value[[2]], "output") &&
-    !isTRUE(expr$value[[3]])
+    !isTRUE(expr$value[[3]]) &&
+    length(expr$value[[2]]) == 2
   if (is_output_expr) {
     lhs <- expr$value[[2]][[2]]
     rhs <- expr$value[[3]]
@@ -275,7 +276,8 @@ parse_compat_fix_output_self <- function(expr, call) {
 parse_compat_fix_compare <- function(expr, call) {
   is_compare <-
     rlang::is_call(expr$value, "~") &&
-    rlang::is_call(expr$value[[2]], "compare")
+    rlang::is_call(expr$value[[2]], "compare") &&
+    length(expr$value[[2]]) == 2
   if (is_compare) {
     original <- expr$value
     expr$value[[2]] <- expr$value[[2]][[2]]
