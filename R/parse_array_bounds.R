@@ -339,7 +339,8 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
 
 
 constraint_solve <- function(at, size, mode) {
-  if (is.numeric(at) && is.numeric(size)) {
+  ## We can compute the validity here immediately:
+  if (is.numeric(at) && (is.numeric(size) || mode == "min")) {
     if (mode == "exact") {
       return(list(valid = at == size))
     } else if (mode == "max") {
@@ -348,13 +349,15 @@ constraint_solve <- function(at, size, mode) {
       return(list(valid = at >= 1))
     }
   }
+
+  ## This is common enough that we can also determine that we're ok:
   if (identical(at, size)) {
     return(list(valid = TRUE))
   }
   maths <- monty::monty_differentiation()$maths
 
   if (mode == "min") {
-    stop("WRITEME")
+    expr <- maths$minus(at, 1)
   } else {
     at <- maths$plus_fold(lapply(expr_to_sum_of_parts(at), maths$uminus))
     expr <- expr_factorise(maths$plus(size, at))
@@ -487,14 +490,7 @@ constraint_finalise <- function(constraints) {
 
 
 constraint_tidy <- function(expr, mode) {
-  if (mode == "min") {
-    browser()
-  }
-  op <- switch(
-    mode,
-    "exact" = "==",
-    "max" = ">=",
-    "min" = "<=")
+  op <- if (mode == "exact") "==" else ">="
   if ("OdinParameter" %in% all.names(expr)) {
     maths <- monty::monty_differentiation()$maths
     parts <- expr_to_sum_of_parts(expr)
@@ -561,10 +557,10 @@ parse_delays_extract_constraint <- function(dat) {
         expr <- eq$src$value
         for (j in seq_len(rank)) {
           ret$add(constraint(
-            "access:write", name, expr, j, call("OdinDim", what, j), FALSE,
+            "access:write", name, expr, j, call("OdinDim", what, j), "max",
             eq$src$index))
           ret$add(constraint(
-            "access:read", what, expr, j, call("OdinDim", name, j), FALSE,
+            "access:read", what, expr, j, call("OdinDim", name, j), "max",
             eq$src$index))
         }
       }
