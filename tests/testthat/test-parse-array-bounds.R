@@ -266,3 +266,39 @@ test_that("difficult constraints in sum expressions", {
     }),
     "Cannot validate array access")
 })
+
+
+test_that("can identify simple negative array access", {
+  err <- expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[v - 2]
+      v <- 1
+      dim(b) <- 3
+      b <- parameter()
+    }),
+    "Out of range read of 'b' in 'b[v - 2]'",
+    fixed = TRUE)
+  expect_equal(
+    err$body,
+    c(i = "Attempting to read before the start of 'b'",
+      x = "Trying to read element: -1"))
+})
+
+
+test_that("can identify simple negative matrix access", {
+  err <- expect_error(
+    odin_parse({
+      initial(a) <- 1
+      update(a) <- b[v - 2, 2]
+      v <- 1
+      dim(b) <- c(3, 2)
+      b <- parameter()
+    }),
+    "Out of range read of 'b' in dimension 1 of 'b[v - 2, 2]'",
+    fixed = TRUE)
+  expect_equal(
+    err$body,
+    c(i = "Attempting to read before the start of dimension 1 of 'b'"
+      x = "Trying to read element: -1"))
+})
