@@ -448,7 +448,9 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
 ##
 ## > OdinParameter("name") >= EXPR
 ##
-## and where EXPR is numeric we only need to find the largest EXPR.
+## and where EXPR is numeric we would only need to find the largest
+## EXPR, though many of these are already simplified away by the
+## de-duplication early here.
 ##
 ## Later, we could also look to see how min/max constraints on
 ## parameters interact here, and to try and deal with any that involve
@@ -467,22 +469,6 @@ constraint_finalise <- function(constraints) {
       NA_character_
     }
   })
-
-  i <- !is.na(constraints$parameter)
-  if (any(i)) {
-    ## Split by parameter, and sum all numeric constraints over
-    ## parameter
-    dat <- split(constraints[i, ], constraints$parameter[i])
-    dat <- lapply(dat, function(d) {
-      v <- vnapply(d$constraint, function(expr) {
-        if (rlang::is_scalar_integerish(expr[[3]])) expr[[3]] else NA_real_
-      })
-      j <- !is.na(v)
-      if (sum(j) > 1) d[!(j & v < max(v[j])), ] else d
-    })
-    constraints <- rbind(constraints[!i, ],
-                         rlang::inject(rbind(!!!unname(dat))))
-  }
 
   rownames(constraints) <- NULL
   constraints
