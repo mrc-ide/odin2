@@ -65,12 +65,13 @@ parse_array_bounds_extract_constraints <- function(dat) {
     expr = I(lapply(constraints, "[[", "expr")),
     dimension = viapply(constraints, "[[", "dimension"),
     at = I(lapply(constraints, "[[", "at")),
-    exact = vlapply(constraints, "[[", "exact"),
+    mode = vcapply(constraints, "[[", "mode"),
     src = viapply(constraints, "[[", "src"))
 
   ## Sort and deduplicate the worst of the repetition:
   constraints <- constraints[order(constraints$name, constraints$type), ]
-  id <- sprintf("%s:%s", constraints$name, vcapply(constraints$at, rlang::hash))
+  at_hash <- vcapply(constraints$at, rlang::hash)
+  id <- paste(constraints$name, constraints$mode, at_hash, sep = ":")
   constraints <- constraints[!duplicated(id), ]
   rownames(constraints) <- NULL
   constraints
@@ -92,8 +93,14 @@ parse_array_bounds_extract_constraint_lhs <- function(eq) {
       idx <- eq$lhs$array[[i]]
       for (v in c("from", "to", "at")) {
         if (!is.null(idx[[v]])) {
-          ret$add(constraint(
-            "access:write", name, expr, i, idx[[v]], FALSE, eq$src$index))
+          if (v != "to") {
+            ret$add(constraint(
+              "access:write", name, expr, i, idx[[v]], "min", eq$src$index))
+          }
+          if (v != "from") {
+            ret$add(constraint(
+              "access:write", name, expr, i, idx[[v]], "max", eq$src$index))
+          }
         }
       }
     }
@@ -109,11 +116,11 @@ parse_array_bounds_extract_constraint_lhs <- function(eq) {
     ## * n constraints for dim(name, i) == dim(value, i) over all dimensions
     len_t <- call("OdinLength", time)
     ret$add(constraint(
-      "interpolate:time", value, time, rank + 1L, len_t, TRUE, eq$src$index))
+      "interpolate:time", value, time, rank + 1L, len_t, "exact", eq$src$index))
     for (i in seq_len(rank)) {
       len_i <- call("OdinDim", value, i)
       ret$add(constraint(
-        "interpolate:value", name, expr, i, len_i, TRUE, eq$src$index))
+        "interpolate:value", name, expr, i, len_i, "exact", eq$src$index))
     }
   }
   ret$get()
@@ -151,14 +158,22 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
         uses <- intersect(all.vars(at[[i]]), INDEX)
         if (length(uses) == 0) {
           ret$add(constraint(
-            "access:read", name, expr, i, at[[i]], FALSE, eq$src$index))
+            "access:read", name, expr, i, at[[i]], "min", eq$src$index))
+          ret$add(constraint(
+            "access:read", name, expr, i, at[[i]], "max", eq$src$index))
         } else if (length(uses) == 1) {
           idx <- eq$lhs$array[[match(uses, INDEX)]]
           for (v in c("from", "to", "at")) {
             if (!is.null(idx[[v]])) {
               at_i <- substitute_(at[[i]], set_names(idx[v], uses))
-              ret$add(constraint(
-                "access:read", name, expr, i, at_i, FALSE, eq$src$index))
+              if (v != "to") {
+                ret$add(constraint(
+                  "access:read", name, expr, i, at_i, "min", eq$src$index))
+              }
+              if (v != "from") {
+                ret$add(constraint(
+                  "access:read", name, expr, i, at_i, "max", eq$src$index))
+              }
             }
           }
         } else {
@@ -176,7 +191,7 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
             uses <- intersect(all.vars(at), INDEX)
             if (length(uses) == 0) {
               ret$add(constraint(
-                "access:read", name, expr_reduce, i, at, FALSE, eq$src$index))
+                "access:read", name, expr_reduce, i, at, "max", eq$src$index))
             } else if (length(uses) == 1) {
               idx_lhs <- eq$lhs$array[[match(uses, INDEX)]]
               for (v_lhs in c("from", "to", "at")) {
@@ -184,7 +199,7 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
                 at_i <- substitute_(at, set_names(idx_lhs[v_lhs], uses))
               }
               ret$add(constraint(
-                "access:read", name, expr_reduce, i, at_i, FALSE, eq$src$index))
+                "access:read", name, expr_reduce, i, at_i, "max", eq$src$index))
             } else {
               warn_unhandled_analysis(expr$expr, uses)
             }
@@ -201,7 +216,7 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
 }
 
 
-constraint <- function(type, name, expr, dimension, at, exact, src) {
+constraint <- function(type, name, expr, dimension, at, mode, src) {
   ## We'll enforce elsewhere that all arrays have length 1 or more,
   ## not sure where though!
   if (is.numeric(at) && at == 1) {
@@ -214,7 +229,7 @@ constraint <- function(type, name, expr, dimension, at, exact, src) {
       expr = expr,
       dimension = dimension,
       at = at,
-      exact = exact,
+      mode = mode,
       src = src))
 }
 
@@ -274,11 +289,20 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
       access <- if (d$type[[i]] == "access:read") "read" else "write"
       if (rank == 1) {
         msg <- "Out of range {access} of '{name}' in '{expr_str}'"
-        hint_size <- "'{name}' has capacity: {size_value}"
+        if (d$mode[[i]] == "min") {
+          hint_size <- "Attempting to read before the start of '{name}'"
+        } else {
+          hint_size <- "'{name}' has capacity: {size_value}"
+        }
       } else {
         msg <-
           "Out of range {access} of '{name}' in dimension {dim} of '{expr_str}'"
-        hint_size <- "Dimension {dim} of '{name}' has capacity: {size_value}"
+        if (d$mode[[i]] == "min") {
+          hint_size <-
+            "Attempting to read before the start of dimension {dim} of '{name}'"
+        } else {
+          hint_size <- "Dimension {dim} of '{name}' has capacity: {size_value}"
+        }
       }
       hint_access <- "Trying to {access} element: {at_value}"
       odin_parse_error(
@@ -293,7 +317,7 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
   rank <- length(arrays[[name]])
   at <- lapply(d$at, constraint_simplify_expr, arrays, equations, variables)
   size <- arrays[[name]][d$dimension]
-  result <- Map(constraint_solve, at, size, d$exact)
+  result <- Map(constraint_solve, at, size, d$mode)
 
   valid <- vlapply(result, "[[", "valid")
   err <- !is.na(valid) & !valid
@@ -314,27 +338,36 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
 }
 
 
-constraint_solve <- function(at, size, exact) {
-  if (is.numeric(at) && is.numeric(size)) {
-    if (exact) {
+constraint_solve <- function(at, size, mode) {
+  ## We can compute the validity here immediately:
+  if (is.numeric(at) && (is.numeric(size) || mode == "min")) {
+    if (mode == "exact") {
       return(list(valid = at == size))
-    } else {
+    } else if (mode == "max") {
       return(list(valid = at <= size))
+    } else { # mode == "min"
+      return(list(valid = at >= 1))
     }
   }
+
+  ## This is common enough that we can also determine that we're ok:
   if (identical(at, size)) {
     return(list(valid = TRUE))
   }
   maths <- monty::monty_differentiation()$maths
 
-  at <- maths$plus_fold(lapply(expr_to_sum_of_parts(at), maths$uminus))
-  expr <- expr_factorise(maths$plus(size, at))
-
-  if (is.numeric(expr)) {
-    return(list(valid = if (exact) expr == 0 else expr >= 0))
+  if (mode == "min") {
+    expr <- maths$minus(at, 1)
+  } else {
+    at <- maths$plus_fold(lapply(expr_to_sum_of_parts(at), maths$uminus))
+    expr <- expr_factorise(maths$plus(size, at))
   }
 
-  list(valid = NA, constraint = constraint_tidy(expr, exact))
+  if (is.numeric(expr)) {
+    return(list(valid = if (mode == "exact") expr == 0 else expr >= 0))
+  }
+
+  list(valid = NA, constraint = constraint_tidy(expr, mode))
 }
 
 
@@ -415,7 +448,9 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
 ##
 ## > OdinParameter("name") >= EXPR
 ##
-## and where EXPR is numeric we only need to find the largest EXPR.
+## and where EXPR is numeric we would only need to find the largest
+## EXPR, though many of these are already simplified away by the
+## de-duplication early here.
 ##
 ## Later, we could also look to see how min/max constraints on
 ## parameters interact here, and to try and deal with any that involve
@@ -435,29 +470,13 @@ constraint_finalise <- function(constraints) {
     }
   })
 
-  i <- !is.na(constraints$parameter)
-  if (any(i)) {
-    ## Split by parameter, and sum all numeric constraints over
-    ## parameter
-    dat <- split(constraints[i, ], constraints$parameter[i])
-    dat <- lapply(dat, function(d) {
-      v <- vnapply(d$constraint, function(expr) {
-        if (rlang::is_scalar_integerish(expr[[3]])) expr[[3]] else NA_real_
-      })
-      j <- !is.na(v)
-      if (sum(j) > 1) d[!(j & v < max(v[j])), ] else d
-    })
-    constraints <- rbind(constraints[!i, ],
-                         rlang::inject(rbind(!!!unname(dat))))
-  }
-
   rownames(constraints) <- NULL
   constraints
 }
 
 
-constraint_tidy <- function(expr, exact) {
-  op <- if (exact) "==" else ">="
+constraint_tidy <- function(expr, mode) {
+  op <- if (mode == "exact") "==" else ">="
   if ("OdinParameter" %in% all.names(expr)) {
     maths <- monty::monty_differentiation()$maths
     parts <- expr_to_sum_of_parts(expr)
@@ -524,10 +543,10 @@ parse_delays_extract_constraint <- function(dat) {
         expr <- eq$src$value
         for (j in seq_len(rank)) {
           ret$add(constraint(
-            "access:write", name, expr, j, call("OdinDim", what, j), FALSE,
+            "access:write", name, expr, j, call("OdinDim", what, j), "max",
             eq$src$index))
           ret$add(constraint(
-            "access:read", what, expr, j, call("OdinDim", name, j), FALSE,
+            "access:read", what, expr, j, call("OdinDim", name, j), "max",
             eq$src$index))
         }
       }
