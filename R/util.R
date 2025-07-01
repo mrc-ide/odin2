@@ -238,19 +238,3 @@ counter <- function() {
 odin_dim_name <- function(name) {
   sprintf("dim_%s", name)
 }
-
-
-not_expr <- function(expr) {
-  rewrite <- list("==" = "!=",
-                  "<" = ">=",
-                  "<=" = ">",
-                  ">" = "<=",
-                  ">=" = "<")
-  if (rlang::is_call(expr, "!")) {
-    return(expr[[2]])
-  } else if (rlang::is_call(expr, names(rewrite))) {
-    return(call(rewrite[[as.character(expr[[1]])]], expr[[2]], expr[[3]]))
-  }
-  protect <- is.recursive(expr) && !rlang::is_call(expr, "(")
-  call("!", if (protect) call("(", expr) else expr)
-}

@@ -35,3 +35,33 @@ expr_factorise <- function(x) {
   })
   maths$plus_fold(ret)
 }
+
+
+expr_not <- function(expr) {
+  rewrite <- list("==" = "!=",
+                  "!=" = "==",
+                  "<" = ">=",
+                  "<=" = ">",
+                  ">" = "<=",
+                  ">=" = "<")
+  if (is.logical(expr)) {
+    return(!expr)
+  } else if (rlang::is_call(expr, "!")) {
+    ret <- expr[[2]]
+    return(if (rlang::is_call(ret, "(", 1)) ret[[2]] else ret)
+  } else if (rlang::is_call(expr, names(rewrite))) {
+    return(call(rewrite[[as.character(expr[[1]])]], expr[[2]], expr[[3]]))
+  }
+  protect <- is.recursive(expr) && !rlang::is_call(expr, "(")
+  call("!", if (protect) call("(", expr) else expr)
+}
+
+
+expr_fold <- function(els, op) {
+  n <- length(els)
+  if (n == 1) {
+    els[[1]]
+  } else {
+    call(op, expr_fold(els[-n], op), els[[n]])
+  }
+}

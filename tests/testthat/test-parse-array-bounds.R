@@ -349,3 +349,16 @@ test_that("negative indices do not error behind if/else", {
       update(x) <- sum(a) + sum(b)
     }))
 })
+
+
+test_that("can use an if/else ladder", {
+  expect_no_error(
+    odin_parse({
+      b[] <- if (i == 1) 0 else if (i == 2) 1 else a[i - 2]
+      a[] <- Uniform(0, 1)
+      dim(b) <- 5
+      dim(a) <- 4
+      initial(x) <- 0
+      update(x) <- sum(a) + sum(b)
+    }))
+})

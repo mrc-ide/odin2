@@ -229,7 +229,7 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
       if (rlang::is_call(expr, "if")) {
         this_condition <- expr[[2]]
         extract(expr[[3]], c(condition, list(this_condition)))
-        extract(expr[[4]], c(condition, list(not_expr(this_condition))))
+        extract(expr[[4]], c(condition, list(expr_not(this_condition))))
       } else {
         lapply(expr[-1], extract, condition)
       }
@@ -252,7 +252,7 @@ constraint <- function(type, name, expr, condition, dimension, at, mode, src) {
   } else if (length(condition) == 1) {
     condition <- condition[[1]]
   } else if (length(condition) > 1) {
-    stop("fold condition")
+    condition <- expr_fold(condition, "&&")
   }
   list(
     list(
@@ -487,7 +487,10 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
     } else if (is.recursive(x)) {
       x[-1] <- lapply(x[-1], simplify)
       if (rlang::is_call(x, logic)) {
-        if (all(vlapply(x[-1], is.numeric))) {
+        is_resolved <- function(el) {
+          is.numeric(el) || is.logical(el)
+        }
+        if (all(vlapply(x[-1], is_resolved))) {
           return(eval(x))
         }
       }
