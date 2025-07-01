@@ -188,35 +188,39 @@ test_that("can deparse constraints", {
 
 
 test_that("solve simple constraints", {
-  expect_equal(constraint_solve(1, 2, "max"), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 2, "max"), list(valid = TRUE))
-  expect_equal(constraint_solve(2, 1, "max"), list(valid = FALSE))
-  expect_equal(constraint_solve(quote(a), quote(a), "max"),
+  expect_equal(constraint_solve(1, NULL, 2, "max"), list(valid = TRUE))
+  expect_equal(constraint_solve(2, NULL, 2, "max"), list(valid = TRUE))
+  expect_equal(constraint_solve(2, NULL, 1, "max"), list(valid = FALSE))
+  expect_equal(constraint_solve(quote(a), NULL, quote(a), "max"),
                list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + b), quote(a + b), "max"),
+  expect_equal(constraint_solve(quote(a + b), NULL, quote(a + b), "max"),
                list(valid = TRUE))
 
-  expect_equal(constraint_solve(quote(a - 1), quote(a), "max"),
+  expect_equal(constraint_solve(quote(a - 1), NULL, quote(a), "max"),
                list(valid = TRUE))
-  expect_equal(constraint_solve(quote(a + 1), quote(a), "max"),
+  expect_equal(constraint_solve(quote(a + 1), NULL, quote(a), "max"),
                list(valid = FALSE))
 
   expect_equal(
     constraint_solve(quote(OdinParameter("a") - 1),
+                     NULL,
                      quote(OdinParameter("a")),
                      "max"),
     list(valid = TRUE))
   expect_equal(
     constraint_solve(quote(OdinParameter("a") + 1),
+                     NULL,
                      quote(OdinParameter("a")),
                      "max"),
     list(valid = FALSE))
   expect_equal(
     constraint_solve(quote(OdinParameter("a")),
+                     NULL,
                      quote(OdinParameter("b")),
                      "max"),
     list(valid = NA,
-         constraint = quote(OdinParameter("b") >= OdinParameter("a"))))
+         constraint = quote(OdinParameter("b") >= OdinParameter("a")),
+         condition = NULL))
 })
 
 
@@ -331,4 +335,17 @@ test_that("can prevent writing to negative index", {
     }),
     "Out of range write of 'b' in 'b[length(b) - 5]'",
     fixed = TRUE)
+})
+
+
+test_that("negative indices do not error behind if/else", {
+  expect_no_error(
+    odin_parse({
+      b[] <- if (i == 1) 0 else a[i - 1]
+      a[] <- Uniform(0, 1)
+      dim(b) <- 5
+      dim(a) <- 4
+      initial(x) <- 0
+      update(x) <- sum(a) + sum(b)
+    }))
 })
