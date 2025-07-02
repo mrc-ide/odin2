@@ -4,7 +4,13 @@
 \alias{odin_show}
 \title{Show generated odin code}
 \usage{
-odin_show(expr, input_type = NULL, compatibility = NULL, what = NULL)
+odin_show(
+  expr,
+  input_type = NULL,
+  compatibility = NULL,
+  check_bounds = NULL,
+  what = NULL
+)
 }
 \arguments{
 \item{expr}{Odin code as the path to a file (a string), a
@@ -25,6 +31,15 @@ use as eventually the compatibility mode will be removed (this
 option is primarily intended for comparing output of odin1 and
 odin2 models against old code).  The default, \code{NULL}, currently
 corresponds to \code{warning}.}
+
+\item{check_bounds}{Control over static array bounds checking.
+This is enabled by default, but is prone to false positives,
+erroring where a read or write appears out of bounds but is
+actually ok.  This argument exists to allow you to disable the
+check and compile the model anyway.  Future versions may allow
+specific lines to be ignored, which will provide finer control
+and allow you to use the bits of the checks that are actually
+helpful.}
 
 \item{what}{Optional string, being a single method to show.
 Popular options are \code{update}, \code{rhs} and \code{compare_data}.}
