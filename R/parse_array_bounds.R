@@ -1,6 +1,14 @@
-parse_array_bounds <- function(dat, call) {
+parse_array_bounds <- function(dat, check_bounds, call) {
+  if (check_bounds == "disabled") {
+    return()
+  }
   ## Find all array accesses, read or write, across all our equations:
   constraints <- parse_array_bounds_extract_constraints(dat)
+  ## We have two types of constraint at present;
+  ##
+  ## * exact constraints mean that the dimension of a must equal that
+  ##   of b, and we use these in checking interpolation
+  ## * min/max constraints are used on access
   if (is.null(constraints)) {
     return()
   }
@@ -14,8 +22,8 @@ parse_array_bounds <- function(dat, call) {
   ## Then we want to sort these out into provably ok, provably bad and
   ## unknown.  We will do this element by element:
   res <- lapply(split(constraints, constraints$name), constraint_triage,
-                arrays, dat$equations, dat$variables, dat$src, call)
-
+                arrays, dat$equations, dat$variables, check_bounds,
+                dat$src, call)
 
   ## At this point we still have lots of repetition among constraints
   ## that we will have found; it's likely that we will have n <= EXPR
@@ -235,7 +243,8 @@ constraint <- function(type, name, expr, dimension, at, mode, src) {
 
 
 ## At this point we only have the constraints for a single array
-constraint_triage <- function(d, arrays, equations, variables, src, call) {
+constraint_triage <- function(d, arrays, equations, variables, action,
+                              src, call) {
   throw_bad_access <- function(i) {
     src_index <- d$src[[i]]
     rank <- length(arrays[[name]])
@@ -323,7 +332,20 @@ constraint_triage <- function(d, arrays, equations, variables, src, call) {
   err <- !is.na(valid) & !valid
 
   if (any(err)) {
-    throw_bad_access(which(err)[[1]])
+    if (action == "warning") {
+      ## This branch is a bit weird, but at least it means that we can
+      ## see all the suspected bad accesses rather than just the
+      ## first.  It's much easier to create the error and then catch
+      ## it and convert to a warning than it is to have a whole
+      ## separate warning function, so we take that strategy here.
+      for (i in which(err)) {
+        tryCatch(
+          throw_bad_access(i),
+          odin_parse_error = odin_error_to_warning)
+      }
+    } else {
+      throw_bad_access(which(err)[[1]])
+    }
   }
 
   if (!anyNA(valid)) {

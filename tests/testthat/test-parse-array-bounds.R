@@ -332,3 +332,62 @@ test_that("can prevent writing to negative index", {
     "Out of range write of 'b' in 'b[length(b) - 5]'",
     fixed = TRUE)
 })
+
+
+test_that("warn on error", {
+  w <- testthat::capture_warnings(
+    odin_parse({
+      initial(a[]) <- 1
+      update(a[]) <- sum(x)
+      x[] <- a[i]
+      dim(x) <- 4
+      dim(a) <- 3
+    }, check_bounds = "warning"))
+  expect_length(w, 1)
+  expect_match(w, "Out of range read of 'a' in 'a[i]'",
+               fixed = TRUE)
+})
+
+
+test_that("warn on all access errors", {
+  w <- testthat::capture_warnings(
+    odin_parse({
+      initial(a[]) <- 1
+      update(a[]) <- sum(x)
+      x[] <- a[i]
+      x[5] <- 1
+      dim(x) <- 4
+      dim(a) <- 3
+    }, check_bounds = "warning"))
+  expect_length(w, 2)
+  expect_match(w, "Out of range read of 'a' in 'a[i]'",
+               fixed = TRUE, all = FALSE)
+  expect_match(w, "Out of range write of 'x' in 'x[5]'",
+               fixed = TRUE, all = FALSE)
+})
+
+
+test_that("can disable bounds checks", {
+  expect_no_condition(
+    odin_parse({
+      initial(a[]) <- 1
+      update(a[]) <- sum(x)
+      x[] <- a[i]
+      dim(x) <- 4
+      dim(a) <- 3
+    }, check_bounds = "disabled"))
+})
+
+
+test_that("select appropriate check_bounds mode", {
+  withr::with_options(list(odin2.check_bounds = NULL), {
+    expect_equal(odin_check_bounds_value(NULL, NULL), "error")
+    expect_equal(odin_check_bounds_value("warning", NULL), "warning")
+    expect_equal(odin_check_bounds_value("disabled", NULL), "disabled")
+  })
+  withr::with_options(list(odin2.check_bounds = "disabled"), {
+    expect_equal(odin_check_bounds_value(NULL, NULL), "disabled")
+    expect_equal(odin_check_bounds_value("warning", NULL), "warning")
+    expect_equal(odin_check_bounds_value("error", NULL), "error")
+  })
+})

@@ -1,11 +1,14 @@
-odin_parse <- function(expr, input_type = NULL, compatibility = NULL) {
+odin_parse <- function(expr, input_type = NULL, compatibility = NULL,
+                       check_bounds = NULL) {
   call <- environment()
-  odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
+  odin_parse_quo(rlang::enquo(expr), input_type, compatibility, check_bounds,
+                 call)
 }
 
 
-odin_parse_quo <- function(quo, input_type, compatibility, call) {
+odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
   compatibility <- odin_compatibility_value(compatibility, call)
+  check_bounds <- odin_check_bounds_value(check_bounds, call)
   dat <- parse_prepare(quo, input_type, call)
   dat$exprs <- parse_compat(dat$exprs, compatibility, ignore_error = FALSE,
                             call = call)
@@ -55,7 +58,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               src = src)
 
   parse_check_usage(ret, call)
-  parse_array_bounds(ret, call)
+  parse_array_bounds(ret, check_bounds, call)
   ret <- parse_adjoint(ret)
   ret
 }
@@ -309,6 +312,16 @@ odin_compatibility_value <- function(compatibility, call) {
   if (is.null(compatibility)) {
     compatibility <- getOption("odin2.compatibility", "warning")
   }
+  ## Slightly different list to below, we'll add "disabled" here soon
   valid <- c("warning", "silent", "error")
   match_value(compatibility, valid, call = call)
+}
+
+
+odin_check_bounds_value <- function(check_bounds, call) {
+  if (is.null(check_bounds)) {
+    check_bounds <- getOption("odin2.check_bounds", "error")
+  }
+  valid <- c("error", "warning", "disabled")
+  match_value(check_bounds, valid, call = call)
 }
