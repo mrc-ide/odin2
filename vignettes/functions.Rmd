@@ -337,6 +337,19 @@ The currently supported distributions are (alphabetically):
 
 In the future, we plan support for additional distributions, please let us know if we are missing any that you need.  The support for these functions comes from `monty` and we will link here to the docs in that package once they exist for additional details.
 
+We plan to explicitly support the [multinomial distribution](https://en.wikipedia.org/wiki/Multinomial_distribution) in future, but for the time being it can be implemented as a loop of nested binomial distributions. For instance if you want to draw `y` from a multinomial distribution with parameters `size` and `prob` (where `prob` will be a vector of the same length as `y`) then this can be implemented as
+
+```
+y[1] <- Binomial(size, prob[1])
+y[2:length(y)] <- Binomial(size - sum(y[1:(i - 1)]), prob[i] / sum(prob[i:length(y)]))
+```
+
+while if you want to include a likelihood term where `z` is a vector of data (see [here](https://mrc-ide.github.io/odin2/articles/fitting.html#comparing-against-vectors-of-data) for guidance on vectors of data) from a multinomial distribution with probability vector `prob`, this can be implemented as
+
+```
+z[1:(length(z) - 1)] ~ Binomial(sum(z[i:length(z)]), prob[i] / sum(prob[i:length(z)]))
+```
+
 ## Semantics of random number draws
 
 Stochastic functions are called for each element in an array they are assigned to, at each time.  So here:
