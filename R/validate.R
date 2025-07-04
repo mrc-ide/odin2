@@ -77,13 +77,14 @@
 ##'   deriv(x) <- a
 ##'   a <- user()
 ##' })
-odin_validate <- function(expr, input_type = NULL, compatibility = NULL) {
+odin_validate <- function(expr, input_type = NULL, compatibility = NULL,
+                          check_bounds = NULL) {
   call <- environment()
   env <- new.env(parent = emptyenv())
   quo <- rlang::enquo(expr)
 
   res <- rlang::try_fetch(
-    odin_parse_quo(quo, input_type, compatibility, call),
+    odin_parse_quo(quo, input_type, compatibility, check_bounds, call),
     error = identity,
     odin_compatibility_problem = function(e) {
       env$compatibility <- e$data

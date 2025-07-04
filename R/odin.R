@@ -21,6 +21,15 @@
 ##'   odin2 models against old code).  The default, `NULL`, currently
 ##'   corresponds to `warning`.
 ##'
+##' @param check_bounds Control over static array bounds checking.
+##'   This is enabled by default, but is prone to false positives,
+##'   erroring where a read or write appears out of bounds but is
+##'   actually ok.  This argument exists to allow you to disable the
+##'   check and compile the model anyway.  Future versions may allow
+##'   specific lines to be ignored, which will provide finer control
+##'   and allow you to use the bits of the checks that are actually
+##'   helpful.
+##'
 ##' @inheritParams dust2::dust_compile
 ##'
 ##' @return A `dust_system_generator` object, suitable for using with
@@ -38,9 +47,11 @@
 ##' y <- dust2::dust_system_simulate(sys, 0:100)
 ##' matplot(t(y[1, , ]), type = "l", lty = 1, xlab = "Time", ylab = "Value")
 odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
-                 debug = NULL, skip_cache = FALSE, compatibility = NULL) {
+                 debug = NULL, skip_cache = FALSE, compatibility = NULL,
+                 check_bounds = NULL) {
   call <- environment()
-  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
+  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility,
+                        check_bounds, call)
   code <- generate_dust_system(dat)
   tmp <- tempfile(fileext = ".cpp")
   on.exit(unlink(tmp))
@@ -79,9 +90,10 @@ odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
 ##'   a <- Normal(x, 1)
 ##' }, what = "update")
 odin_show <- function(expr, input_type = NULL, compatibility = NULL,
-                      what = NULL) {
+                      check_bounds = NULL, what = NULL) {
   call <- environment()
-  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
+  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility,
+                        check_bounds, call)
   if (!is.null(what)) {
     parts <- generate_dust_parts()
     dat <- generate_prepare(dat)

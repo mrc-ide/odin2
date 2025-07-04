@@ -49,4 +49,8 @@ If you want to make this permanent, you can add this line to your `~/.Rprofile` 
 
 ## `odin2.compatibility`
 
-The default behaviour of the odin1 to odin2 compatibility checks.  If set, this should be a string suitable to pass to `odin2::odin` (one of `warning`, `error` or `silent`); see the help for `odin2::odin` for a description of the possible options.
+The default behaviour of the odin1 to odin2 compatibility checks.  If set, this should be a string suitable to pass to the `compatibility` argument of `odin2::odin` (one of `warning`, `error` or `silent`); see the help for `odin2::odin` for a description of the possible options.
+
+## `odin2.check_bounds`
+
+The default behaviour of odin2 array bounds checks.  If set, this should be a string suitable to pass to the `check_bounds` argument of `odin2::odin` (one of `error`, `warning` or `disable`); see the help for `odin2::odin` for a description of the possible options.

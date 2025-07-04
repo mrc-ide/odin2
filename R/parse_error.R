@@ -96,6 +96,14 @@ odin_error_explain <- function(code, how = "pretty") {
 }
 
 
+odin_error_to_warning <- function(e) {
+  footer <- cnd_footer.odin_parse_error(e)
+  cli::cli_warn(
+    c(e$message, e$body, footer),
+    src = e$src, call = e$call)
+}
+
+
 format_src <- function(src) {
   if (nrow(src) == 0) {
     context <- "(source unavailable)"

@@ -11,7 +11,8 @@ odin(
   workdir = NULL,
   debug = NULL,
   skip_cache = FALSE,
-  compatibility = NULL
+  compatibility = NULL,
+  check_bounds = NULL
 )
 }
 \arguments{
@@ -59,6 +60,15 @@ use as eventually the compatibility mode will be removed (this
 option is primarily intended for comparing output of odin1 and
 odin2 models against old code).  The default, \code{NULL}, currently
 corresponds to \code{warning}.}
+
+\item{check_bounds}{Control over static array bounds checking.
+This is enabled by default, but is prone to false positives,
+erroring where a read or write appears out of bounds but is
+actually ok.  This argument exists to allow you to disable the
+check and compile the model anyway.  Future versions may allow
+specific lines to be ignored, which will provide finer control
+and allow you to use the bits of the checks that are actually
+helpful.}
 }
 \value{
 A \code{dust_system_generator} object, suitable for using with
