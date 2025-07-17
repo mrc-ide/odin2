@@ -61,7 +61,21 @@ odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
               src = src)
 
   parse_check_usage(ret, call)
-  parse_array_bounds(ret, check_bounds, call)
+  rlang::try_fetch(
+    parse_array_bounds(ret, check_bounds, call),
+    error = function(e) {
+      if (inherits(e, "odin_parse_error")) {
+        rlang::zap()
+      } else {
+        odin_parse_error(
+          c("An odin bug is preventing analysis of your bounds",
+            i = paste("You can disable bounds checking to continue, by",
+                      "passing in 'check_bounds = \"disabled\"' to 'odin()'"),
+            i = paste("Please report this error to us, and send along the",
+                      "model code so that we can replicate it")),
+          "E3003", NULL, call, parent = e)
+      }
+    })
   ret <- parse_adjoint(ret)
   ret
 }
