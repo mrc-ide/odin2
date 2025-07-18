@@ -1275,3 +1275,7 @@ So:
 * if `a` is a scalar, then `c` must be a vector of length `nt`
 * If `a` is a vector of length `n1`, then `c` must be a matrix with `n1` rows and `nt` columns
 * If `a` is a matrix with `n1` rows and `n2` columns, then `c` must be a 3-dimensional array with dimensions `c(n1, n2, nt)` and so on
+
+# `E3003`
+
+We have failed to analyse your bounds correctly, and consider this to be an odin bug.  We can't continue any further with analysis, but we'd like to see the model code in order to improve odin.  Rerun odin with `check_bounds = "disabled"` to skip this error in the meantime.
