@@ -35,7 +35,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
     equations, phases, system$variables, system$output, system$arrays,
     system$parameters, system$data, delays, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
-                                 system$variables, call)
+                                 system$ode_variables, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,
                        equations, system$data, phases, call)
   browser <- parse_browser(system$exprs$browser, system$time, system$variables,
