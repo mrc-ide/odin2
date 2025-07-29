@@ -334,6 +334,10 @@ The currently supported distributions are (alphabetically):
 * `TruncatedNormal` -- the [truncated normal distribution](https://en.wikipedia.org/wiki/Truncated_normal_distribution) with parameters `mean`, `sd`, `min` and `max`. For a one-sided truncated normal distribution, you can set `min = -Inf` or `max = Inf`. Note that `mean` and `sd` are not the mean and standard deviation of the truncated normal distribution, but are the mean and standard deviation of the normal distribution that has been truncated.
 * `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
 * `Weibull` -- the [Weibull distribution](https://en.wikipedia.org/wiki/Weibull_distribution) with parameters `shape` and `scale`
+* `ZINegativeBinomial` -- the [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model) negative binomial distribution. With probability `pi0` a 0 is drawn, otherwise we draw from the corresponding standard negative binomial distribution using the other parameters (which may also result in a 0 being drawn). As with the standard negative binomial distribution, there are two forms:
+  - `pi0`, `size`, `prob` (**default**)
+  - `pi0`, `size`, `mu` (the mean of the negative binomial part of the distribution - note that the mean of the zero-inflated negative binomial distribution will be `(1 - pi0) * mu`).
+* `ZIPoisson` -- the [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model) Poisson distribution. with parameters `pi0` (the probability of excess zeros) and `lambda` (the mean of the Poisson part of the distribution). With probability `pi0` a 0 is drawn, otherwise we draw from the corresponding standard Poisson distribution with mean `lambda` (which may also result in a 0 being drawn). Note the mean of this distribution is `(1 - pi0) * lambda`.
 
 In the future, we plan support for additional distributions, please let us know if we are missing any that you need.  The support for these functions comes from `monty` and we will link here to the docs in that package once they exist for additional details.
 
