@@ -16,12 +16,15 @@ odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
 
   exprs <- parse_system_arrays(exprs, call)
   system <- parse_system_overall(exprs, call)
+
+  variables_without_output <- system$ode_variables %||% system$variables
+
   equations <- parse_system_depends(
-    system$exprs$equations, system$ode_variables, call)
+    system$exprs$equations, variables_without_output, call)
   equations <- parse_system_stage(
     equations, system$variables, system$parameters, system$data$name, call)
   delays <- parse_system_delays(
-    equations, system$ode_variables, system$arrays, call)
+    equations, variables_without_output, system$arrays, call)
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$output,
     system$parameters, delays, system$data$name, call)
@@ -35,7 +38,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
     equations, phases, system$variables, system$output, system$arrays,
     system$parameters, system$data, delays, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
-                                 system$variables, call)
+                                 variables_without_output, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,
                        equations, system$data, phases, call)
   browser <- parse_browser(system$exprs$browser, system$time, system$variables,
