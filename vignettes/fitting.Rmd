@@ -5,6 +5,7 @@ vignette: >
   %\VignetteIndexEntry{Fitting odin2 models to data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{decor}
 ---
 
 ```{r, include = FALSE}
