@@ -430,6 +430,17 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
       if (nm %in% variables) {
         return(call("OdinVariable", nm))
       }
+      ## We should warn about this generally; an index directly
+      ## involves time and that is generally better as an
+      ## interpolation function.  However, it's possible that there is
+      ## a reasonable use case for this where the interpolation
+      ## functions don't work and so we don't bomb out.  This approach
+      ## (for now) will leave these expressions as unknowable and
+      ## later on when we improve the handling of unhandled
+      ## expressions we can warn about them better.
+      if (nm %in% c("time", "dt")) {
+        return(nm)
+      }
       stopifnot(sum(names(equations) == nm) == 1)
       eq <- equations[[nm]]
       if (is.null(eq$special)) {

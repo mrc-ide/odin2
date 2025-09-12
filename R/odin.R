@@ -28,7 +28,8 @@
 ##'   check and compile the model anyway.  Future versions may allow
 ##'   specific lines to be ignored, which will provide finer control
 ##'   and allow you to use the bits of the checks that are actually
-##'   helpful.
+##'   helpful.  You can also pass `TRUE` here to mean "error" or
+##'   `FALSE` to mean "disabled".
 ##'
 ##' @inheritParams dust2::dust_compile
 ##'

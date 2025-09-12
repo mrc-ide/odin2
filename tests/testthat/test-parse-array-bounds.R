@@ -382,12 +382,42 @@ test_that("can disable bounds checks", {
 test_that("select appropriate check_bounds mode", {
   withr::with_options(list(odin2.check_bounds = NULL), {
     expect_equal(odin_check_bounds_value(NULL, NULL), "error")
+    expect_equal(odin_check_bounds_value(TRUE, NULL), "error")
+    expect_equal(odin_check_bounds_value(FALSE, NULL), "disabled")
     expect_equal(odin_check_bounds_value("warning", NULL), "warning")
     expect_equal(odin_check_bounds_value("disabled", NULL), "disabled")
   })
   withr::with_options(list(odin2.check_bounds = "disabled"), {
     expect_equal(odin_check_bounds_value(NULL, NULL), "disabled")
+    expect_equal(odin_check_bounds_value(TRUE, NULL), "error")
+    expect_equal(odin_check_bounds_value(FALSE, NULL), "disabled")
     expect_equal(odin_check_bounds_value("warning", NULL), "warning")
     expect_equal(odin_check_bounds_value("error", NULL), "error")
   })
+})
+
+
+test_that("sensible error message if bounds checking fails", {
+  skip_if_not_installed("mockery")
+  mock_parse_array_bounds <- mockery::mock(stop("random error"))
+  testthat::local_mocked_bindings(
+    parse_array_bounds = mock_parse_array_bounds)
+  expect_error(
+    odin_parse({
+      initial(x) <- 1
+      update(x) <- 1
+    }),
+    "An odin bug is preventing analysis of your bounds")
+})
+
+
+test_that("skip over bounds checking involving time", {
+  ## This failed prior to 0.3.35 (mrc-6625)
+  expect_no_error(
+    odin_parse({
+      initial(x) <- 0
+      update(x) <- a[min(time, 10)]
+      dim(a) <- 10
+      a[] <- Normal(0, 1)
+    }))
 })
