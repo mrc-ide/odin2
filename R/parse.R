@@ -339,6 +339,11 @@ odin_check_bounds_value <- function(check_bounds, call) {
   if (is.null(check_bounds)) {
     check_bounds <- getOption("odin2.check_bounds", "error")
   }
+  if (isTRUE(check_bounds)) {
+    check_bounds <- "error"
+  } else if (isFALSE(check_bounds)) {
+    check_bounds <- "disabled"
+  }
   valid <- c("error", "warning", "disabled")
   match_value(check_bounds, valid, call = call)
 }

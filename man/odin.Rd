@@ -68,7 +68,8 @@ actually ok.  This argument exists to allow you to disable the
 check and compile the model anyway.  Future versions may allow
 specific lines to be ignored, which will provide finer control
 and allow you to use the bits of the checks that are actually
-helpful.}
+helpful.  You can also pass \code{TRUE} here to mean "error" or
+\code{FALSE} to mean "disabled".}
 }
 \value{
 A \code{dust_system_generator} object, suitable for using with

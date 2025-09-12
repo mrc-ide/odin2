@@ -382,11 +382,15 @@ test_that("can disable bounds checks", {
 test_that("select appropriate check_bounds mode", {
   withr::with_options(list(odin2.check_bounds = NULL), {
     expect_equal(odin_check_bounds_value(NULL, NULL), "error")
+    expect_equal(odin_check_bounds_value(TRUE, NULL), "error")
+    expect_equal(odin_check_bounds_value(FALSE, NULL), "disabled")
     expect_equal(odin_check_bounds_value("warning", NULL), "warning")
     expect_equal(odin_check_bounds_value("disabled", NULL), "disabled")
   })
   withr::with_options(list(odin2.check_bounds = "disabled"), {
     expect_equal(odin_check_bounds_value(NULL, NULL), "disabled")
+    expect_equal(odin_check_bounds_value(TRUE, NULL), "error")
+    expect_equal(odin_check_bounds_value(FALSE, NULL), "disabled")
     expect_equal(odin_check_bounds_value("warning", NULL), "warning")
     expect_equal(odin_check_bounds_value("error", NULL), "error")
   })
