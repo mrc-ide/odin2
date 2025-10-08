@@ -271,7 +271,7 @@ You can use this approach to compute a matrix-vector product $\mathbf(Ax)$:
 
 ```
 ax_tmp[, ] <- a[i, j] * x[j]
-ax[] <- sum(a[, i])
+ax[] <- sum(ax_tmp[, i])
 ```
 
 # Distribution functions
