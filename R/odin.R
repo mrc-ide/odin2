@@ -31,6 +31,17 @@
 ##'   helpful.  You can also pass `TRUE` here to mean "error" or
 ##'   `FALSE` to mean "disabled".
 ##'
+##' @param ... Unused, must be empty.  This allows us to add and
+##'   reorder remaining arguments at will, as all arguments must be
+##'   specified by name, not position).
+##'
+##' @param target Compilation target.  If provided, it must be one of
+##'   `cpp` or `js`.  In future, we hope to support `cuda` to enable
+##'   support compilation to run on NVIDIA GPUs.  The default, `NULL`,
+##'   falls back on the option `odin2.target`, and if that is unset we
+##'   **currently** select `cpp`, but this is subject to change once
+##'   the JavaScript support is complete.
+##'
 ##' @inheritParams dust2::dust_compile
 ##'
 ##' @return A `dust_system_generator` object, suitable for using with
@@ -47,18 +58,30 @@
 ##' sys <- dust2::dust_system_create(gen, list(), n_particles = 10)
 ##' y <- dust2::dust_system_simulate(sys, 0:100)
 ##' matplot(t(y[1, , ]), type = "l", lty = 1, xlab = "Time", ylab = "Value")
-odin <- function(expr, input_type = NULL, quiet = NULL, workdir = NULL,
+odin <- function(expr, ..., input_type = NULL, quiet = NULL, workdir = NULL,
                  debug = NULL, skip_cache = FALSE, compatibility = NULL,
-                 check_bounds = NULL) {
+                 check_bounds = NULL, target = NULL) {
+  rlang::check_dots_empty()
   call <- environment()
+  ## Fail fast here:
+  target <- odin_select_target(target)
   dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility,
                         check_bounds, call)
-  code <- generate_dust_system(dat)
-  tmp <- tempfile(fileext = ".cpp")
-  on.exit(unlink(tmp))
-  writeLines(code, tmp)
-  dust2::dust_compile(tmp, quiet = quiet, workdir = workdir, debug = debug,
-                      skip_cache = skip_cache)
+
+  ## This is a bit gross because we only pass some arguments forward.
+  ## However, some might end up useful for the js (e.g., quiet,
+  ## workdir, skip_cache could all have some potential applications).
+  ## Based on feedback though, people prefer explicit names to the
+  ## arguments rather than dots and "see some other function for
+  ## allowable dots".  We could also tighten up which args are
+  ## compatible with which targets, but most of the time it's just not
+  ## that big a deal.
+  switch(
+    target,
+    cpp = odin_generator_cpp(dat, quiet = quiet, workdir = workdir,
+                             debug = debug, skip_cache = skip_cache),
+    js = odin_generator_js(dat),
+    cli::cli_abort("Unknown target type '{target}' [odin bug]")) # nocov
 }
 
 
@@ -122,4 +145,41 @@ print.odin_code <- function(x, ...) {
   }
   writeLines(x)
   invisible(x)
+}
+
+
+odin_select_target <- function(target, call = parent.frame()) {
+  if (is.null(target)) {
+    target <- getOption("odin2.target", "cpp")
+  }
+  valid <- c("cpp", "js")
+  match_value(target, valid, call = call)
+}
+
+
+odin_generator_cpp <- function(dat, quiet, workdir, debug, skip_cache) {
+  code <- generate_dust_system(dat)
+  tmp <- tempfile(fileext = ".cpp")
+  on.exit(unlink(tmp))
+  writeLines(code, tmp)
+  dust2::dust_compile(tmp, quiet = quiet, workdir = workdir, debug = debug,
+                      skip_cache = skip_cache)
+}
+
+
+odin_generator_js <- function(dat) {
+  ## Generate JS code, create a V8 context that contains the required
+  ## support code, evaluate our JS code in that context and return a
+  ## wrapper object that contains the context and matches the
+  ## interface of the dust/C++ version.  That suggests that some of
+  ## the work here really ends up being pushed into dust because we
+  ## want dust_system_create to behave appropriately based on the
+  ## first argument -- which would here be a js generator.  That means
+  ## that the dust package probably needs to report back about
+  ## supported backends (e.g., is V8 installed vs is a C++ toolchain
+  ## installed) and smooth over as much of this as possible.
+  cli::cli_abort(
+    c("JavaScript is not yet supported",
+      i = 'You have used `target = "js"` before we have implemented it'),
+    call = parent.frame())
 }
