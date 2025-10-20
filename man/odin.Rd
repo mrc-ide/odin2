@@ -6,19 +6,25 @@
 \usage{
 odin(
   expr,
+  ...,
   input_type = NULL,
   quiet = NULL,
   workdir = NULL,
   debug = NULL,
   skip_cache = FALSE,
   compatibility = NULL,
-  check_bounds = NULL
+  check_bounds = NULL,
+  target = NULL
 )
 }
 \arguments{
 \item{expr}{Odin code as the path to a file (a string), a
 character vector of code, or as an expression (typically within
 braces \code{{}}).}
+
+\item{...}{Unused, must be empty.  This allows us to add and
+reorder remaining arguments at will, as all arguments must be
+specified by name, not position).}
 
 \item{input_type}{An optional string describing the type of input
 for \code{expr} - must be one of \code{file}, \code{text} or \code{expression}.  If
@@ -70,6 +76,13 @@ specific lines to be ignored, which will provide finer control
 and allow you to use the bits of the checks that are actually
 helpful.  You can also pass \code{TRUE} here to mean "error" or
 \code{FALSE} to mean "disabled".}
+
+\item{target}{Compilation target.  If provided, it must be one of
+\code{cpp} or \code{js}.  In future, we hope to support \code{cuda} to enable
+support compilation to run on NVIDIA GPUs.  The default, \code{NULL},
+falls back on the option \code{odin2.target}, and if that is unset we
+\strong{currently} select \code{cpp}, but this is subject to change once
+the JavaScript support is complete.}
 }
 \value{
 A \code{dust_system_generator} object, suitable for using with
