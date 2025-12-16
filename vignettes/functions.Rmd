@@ -149,10 +149,10 @@ sqrt(3)^2 == 3
 * `sqrt` -- **Square root function** (e.g., `sqrt(4)` &rarr; `2`)
 * `beta` -- **Beta function** (e.g., `beta(3, 5)` &rarr; `0.00952381`)
 * `lbeta` -- **Log beta function** (e.g., `lbeta(3, 5)` &rarr; `-4.65396`)
-* `choose` -- **Binomial coefficients** (e.g., `choose(60, 3)` &rarr; `34220`)
-* `lchoose` -- **Log binomial coefficients** (e.g., `choose(60, 3)` &rarr; `10.44057`)
 * `gamma` -- **Gamma function** (e.g., `gamma(10)` &rarr; `362880`)
 * `lgamma` -- **Log gamma function** (e.g., `lgamma(10)` &rarr; `12.80183`)
+* `erf` -- **Error function** (e.g., `erf(1)` &rarr; `0.8427008`)
+* `erfc` -- **Complementary error function** (e.g., `erfc(1)` &rarr; `0.1572992`)
 
 The exact behaviour for `%%` and `%/%` for floating point numbers and negative numbers is complicated - please see `?Arithmetic`.  The rules for operators in `odin` try to follow those in R as closely as possible.
 
