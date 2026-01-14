@@ -520,7 +520,7 @@ test_that("pull recursive dependencies into compare_data", {
       "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
-      "  const real_type p = monty::math::exp(x);",
+      "  const real_type p = monty::math::exp<real_type>(x);",
       "  odin_ll += unless_nan(monty::density::poisson(data.d, p, true));",
       "  return odin_ll;",
       "}"))
@@ -586,9 +586,9 @@ test_that("generate adjoint", {
       "  const auto x = state[0];",
       "  const auto adj_x = adjoint[0];",
       "  const auto adj_a = adjoint[1];",
-      "  const real_type p = monty::math::exp(x);",
+      "  const real_type p = monty::math::exp<real_type>(x);",
       "  const real_type adj_p = data.d / p - 1;",
-      "  adjoint_next[0] = adj_p * monty::math::exp(x) + adj_x;",
+      "  adjoint_next[0] = adj_p * monty::math::exp<real_type>(x) + adj_x;",
       "  adjoint_next[1] = adj_a;",
       "}"))
 
@@ -760,9 +760,9 @@ test_that("can generate models with commonly used mathematical functions", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  const real_type a = monty::math::log(x);",
-      "  const real_type b = monty::math::ceil(a);",
-      "  const real_type c = monty::math::pow(a, b);",
+      "  const real_type a = monty::math::log<real_type>(x);",
+      "  const real_type b = monty::math::ceil<real_type>(a);",
+      "  const real_type c = monty::math::pow<real_type>(a, b);",
       "  state_next[0] = c;",
       "}"))
 })
@@ -2408,8 +2408,8 @@ test_that("can generate nontrivial debug", {
       "  const auto S = state[0];",
       "  const auto I = state[1];",
       "  const auto R = state[2];",
-      "  const real_type p_IR = 1 - monty::math::exp(-shared.gamma * dt);",
-      "  const real_type p_SI = 1 - monty::math::exp(-(shared.beta * I / shared.N * dt));",
+      "  const real_type p_IR = 1 - monty::math::exp<real_type>(-shared.gamma * dt);",
+      "  const real_type p_SI = 1 - monty::math::exp<real_type>(-(shared.beta * I / shared.N * dt));",
       "  const real_type n_SI = monty::random::binomial<real_type>(rng_state, S, p_SI);",
       "  const real_type n_IR = monty::random::binomial<real_type>(rng_state, I, p_IR);",
       "  state_next[0] = S - n_SI;",
