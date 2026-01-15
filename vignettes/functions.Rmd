@@ -153,6 +153,8 @@ sqrt(3)^2 == 3
 * `lgamma` -- **Log gamma function** (e.g., `lgamma(10)` &rarr; `12.80183`)
 * `factorial` -- **Factorial function** (e.g., `factorial(10)` &rarr; `3628800`)
 * `lfactorial` -- **Log factorial function** (e.g., `lfactorial(10)` &rarr; `15.10441`)
+* `choose` -- **Binomial coefficient function** (e.g. `choose(7, 3)` &rarr; `35`)
+* `lchoose` -- **Log binomial coefficient function** (e.g. `lchoose(7, 3)` &rarr; `3.555348`)
 * `erf` -- **Error function** (e.g., `erf(1)` &rarr; `0.8427008`)
 * `erfc` -- **Complementary error function** (e.g., `erfc(1)` &rarr; `0.1572992`)
 
