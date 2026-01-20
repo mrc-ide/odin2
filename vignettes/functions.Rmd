@@ -134,7 +134,7 @@ sqrt(3)^2 == 3
 * `%/%` -- **Integer divide**: Different to floating point division, effectively the full number of times one number divides into another (e.g., `20 %/% 7` &rarr; `2`)
 * `abs` -- **Absolute value** (e.g., `abs(-1)` &rarr; `1`)
 * `sign` -- **Sign function**: Returns the sign of its argument as either -1, 0 or 1, which may be useful for multiplying by another argument (e.g., `sign(-100)` &rarr; `-1`)
-* `round` -- **Round a number** (e.g., `round(1.23)` &rarr; `1`; `round(1.23, 1)` &rarr; `1.2`)
+* `round` -- **Round a number**: round a number to the nearest integer (e.g., `round(1.23)` &rarr; `1`). Note that this uses the C++ convention that half rounds away from zero (e.g. `round(2.5)` &rarr; `3`) in contrast to the R convention that half rounds to even (in R, `round(2.5)` &rarr; `2`)
 * `floor` -- **Floor of a number**: Largest integer not greater than the provided number (e.g., `floor(6.5)` &rarr; `6`)
 * `ceiling` -- **Ceiling of a number**: Smallest integer not less than the provided number (e.g., `ceiling(6.5)` &rarr; `7`)
 * `trunc` -- **Truncate a number**: Round a number towards zero
@@ -153,6 +153,10 @@ sqrt(3)^2 == 3
 * `lchoose` -- **Log binomial coefficients** (e.g., `choose(60, 3)` &rarr; `10.44057`)
 * `gamma` -- **Gamma function** (e.g., `gamma(10)` &rarr; `362880`)
 * `lgamma` -- **Log gamma function** (e.g., `lgamma(10)` &rarr; `12.80183`)
+* `factorial` -- **Factorial function** (e.g., `factorial(10)` &rarr; `3628800`)
+* `lfactorial` -- **Log factorial function** (e.g., `lfactorial(10)` &rarr; `15.10441`)
+* `erf` -- **Error function** (e.g., `erf(1)` &rarr; `0.8427008`)
+* `erfc` -- **Complementary error function** (e.g., `erfc(1)` &rarr; `0.1572992`)
 
 The exact behaviour for `%%` and `%/%` for floating point numbers and negative numbers is complicated - please see `?Arithmetic`.  The rules for operators in `odin` try to follow those in R as closely as possible.
 

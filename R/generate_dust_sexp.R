@@ -144,7 +144,12 @@ generate_dust_sexp <- function(expr, dat, options = list()) {
       ret <- sprintf("monty::math::%s<%s>(%s)",
                      fn, dest_type, paste(args_str, collapse = ", "))
     } else if (fn %in% names(FUNCTIONS_MONTY_MATH)) {
-      ret <- sprintf("monty::math::%s(%s)",
+      ## For all other monty math functions we ensure the output type is real
+      ## as this is almost certainly what we always want, and this will prevent
+      ## the output of real-valued functions being coerced to int if the
+      ## input is an int. In cases where users really want the output to be an
+      ## int they should wrap with as.integer()
+      ret <- sprintf("monty::math::%s<real_type>(%s)",
                      FUNCTIONS_MONTY_MATH[[fn]],
                      paste(args_str, collapse = ", "))
     } else if (fn == "as.numeric") {
