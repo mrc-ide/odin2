@@ -1,5 +1,6 @@
 test_that("can generate trivial package, compile the result, and run system", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   path <- withr::local_tempdir()
   test_pkg_setup(path, "mypkg")
   writeLines(c("initial(x) <- 0",
@@ -17,6 +18,7 @@ test_that("can generate trivial package, compile the result, and run system", {
 
 test_that("can run example package", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   path <- withr::local_tempdir()
   example_package(path)
   res <- odin_package(path, quiet = TRUE)

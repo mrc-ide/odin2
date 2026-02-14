@@ -5,6 +5,7 @@ vignette: >
   %\VignetteIndexEntry{Packaging odin models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{decor}
 ---
 
 ```{r, include = FALSE}

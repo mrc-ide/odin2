@@ -1,5 +1,6 @@
 test_that("can compute gradient", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   sir <- odin({
     p_IR <- 1 - exp(-gamma * dt)
     S0 <- 1000
