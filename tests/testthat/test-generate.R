@@ -2168,6 +2168,27 @@ test_that("can generate print strings", {
 })
 
 
+test_that("can generate print strings for ode systems", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    deriv(x) <- x_deriv
+    x_deriv <- x * 2
+    print("x_deriv: {x_deriv}")
+  })
+  
+  dat <- generate_prepare(dat)
+  
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const auto x = state[0];",
+      "  const real_type x_deriv = x * 2;",
+      "  state_deriv[0] = x_deriv;",
+      '  Rprintf("[%f] x_deriv: %f\\n", time, x_deriv);',
+      "}"))
+})
+
+
 test_that("can generate print that requires additional unpack", {
   dat <- odin_parse({
     initial(x) <- 1
@@ -2338,6 +2359,40 @@ test_that("can generate browser code", {
       '    dust2::r::browser::save(b, "b", odin_env);',
       '    dust2::r::browser::save(x, "x", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
+      "  }",
+      "}"))
+})
+
+
+test_that("can generate browser code for ode systems", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- b
+    a <- x * 2
+    b <- a / x
+    browser(phase = "deriv", when = time > 2)
+  })
+  dat <- generate_prepare(dat)
+  
+  expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/browser.hpp>"))
+  
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const auto x = state[0];",
+      "  const real_type a = x * 2;",
+      "  const real_type b = a / x;",
+      "  state_deriv[0] = b;",
+      "  if (time > 2) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(a, "a", odin_env);',
+      '    dust2::r::browser::save(b, "b", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
+      '    dust2::r::browser::enter(odin_env, "deriv", time);',
       "  }",
       "}"))
 })
