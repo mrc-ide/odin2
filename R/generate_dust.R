@@ -401,6 +401,9 @@ generate_dust_system_rhs <- function(dat) {
   for (eq in eqs) {
     body$add(generate_dust_assignment(eq, "state_deriv", dat))
   }
+  
+  body$add(generate_dust_print(dat, "deriv"))
+  body$add(generate_dust_browser(dat, "deriv"))
 
   cpp_function("void", "rhs", args, body$get(), static = TRUE)
 }
