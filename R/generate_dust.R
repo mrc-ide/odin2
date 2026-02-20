@@ -810,13 +810,12 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     }
   } else if (identical(eq$rhs$type, "interpolate")) {
     name <- eq$lhs$name
+    rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
     if (isFALSE(options$shared_exists)) {
       dest <- name
-      rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
       res <- sprintf("const auto %s = %s;", dest, rhs)
     } else {
       dest <- sprintf("shared.%s", name)
-      rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
       res <- sprintf("%s = %s;", dest, rhs)
     }
   } else if (rlang::is_call(eq$rhs$expr, "OdinInterpolateEval") &&
