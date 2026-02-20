@@ -809,8 +809,15 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       res <- sprintf("dim.%s.set({%s});", eq$lhs$name_data, dims_str)
     }
   } else if (identical(eq$rhs$type, "interpolate")) {
+    name <- eq$lhs$name
     rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
-    res <- sprintf("const auto %s = %s;", eq$lhs$name, rhs)
+    if (isFALSE(options$shared_exists)) {
+      dest <- name
+      res <- sprintf("const auto %s = %s;", dest, rhs)
+    } else {
+      dest <- sprintf("shared.%s", name)
+      res <- sprintf("%s = %s;", dest, rhs)
+    }
   } else if (rlang::is_call(eq$rhs$expr, "OdinInterpolateEval") &&
              eq$lhs$name %in% dat$storage$arrays$name) {
     ## Special case here until we sort out vector valued functions I

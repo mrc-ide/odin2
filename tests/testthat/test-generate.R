@@ -1900,6 +1900,14 @@ test_that("can add interpolation", {
       "  odin.packing.state.copy_offset(odin.offset.state.begin());",
       "  return shared_state{odin, dim, n, at, ay, interpolate_y};",
       "}"))
+  
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.at, shared.at.data(), "at", false);',               
+      '  dust2::r::read_real_array(parameters, shared.dim.ay, shared.ay.data(), "ay", false);',              
+      '  shared.interpolate_y = dust2::interpolate::InterpolateConstant(shared.at, shared.ay, "at", "ay");',
+      "}" ))
 })
 
 
@@ -2080,6 +2088,14 @@ test_that("can interpolate arrays", {
       "  };",
       "  odin.packing.state.copy_offset(odin.offset.state.begin());",
       "  return shared_state{odin, dim, nt, na, at, ay, interpolate_a};",
+      "}"))
+  
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.at, shared.at.data(), "at", false);',                                               
+      '  dust2::r::read_real_array(parameters, shared.dim.ay, shared.ay.data(), "ay", false);',                                                
+      '  shared.interpolate_a = dust2::interpolate::InterpolateConstantArray<real_type, 1>(shared.at, shared.ay, shared.dim.a, "at", "ay");',
       "}"))
 
   expect_equal(
