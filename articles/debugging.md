@@ -1,0 +1,353 @@
+# Debugging
+
+Debugging odin models can be challenging because:
+
+- They’re not composable - you end up with a fairly large set of
+  equations that govern your system, and you can’t easily split this
+  into smaller testable units and compose them together.
+- You are writing in the DSL but the model runs in some other language;
+  this sometimes behaves unexpectedly and is much less inspectable than
+  just using R
+- You can’t (easily) interrupt the running of the program at any point
+  and inspect it
+
+Here, we outline some strategies for debugging, and describe the new
+features that aim to make this easier.
+
+``` r
+library(odin2)
+library(dust2)
+```
+
+## Using `print()`
+
+As of odin 1.4.5, you can print the value of some variables in the
+middle of running your model. We will expand and change this
+functionality in future versions, your feedback is very welcome.
+
+Consider the simple model below, which illustrates the idea:
+
+``` r
+gen <- odin2::odin({
+  update(x) <- Normal(x, 1)
+  initial(x) <- 1
+  print("x: {x}")
+})
+sys <- dust_system_create(gen(), list(), 1)
+dust_system_run_to_time(sys, 10)
+#> [0.000000] x: 0.000000
+#> [1.000000] x: -0.514960
+#> [2.000000] x: -1.023495
+#> [3.000000] x: -1.239498
+#> [4.000000] x: -0.470707
+#> [5.000000] x: 0.898433
+#> [6.000000] x: 0.797199
+#> [7.000000] x: -0.569418
+#> [8.000000] x: -0.342841
+#> [9.000000] x: -1.825629
+```
+
+Here we’ve told odin that we want to watch the variable `x` and print
+its value at every evaluation (the third line of the model code. When we
+run the model it prints out the time in square brackets then the debug
+information following. Notice that we only requested the solution at
+times 0 and 0.1 but the debug information shows every point in time that
+the ODE solver evaluated this system of equations.
+
+While this function shares its name with R’s
+[`print()`](https://rdrr.io/r/base/print.html) it has entirely different
+functionality.
+
+### `print` format strings
+
+For print formatting, we use [glue](https://glue.tidyverse.org/) to
+drive the formatting, and if you have used that package the format will
+feel familiar.
+
+The most simple usage is as above; you can refer to variables within
+`{curly braces}`; so long as your variable is a scalar this will work.
+Outside of curly braces the string is printed verbatim.
+
+#### Conditional display
+
+If your model takes many steps, or if you want to narrow down on a
+problem, you may want to enable conditional display of your debug
+information. Use the argument `when =` to control display, such as
+
+``` r
+print("x: {x}", when = x > 1)
+```
+
+which will display the value of `x` when it is greater than 1. You can
+chain together expressions with parentheses and `&&` or `||` and
+reference any value in your system. For example:
+
+``` r
+printf("{x} {y} {z}", when = x > (x + y + z) / 2 && a < 1)
+```
+
+#### Controlling precision
+
+You can control the way that quantities are displayed through the use of
+formatting options. The formatting is the same as used by R, so you can
+experiment in the console easily. The default is to print as a generic
+floating point number, so this:
+
+``` r
+print("x: {x}, y: {y}")
+```
+
+is roughly equivalent to writing
+
+``` r
+sprintf("x: %f, y: %f", x, y)
+```
+
+See [`?sprintf`](https://rdrr.io/r/base/sprintf.html) for more
+information; but this defaults to 6 decimal places of precision. This
+may not be appropriate if you are dealing with numbers that are very
+large or very small; these both look a bit silly:
+
+``` r
+sprintf("x: %f, y: %f", 1e-7, 1e7)
+#> [1] "x: 0.000000, y: 10000000.000000"
+```
+
+The first loses all information - the only non-zero parts of the number
+fall after the precision cut-off, while in the second the 6 decimal
+places just add noise. So above we might prefer:
+
+``` r
+sprintf("x: %g, y: %g", 1e-7, 1e7)
+#> [1] "x: 1e-07, y: 1e+07"
+```
+
+which we could write in odin’s approach as
+
+``` r
+print("x: {x; g}, y: {y; g}")
+```
+
+Anything after the `;` is interpreted as a format specifier. You could
+also do
+
+``` r
+print("x: {x; g}, y: {y; .2f}")
+```
+
+which would format `y` to 2 decimal places. We follow here the example
+of the [`sprintf` transformer example in
+glue](https://glue.tidyverse.org/articles/transformers.html#sprintf-transformer)
+by not including the `%` placeholder, but allow all formats that the
+underlying library supports.
+
+### Current limitations
+
+This is an experimental interface, and it has not been exposed to much
+real-world use. As such it is possible that you might write fairly
+innocent looking code and it produce a compiler error rather than a
+nicer R error - please let us know so we can fix this.
+
+- There’s no good way of printing out the contents of an array aside
+  from indexing into it. That’s possibly a reasonable thing to do
+  though, given that most arrays get very large very quickly.
+- You can’t yet control the way that time is formatted (e.g., disabling
+  it or changing the precision)
+- The print statement only runs in your right-hand-side function (ODE
+  models) or update function (discrete time models) and so it’s possible
+  that some variables that you refer to in your print statements won’t
+  exist in this function (e.g., transient quantities used only to
+  compute some initial condition). We hope this is rare in real-use
+  examples but welcome minimal examples that show where this causes
+  problems (likely you will see a compiler error)
+- We print the result at the end of the rhs/update function; if you have
+  a crash (or are writing off the end of memory) then this might not be
+  what you want (e.g., the variables you see are the ones in the
+  iteration prior to the crash, or after they have been overwritten by
+  junk). We may support printing more eagerly, after all dependencies in
+  the expression are satisfied, with an additional option to `print`
+- Be careful of using integer printing (e.g., `{x; d}`) for variables
+  that are merely integer-like, or you will get unexpected junk output
+  out. You can however write `{as.integer(x); d}` which will do a
+  conversion to integer and then print that
+
+## Show the generated code
+
+Sometimes just looking at the generated code can be helpful. You can do
+this with `odin_show`:
+
+``` r
+odin_show({
+  initial(x) <- 0
+  update(x) <- Normal(x, 1)
+})
+#> 
+#> ── odin code: ──────────────────────────────────────────────────────────────────
+#> #include <dust2/common.hpp>
+#> // [[dust2::class(odin_system)]]
+#> // [[dust2::time_type(discrete)]]
+#> class odin_system {
+#> public:
+#>   odin_system() = delete;
+#>   using real_type = double;
+#>   using rng_state_type = monty::random::generator<real_type>;
+#>   struct shared_state {
+#>     struct odin_internals_type {
+#>       struct {
+#>         dust2::packing state;
+#>       } packing;
+#>       struct {
+#>         std::array<size_t, 1> state;
+#>       } offset;
+#>     } odin;
+#>   };
+#>   struct internal_state {};
+#>   using data_type = dust2::no_data;
+#>   static dust2::packing packing_state(const shared_state& shared) {
+#>     return shared.odin.packing.state;
+#>   }
+#>   static shared_state build_shared(cpp11::list parameters) {
+#>     shared_state::odin_internals_type odin;
+#>     odin.packing.state = dust2::packing{
+#>       {"x", {}}
+#>     };
+#>     odin.packing.state.copy_offset(odin.offset.state.begin());
+#>     return shared_state{odin};
+#>   }
+#>   static internal_state build_internal(const shared_state& shared) {
+#>     return internal_state{};
+#>   }
+#>   static void update_shared(cpp11::list parameters, shared_state& shared) {
+#>   }
+#>   static void update_internal(const shared_state& shared, internal_state& internal) {
+#>   }
+#>   static void initial(real_type time, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state) {
+#>     state[0] = 0;
+#>   }
+#>   static void update(real_type time, real_type dt, const real_type* state, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state_next) {
+#>     const auto x = state[0];
+#>     state_next[0] = monty::random::normal<real_type>(rng_state, x, 1);
+#>   }
+#> };
+```
+
+To show just a particular method (usually `update` or `rhs`), use the
+`what` argument, for example:
+
+``` r
+odin_show({
+  initial(x) <- 0
+  update(x) <- Normal(x, 1)
+}, what = "update")
+#> 
+#> ── odin code (update): ─────────────────────────────────────────────────────────
+#> static void update(real_type time, real_type dt, const real_type* state, const shared_state& shared, internal_state& internal, rng_state_type& rng_state, real_type* state_next) {
+#>   const auto x = state[0];
+#>   state_next[0] = monty::random::normal<real_type>(rng_state, x, 1);
+#> }
+```
+
+## Use the interactive debugger
+
+This is new and very experimental, you can ask odin to drop you into a
+debugger (implemented on top of R’s
+[`browser()`](https://rdrr.io/r/base/browser.html) to explore the values
+of your variables at some point within a model run. To do this, add a
+call to [`browser()`](https://rdrr.io/r/base/browser.html) somewhere
+within your odin code and recompile.
+
+The `browser` function in odin accepts arguments
+
+- `phase`: the system phase where the debugger should be inserted; this
+  will typically be `update` or `deriv`
+- `when`: optionally a condition that should be satisfied for the
+  debugger to be triggered. You will typically want to set this or it
+  will be called at every step
+
+Note that these are not the same as R’s
+[`browser()`](https://rdrr.io/r/base/browser.html)!
+
+For example, to debug the simple SIR model from `vignette("odin")` we
+might write:
+
+``` r
+gen <- odin({
+  p_IR <- 1 - exp(-gamma * dt)
+  N <- parameter(1000)
+  p_SI <- 1 - exp(-(beta * I / N * dt))
+  n_SI <- Binomial(S, p_SI)
+  n_IR <- Binomial(I, p_IR)
+  update(S) <- S - n_SI
+  update(I) <- I + n_SI - n_IR
+  update(R) <- R + n_IR
+  initial(S) <- N - I0
+  initial(I) <- I0
+  initial(R) <- 0
+  beta <- parameter(0.2)
+  gamma <- parameter(0.1)
+  I0 <- parameter(10)
+
+  browser(phase = "update", when = I < 10 && time > 20)
+})
+```
+
+The location of the call to
+[`browser()`](https://rdrr.io/r/base/browser.html) does not matter; it
+will be activated at the **end** of the phase. The condition here might
+be something we cook up to look at what happens as the number of
+individuals in the infected class starts tailing off at the end of the
+simulation.
+
+We create and initialise the system as normal:
+
+``` r
+sys <- dust_system_create(gen(), list())
+dust_system_set_state_initial(sys)
+```
+
+However, when you run the system you will pause part way through
+evaluation:
+
+``` r
+dust_system_run_to_time(sys, 200)
+#> ℹ dust browser ('update'; time = 117): see `?dust_browser()` for help
+#> Called from: eval(substitute(expr), data, enclos = parent.frame())
+```
+
+and the prompt has changed to `Browse[1]>` (unfortunately we can’t
+change this easily)
+
+Here, you can see the things that odin and dust know about:
+
+``` r
+Browse[1]> ls()
+ [1] "beta"  "gamma" "I"     "I0"    "N"     "n_IR"  "n_SI"  "p_IR"  "p_SI"
+[10] "R"     "S"     "time"
+```
+
+and you can inspect values or perform calculations:
+
+``` r
+Browse[1]> N
+[1] 1000
+Browse[1]> I
+[1] 9
+Browse[1]> S
+[1] 178
+Browse[1]> I / S
+[1] 0.0505618
+```
+
+If you press `c` or `n`, then odin the system will proceed to the next
+step and drop you back into the debugger. You can exit with `Q` which
+will return you to the console with an error. You can also run
+
+``` r
+dust_browser_continue()
+```
+
+and then press `c` to continue to the end of your simulation.
+
+Changes that you make to variables within the debugger are *not*
+(currently) reflected back into the model. We’d be very happy to discuss
+this sort of workflow if it seems useful.

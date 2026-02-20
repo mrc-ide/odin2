@@ -1,0 +1,652 @@
+# Supported Functions
+
+## General syntax
+
+`odin` is a “[Domain Specific
+Language](https://en.wikipedia.org/wiki/Domain-specific_language)”; a
+mini-language that solves a specific problem; in this case representing
+systems of difference or differential equations. It is syntactically R
+(i.e., it can be parsed with R’s parser) but it is not itself R. Only a
+subset of expressions and syntax are supported.
+
+Every line in `odin` code must be an **assignment** or a
+**relationship** (there are some minor exceptions below).
+
+An assignment looks like
+
+``` r
+a <- expression
+```
+
+while a relationship looks like
+
+``` r
+b ~ Distribution(...)
+```
+
+where `b` will be an entry from data (introduced by
+[`data()`](https://rdrr.io/r/utils/data.html)), `Distribution` will be a
+monty distribution function (see below), and `...` will be arguments to
+this function, which might come from data or from model variables. See
+[`vignette("fitting")`](https://mrc-ide.github.io/odin2/articles/fitting.md)
+for a high-level introduction to this interface.
+
+`odin2` supports many functions that you’d expect to see for
+constructing dynamical models. These include most common mathematical
+operations and some that are quite obscure. The support for stochastic
+models and comparison to data comes from `monty`.
+
+## Variables
+
+Conceptually, a system is entirely determined by its **variables**;
+these are the state of the system.
+
+- for continuous time (ODE) models, these are the equations that you
+  have time derivatives for, represented by
+  [`deriv()`](https://rdrr.io/r/stats/deriv.html) on the left-hand-side
+  of an assignment
+- for discrete time models, these are the equations that you have
+  [`update()`](https://rdrr.io/r/stats/update.html) expressions for, for
+  describing the recurrence relation.
+
+Practically, we actually determine the variables of a system based on
+the presence of an `initial()` call on the left hand side, as this will
+be present for both continuous-time and discrete-time systems.
+
+The simplest ODE system might be:
+
+``` r
+deriv(x) <- 1 / x
+initial(x) <- 1
+```
+
+which describes some sort of logarithmic growth in `x`.
+
+Similarly, a trivial discrete-time system might be
+
+``` r
+update(x) <- x + 1
+initial(x) <- 0
+```
+
+which describes a counter.
+
+### Continuous time models
+
+There are two special considerations for ODE models.
+
+First, we allow additional “variables” as output; these are quantities
+for which you do not have derivatives and are computed from your true
+variables and other quantities in the model, but which are considered
+state for the purposes of input and output. You can specify output by
+writing:
+
+``` r
+output(y) <- x * 2
+```
+
+which would define a new variable `y` which takes on the value of
+`x * 2`. When passing state into or out of a system `y` would be
+included even though it is computable from `x`. Alternatively, if `y` is
+something that you are already using within the model you can write:
+
+``` r
+output(y) <- TRUE
+```
+
+You may want to use these to inspect intermediates in an ODE model, or
+to reduce the amount of state you need to save from `simulate` etc (for
+example you may want to output the sum over some disaggregated set of
+variables for which you actually have derivatives).
+
+Second, if your system has delays, then there is implicit state in the
+history of these delays. Delays start off life empty and are filled up
+as the system runs. This means that continuing a delayed system is not
+the same as starting a delayed system from a particular point in
+space/time, and we will provide tools for working with this in future
+versions.
+
+## Basic operations
+
+- `+` – **Plus**: Both infix (`a + b`) and prefix (`+a`) versions
+  supported (e.g., `1 + 2` → `3`)
+- `-` – **Minus**: Both infix (`a - b`) and prefix (`-a`) versions
+  supported (e.g., `10 - 1` → `9`)
+- `*` – **Multiply**: Multiply two numbers together (e.g., `2 * 6` →
+  `12`)
+- `/` – **Divide**: Divide two numbers (e.g., `12 / 6` → `2`)
+- `^` – **Power**: Raise the first number to the power of the second.
+  Either number may be a floating point number (e.g., `2.3 ^ 1.2` →
+  `2.716898`)
+- `(` – **Parenthesis**: Group expressions together (e.g., `(1 + 5) * 2`
+  → `12`)
+
+## Conditionals
+
+You can only use conditionals with `if` as an inline expression, for
+example
+
+``` r
+a <- if (9 > 10) 1 else 2
+```
+
+would result in `a` being assigned as `2` (this works in R normally
+too!).
+
+Because general flow control is not supported, you **cannot** write:
+
+``` r
+if (9 > 10) {
+  a <- 1
+} else {
+  a <- 2
+}
+```
+
+## Operators
+
+A number of logical-returning operators exist, primarily to support the
+`if` statement; all the usual comparison operators exist (though not
+vectorised `|` or `&`).
+
+- `>` – **Greater than** (e.g., `1 > 2` → `FALSE`)
+- `<` – **Less than** (e.g., `1 < 2` → `TRUE`)
+- `>=` – **Greater than or equal to** (e.g., `1 >= 2` → `FALSE`)
+- `<=` – **Less than or equal to** (e.g., `1 <= 2` → `TRUE`)
+- `==` – **Is exactly equal to** (e.g., `1 == 1` → `TRUE`)
+- `!=` – **Is not exactly equal to** (e.g., `1 != 2` → `TRUE`)
+- `&&` – **Boolean AND** (e.g., `(1 == 1) && (2 > 1)` → `TRUE`)
+- `||` – **Boolean OR** (e.g., `(1 == 1) && (2 > 1)` → `TRUE`)
+
+Be wary of strict equality with `==` or `!=` as numbers may be floating
+point numbers, which have some surprising properties for the
+uninitiated, for example
+
+``` r
+sqrt(3)^2 == 3
+```
+
+    ## [1] FALSE
+
+## Mathematical functions and constants
+
+- `%%` – **Modulo**: Finds the remainder after division of one number by
+  another (e.g., `123 %% 100` → `23`)
+- `%/%` – **Integer divide**: Different to floating point division,
+  effectively the full number of times one number divides into another
+  (e.g., `20 %/% 7` → `2`)
+- `abs` – **Absolute value** (e.g., `abs(-1)` → `1`)
+- `sign` – **Sign function**: Returns the sign of its argument as either
+  -1, 0 or 1, which may be useful for multiplying by another argument
+  (e.g., `sign(-100)` → `-1`)
+- `round` – **Round a number**: round a number to the nearest integer
+  (e.g., `round(1.23)` → `1`). Note that this uses the C++ convention
+  that half rounds away from zero (e.g. `round(2.5)` → `3`) in contrast
+  to the R convention that half rounds to even (in R, `round(2.5)` →
+  `2`)
+- `floor` – **Floor of a number**: Largest integer not greater than the
+  provided number (e.g., `floor(6.5)` → `6`)
+- `ceiling` – **Ceiling of a number**: Smallest integer not less than
+  the provided number (e.g., `ceiling(6.5)` → `7`)
+- `trunc` – **Truncate a number**: Round a number towards zero
+- `max` – **Maximum**: Returns maximum of two numbers (e.g., `max(2, 6)`
+  → `6`)
+- `min` – **Minimum** (e.g., `min(2, 6)` → `2`)
+- `exp` – **Exponential function** (e.g., `exp(1)` → `2.718282`)
+- `expm1` – **Computes exp(x) - 1 accurately for small \|x\|** (e.g.,
+  `exp(1)` → `1.718282`)
+- `log` – **Logarithmic function in base e** (e.g., `log(1)` → `0`)
+- `log2` – **Logarithmic function in base 2** (e.g., `log2(1024)` →
+  `10`)
+- `log10` – **Logarithmic function in base 10** (e.g., `log10(1000)` →
+  `3`)
+- `log1p` – **Computes log(x + 1) accurately for small \|x\|** (e.g.,
+  `log1p(1)` → `0.6931472`)
+- `sqrt` – **Square root function** (e.g., `sqrt(4)` → `2`)
+- `beta` – **Beta function** (e.g., `beta(3, 5)` → `0.00952381`)
+- `lbeta` – **Log beta function** (e.g., `lbeta(3, 5)` → `-4.65396`)
+- `choose` – **Binomial coefficients** (e.g., `choose(60, 3)` → `34220`)
+- `lchoose` – **Log binomial coefficients** (e.g., `choose(60, 3)` →
+  `10.44057`)
+- `gamma` – **Gamma function** (e.g., `gamma(10)` → `362880`)
+- `lgamma` – **Log gamma function** (e.g., `lgamma(10)` → `12.80183`)
+- `factorial` – **Factorial function** (e.g., `factorial(10)` →
+  `3628800`)
+- `lfactorial` – **Log factorial function** (e.g., `lfactorial(10)` →
+  `15.10441`)
+- `erf` – **Error function** (e.g., `erf(1)` → `0.8427008`)
+- `erfc` – **Complementary error function** (e.g., `erfc(1)` →
+  `0.1572992`)
+
+The exact behaviour for `%%` and `%/%` for floating point numbers and
+negative numbers is complicated - please see
+[`?Arithmetic`](https://rdrr.io/r/base/Arithmetic.html). The rules for
+operators in `odin` try to follow those in R as closely as possible.
+
+The constant `pi` can be used, along with all the usual trig functions:
+
+- `cos` – **Cosine function**
+- `sin` – **Sine function**
+- `tan` – **Tangent function**
+- `acos` – **Arc-cosine function**
+- `asin` – **Arc-sin function**
+- `atan` – **Arc-tangent function**
+- `atan2` – **Two-argument arc-tangent function**
+- `cosh` – **Hyperbolic cosine function**
+- `sinh` – **Hyperbolic sine function**
+- `tanh` – **Hyperbolic tangent function**
+- `acosh` – **Hyperbolic arc-cosine function**
+- `asinh` – **Hyperbolic arc-sine function**
+- `atanh` – **Hyperbolic arc-tangent function**
+
+## Arrays
+
+Use of arrays implies a “`for`-loop” in the generated code. For example,
+you might write a vectorised version of the [logistic
+map](https://en.wikipedia.org/wiki/Logistic_map) as:
+
+``` r
+update(y[]) <- r[i] * y[i] * (1 - y[i])
+```
+
+which will expand to code equivalent to
+
+``` r
+for (i in 1:length(y)) {
+  y_next[i] <- r[i] * y[i] * (1 - y[i])
+}
+```
+
+The loop extent here (over the entire range of `y`) is determined by the
+left hand side expression (`y[]`). This enables use of `i` on the right
+hand side to index as loop progresses.
+
+The indices on the right hand side can be `i`, `j`, `k`, `l`, `i5`,
+`i6`, `i7` or `i8` (odin supports arrays up to 8 dimensions: do let us
+know if you need more for some reason).
+
+Arrays can have more than one dimension, for example the expression:
+
+``` r
+ay[, ] <- a[i, j] * y[j]
+```
+
+involves loops over two dimensions because we loop over the whole extent
+of `ay` which is a matrix. This is roughly equivalent to:
+
+``` r
+for (i in 1:nrow(ay)) {
+  for (j in 1:ncol(ay)) {
+     ay[i, j] <- a[i, j] * y[j]
+  }
+}
+```
+
+Note here that `y` is accessed using `j`, even though it is only a
+vector. This is because the loop extents are generated by the left hand
+side.
+
+### Array size
+
+Every array variable requires a
+[`dim()`](https://rdrr.io/r/base/dim.html) **assignment**. For example,
+in the above examples we might have:
+
+``` r
+dim(y) <- 10
+dim(ay) <- c(nr, nc)
+```
+
+where `y` is defined to be a 1-dimensional array of length 10 and `ay`
+is a matrix (2-dimensional array) with `nr` rows and `nc` columns. The
+extents of arrays must be determined at the **first** system
+initialisation, and this is checked during parse.
+
+If you have different arrays with the same dimensions, you can also use
+[`dim()`](https://rdrr.io/r/base/dim.html) on the right-hand side, to
+copy from an array you have set the dimensions of elsewhere. For
+<example:->
+
+``` r
+dim(x1) <- c(5, 3, 2)
+dim(x2) <- dim(x1)
+dim(x3) <- dim(x1)
+```
+
+You can also combine arrays on the left-hand side to group arrays with
+the same dimensions together. These 5 arrays will all have the same
+dimensions:-
+
+``` r
+dim(x, y) <- c(5, 3, 2)
+dim(a, b, c) <- dim(x)
+```
+
+### Special functions for arrays
+
+We provide several functions for retrieving dimensions from an array
+
+- `length` – *Length*: get the full length of an array. For a single
+  dimensional array this is obvious, for a multidimensional array it is
+  the product over all dimensions.
+- `nrow` – *Number of rows*: number of rows in a matrix or number of
+  elements in the first dimension of a multidimensional array
+- `ncol` – *Number of columns*: number of columns in a matrix or number
+  of elements in the second dimension of a multidimensional array
+
+We do not currently offer a function for accessing the size of higher
+dimensions, please let us know if this is an issue (see
+[`vignette("migrating")`](https://mrc-ide.github.io/odin2/articles/migrating.md))
+
+Frequently, you will want to take a sum over an array, or part of an
+array, using `sum`. To sum over all elements of an array, use
+[`sum()`](https://rdrr.io/r/base/sum.html) with the name of the array
+you would like to sum over:
+
+``` r
+dim(x) <- 10
+x_tot <- sum(x)
+```
+
+If `m` is a matrix you can compute the sums over the second column by
+writing:
+
+``` r
+m1_tot <- sum(m[, 2])
+```
+
+This partial sum approach is frequently used within implicit loops:
+
+    m_col_totals[] <- sum(m[, i])
+
+You can use this approach to compute a matrix-vector product
+$\mathbf{(}Ax)$:
+
+    ax_tmp[, ] <- a[i, j] * x[j]
+    ax[] <- sum(ax_tmp[, i])
+
+## Distribution functions
+
+We support distribution functions in two places:
+
+First, for discrete-time models we support sampling from a distribution
+at each time step. For example:
+
+``` r
+a <- Normal(0, 1)
+```
+
+will assign `a` to a draw from the standard normal distribution. You
+cannot use these functions from continuous time models. You cannot
+sample from stochastic functions in a continuous time (ODE) model.
+
+Second, for comparison to data, for example:
+
+    a ~ Normal(0, 1)
+
+will add a log likelihood term looking up the log density of the data
+element `a` against a standard normal distribution. This form can be
+used in both discrete-time and continuous-time models. For more
+information, see
+[`vignette("fitting")`](https://mrc-ide.github.io/odin2/articles/fitting.md).
+
+Some distributions have several versions; these are distinguished by the
+arguments to the functions. For example:
+
+``` r
+a <- Gamma(2, 0.1)
+a <- Gamma(shape = 2, rate = 0.1)
+```
+
+draw from a Gamma distribution with a shape of 2 and a **rate** of 0.1,
+while
+
+``` r
+a <- Gamma(2, scale = 10)
+a <- Gamma(shape = 2, scale = 10)
+```
+
+draw from a Gamma distribution with a shape of 2 and a **scale** of 10.
+
+The currently supported distributions are (alphabetically):
+
+- `Beta` – the [beta
+  distribution](https://en.wikipedia.org/wiki/Beta_distribution) with
+  parameters `a` and `b` (vs `rbeta`’s `shape1` and `shape2`)
+- `BetaBinomial` – the [beta-binomial
+  distribution](https://en.wikipedia.org/wiki/Beta-binomial_distribution)
+  with two forms:
+  - `size`, `prob` (the mean probability of success), `rho` (dispersion
+    parameter) (**default**)
+  - `size`, `a`, `b`
+- `Binomial` – the [binomial
+  distribution](https://en.wikipedia.org/wiki/Binomial_distribution)
+  with parameters `size` and `prob`
+- `Cauchy` – the [Cauchy
+  distribution](https://en.wikipedia.org/wiki/Cauchy_distribution) with
+  parameters `location` and `scale`. Note that as the Cauchy
+  distribution does not have a defined mean, you can not run a model
+  with Cauchy draws in [deterministic
+  mode](https://mrc-ide.github.io/odin2/articles/fitting.html#deterministic-models-from-stochastic).
+- `Exponential` – the [exponential
+  distribution](https://en.wikipedia.org/wiki/Exponential_distribution)
+  with two forms:
+  - `rate` (**default**); this is the same parameterisation as `rexp`
+  - `mean` which is the inverse of rate. **NOTE**: we may change this to
+    `scale` soon
+- `Gamma` – the [gamma
+  distribution](https://en.wikipedia.org/wiki/Gamma_distribution) with
+  two forms:
+  - `shape`, `rate` (**default**)
+  - `shape`, `scale`
+- `Hypergeometric` – the [hypergeometric
+  distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution)
+  with parameters `m` (number of white balls), `n` (number of black
+  balls), and `k` (number of samples), and we return the number of
+  *white* balls. We may support alternative parametrisations of this
+  distribution in future (this version is the same parametrisation as
+  `rhyper`)
+- `LogNormal` – the [log-normal
+  distribution](https://en.wikipedia.org/wiki/Log-normal_distribution)
+  with parameters `meanlog` and `sdlog`, the mean and standard deviation
+  of the distribution on the log scale
+- `NegativeBinomial` – the [negative binomial
+  distribution](https://en.wikipedia.org/wiki/Negative_binomial_distribution)
+  with two forms:
+  - `size`, `prob` (**default**)
+  - `size`, `mu` (the mean)
+- `Normal` – the [normal
+  distribution](https://en.wikipedia.org/wiki/Normal_distribution) with
+  parameters `mean`, `sd`
+- `Poisson` – the [Poisson
+  distribution](https://en.wikipedia.org/wiki/Poisson_distribution) with
+  parameter `lambda` (the mean)
+- `TruncatedNormal` – the [truncated normal
+  distribution](https://en.wikipedia.org/wiki/Truncated_normal_distribution)
+  with parameters `mean`, `sd`, `min` and `max`. For a one-sided
+  truncated normal distribution, you can set `min = -Inf` or
+  `max = Inf`. Note that `mean` and `sd` are not the mean and standard
+  deviation of the truncated normal distribution, but are the mean and
+  standard deviation of the normal distribution that has been truncated.
+- `Uniform` – the [uniform
+  distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with
+  parameters `min` and `max`
+- `Weibull` – the [Weibull
+  distribution](https://en.wikipedia.org/wiki/Weibull_distribution) with
+  parameters `shape` and `scale`
+- `ZINegativeBinomial` – the
+  [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model)
+  negative binomial distribution. With probability `pi0` a 0 is drawn,
+  otherwise we draw from the corresponding standard negative binomial
+  distribution using the other parameters (which may also result in a 0
+  being drawn). As with the standard negative binomial distribution,
+  there are two forms:
+  - `pi0`, `size`, `prob` (**default**)
+  - `pi0`, `size`, `mu` (the mean of the negative binomial part of the
+    distribution - note that the mean of the zero-inflated negative
+    binomial distribution will be `(1 - pi0) * mu`).
+- `ZIPoisson` – the
+  [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model)
+  Poisson distribution. with parameters `pi0` (the probability of excess
+  zeros) and `lambda` (the mean of the Poisson part of the
+  distribution). With probability `pi0` a 0 is drawn, otherwise we draw
+  from the corresponding standard Poisson distribution with mean
+  `lambda` (which may also result in a 0 being drawn). Note the mean of
+  this distribution is `(1 - pi0) * lambda`.
+
+In the future, we plan support for additional distributions, please let
+us know if we are missing any that you need. The support for these
+functions comes from `monty` and we will link here to the docs in that
+package once they exist for additional details.
+
+We plan to explicitly support the [multinomial
+distribution](https://en.wikipedia.org/wiki/Multinomial_distribution) in
+future, but for the time being it can be implemented as a loop of nested
+binomial distributions. For instance if you want to draw `y` from a
+multinomial distribution with parameters `size` and `prob` (where `prob`
+will be a vector of the same length as `y`) then this can be implemented
+as
+
+    y[1] <- Binomial(size, prob[1])
+    y[2:length(y)] <- Binomial(size - sum(y[1:(i - 1)]), prob[i] / sum(prob[i:length(y)]))
+
+while if you want to include a likelihood term where `z` is a vector of
+data (see
+[here](https://mrc-ide.github.io/odin2/articles/fitting.html#comparing-against-vectors-of-data)
+for guidance on vectors of data) from a multinomial distribution with
+probability vector `prob`, this can be implemented as
+
+    z[1:(length(z) - 1)] ~ Binomial(sum(z[i:length(z)]), prob[i] / sum(prob[i:length(z)]))
+
+### Semantics of random number draws
+
+Stochastic functions are called for each element in an array they are
+assigned to, at each time. So here:
+
+    x[] <- Normal(0, 1)
+
+`x` will be filled with each element having a different draw from a
+standard normal. In contrast, in:
+
+    a <- Normal(0, 1)
+    x[] <- a
+
+`x` will be a vector where every element is the same, the result of a
+*single* draw from a standard normal.
+
+## Special functions
+
+There are some special odin functions that may appear on the right hand
+side and which must be the only function used in the expression.
+
+### Parameters
+
+The function `parameter()` introduces a “parameter”; something that you
+will initialise your system with, or update after initialisation. This
+is the primary mechanism for controlling how systems behave. The
+`parameter` function accepts arguments:
+
+- `default`: The first argument, typically unnamed, holds the default
+  value if none is provided at initialisation
+- `constant`: Logical, indicating if the parameter cannot be changed
+  after being initially set. This must be `TRUE` for things leading into
+  array extents
+- `differentiate`: Logical, indicating if the likelihood (from
+  comparison to data) should be differentiated with respect to this
+  parameter.
+- `type`: The data type for the variable, as a string. Must be one of
+  `real` (the default), `integer` or `logical`.
+- `rank`: The number of dimensions of the parameter. This is only used
+  when assigning to [`dim()`](https://rdrr.io/r/base/dim.html) (see
+  below)
+
+For example:
+
+``` r
+a <- parameter()
+```
+
+Or:
+
+    n <- parameter(12, constant = TRUE, type = "integer")
+
+There are some interactions among the `differentiate` argument combined
+with `constant` or `type`:
+
+- If a parameter is differentiable (`differentiate = TRUE`) it may not
+  be constant!
+- If **any** parameter is differentiable, the default value for
+  `constant` is `TRUE`, and all non-constant parameters must be
+  differentiable. Otherwise the default value for `constant` is `FALSE`
+- Only parameters with `type = "real"` can be used with
+  `differentiate = TRUE`
+
+If your parameter has its dimensions determined by the size data you
+give it, you need to write it slightly specially:
+
+    a <- parameter()
+    dim(a) <- parameter(rank = 2)
+
+The `rank` argument here is required because otherwise we have no
+information on the number of dimensions that `a` has; here by saying
+`rank = 2` we specify that `a` is a matrix. *We might change this
+interface in future, the implementation here fairly closely matches that
+in odin1.*
+
+### Data
+
+If your model compares to data (i.e., it uses `~`) then it needs data.
+These are specified similarly to `parameter()`, though at present no
+arguments are supported.
+
+``` r
+d <- data()
+```
+
+Unlike `parameter()`, you will have a series of data elements, each
+corresponding to an observation at a different point in time in a time
+series. See `vignettes("fitting")` for more details.
+
+### Interpolation
+
+You can create variables that interpolate against time. This is useful
+in a few contexts, for example:
+
+- A piecewise constant function that represents the level of some
+  external factor
+- A smooth function that represents an environmental input
+
+Currently all interpolation functions are *scalar valued* meaning that
+at each time a single output is produced.
+
+The usage is:
+
+``` r
+interpolate(time, value, mode)
+```
+
+- `time` is a vector representing time values
+- `value` is a vector representing the series you would like to
+  interpolate, the same length as `time`
+- `mode` is a string, one of `constant`, `linear` or `spline`
+
+Once complete we will show usage of interpolating functions in their own
+vignette.
+
+## Restricted names
+
+You cannot assign to a name that is reserved in:
+
+- [C++](https://en.cppreference.com/w/cpp/keyword) - includes useful
+  words such as `new` and `switch`
+- [C](http://en.cppreference.com/w/c/keyword) - largely a subset of
+  C++’s words, but also excludes `restrict`
+- [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#reserved_words) -
+  includes useful words such as `default` and `export`
+- A few words restricted by odin itself: `time`, `dt`, `parameter`,
+  `data`, `interpolate`, `delay`, `initial`, `deriv`, `update`,
+  `output`, `dim`, `config`, `state`, `state_next`, `state_deriv`,
+  `shared`, `internal`, `pi`. We may reduce this list in future.
+
+In addition, odin restricts a few prefixes; a name cannot start with
+`odin_`, `dim_`, `interpolate_`, `delay_` or `adjoint_`.

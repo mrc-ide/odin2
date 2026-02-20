@@ -1,0 +1,571 @@
+# Migrating from odin 1.x.x
+
+This vignette discusses key differences with odin version 1, and with
+`odin.dust`.
+
+``` r
+library(odin2)
+library(dust2)
+```
+
+## New features
+
+Some of these features were present in versions of `odin.dust` and many
+derive from underlying support in `dust2`.
+
+- Comparison to data and likelihood support (introduced in `odin.dust`)
+- Automatic differentiation
+- More efficient setting of the subset of parameters you are likely to
+  use while fitting (use the `constant` argument to `parameter()`)
+- Multiple parameter sets at once (introduced in `odin.dust` but
+  expanded here)
+- Run multiple copies of a system at once in parallel (introduced in
+  `odin.dust`)
+- Built-in support for periodic variable resetting (e.g., for computing
+  daily incidence)
+- Better (we hope) error messages
+- Better debugging tools (see
+  [`vignette("debugging")`](https://mrc-ide.github.io/odin2/articles/debugging.md))
+- Compile-time bounds checking of arrays, preventing many crashes
+
+### Planned
+
+- Optional array bounds checking, during runtime (in the latter case
+  with a performance penalty once enabled).
+
+### Hoped
+
+- Support for multinomial samples and other vector-valued functions
+
+## Missing features
+
+Things we do plan on implementing:
+
+- Compile-time parameter substitution (`mrc-5575`)
+- Compilation to JavaScript
+- Compilation to GPU
+
+Things that we plan to drop in this version
+
+- Many details in `config()` and `options`
+
+Note that some errors are still not caught as odin errors, and invalid
+odin code will be accepted and generate C++ code that fails to compile.
+Please send us code that causes this to happen.
+
+## Changes in syntax
+
+### `user()` becomes `parameter()`
+
+This might be the largest user-visible change, and can be automatically
+migrated.
+
+Previously, to support parameters you might write
+
+``` r
+a <- user(4)
+```
+
+which says that `a` is a user-supplied parameter with a default value of
+`4`. In most cases this now simply becomes
+
+``` r
+a <- parameter(4)
+```
+
+The `integer` argument accepted by `user` has now changed:
+
+- `user(integer = TRUE)` becomes `parameter(type = "integer")`
+- `user(integer = FALSE)` becomes `parameter(type = "real")`
+
+This translation can be done automatically in most cases, and will be
+done (with a warning) by default if possible. You should update your
+code with the suggested fix, however, as this translation will be
+removed in a future version.
+
+### Compare keyword is now removed.
+
+In comparisons such as
+
+``` r
+compare(d) ~ Normal(0, 1)
+```
+
+The `compare` keyword, and the `~` only occur together. This has been
+simplified, and is now written as:
+
+``` r
+d ~ Normal(0, 1)
+```
+
+which reads as: `d` is normally distributed with a mean of 0 and
+standard deviation of 1.
+
+### Vector parameters assign without array indices
+
+Previously, if you had a vector parameter you had to write
+
+``` r
+a[] <- parameter()
+dim(a) <- 10
+```
+
+(though with `user()`, as in the previous section). However, the array
+index here does not really add anything as we already know how many
+dimensions `a` has from the `dim` call. So now you should write
+
+``` r
+a <- parameter()
+dim(a) <- 10
+```
+
+which makes it clearer that **all** of `a` is assigned by the parameter
+call.
+
+### Vector/matrix/array parameters whose size is determined by input require `rank` argument
+
+What a mouthful. Previously you might have written
+
+``` r
+a[, ] <- user()
+dim(a) <- user()
+```
+
+which means “`a` is a matrix whose dimensions are determined by the
+input we are given on initialisation”. Because of the previous change
+the first line changes to
+
+``` r
+a <- parameter()
+```
+
+but that means that we no longer know that `a` has two dimensions.
+That’s ok because we’ve moved the responsibility for this into the
+[`dim()`](https://rdrr.io/r/base/dim.html) assignment line anyway
+(internally). So for now you write
+
+``` r
+dim(a) <- parameter(rank = 2)
+```
+
+which conveys the same intent. We may make this slightly more friendly
+in future (see
+[`vignette("functions")`](https://mrc-ide.github.io/odin2/articles/functions.md)).
+
+### Interpolate results assign without array indices
+
+Previously, if you had an `interpolate()` call that returned a vector
+(or higher-dimension array) you had to write
+
+``` r
+v[] <- interpolate(a, b, "constant")
+```
+
+but now you should drop the `[]`, as for the `parameter()` case above,
+as you are replacing *all* of `v` at once, writing:
+
+``` r
+v <- interpolate(a, b, "constant")
+```
+
+### Discrete-time models have a more solid time basis
+
+Previously, discrete time models used `step` to count steps forward as
+unsigned integers, usually from zero. Many models added a parameter (or
+constant) `dt` representing the timestep and then a variable `time`
+which represented the time as a real-valued number. For example you
+might have `dt` of 0.25 and then your model stops at times
+`[0, 0.25, 0.5, 0.75, 1]` for steps `[0, 1, 2, 3, 4]`.
+
+We formalise this approach now having discrete time systems be
+explicitly in terms of the same time basis as ODE models (that is, some
+real valued time axis). When you initialise a model you pass in `dt`,
+which must be an even divisor of 1 (so 0.5, 0.25, 0.2, etc). We then
+take steps of this size. The wrinkle is that (at least for now) the
+model will only return control back to you, or state back to you, at
+integer-valued times. We may relax this in future to allow returning at
+any time value that is a multiple of `dt`.
+
+This will cause a few issues for using old code, which we cover below.
+
+#### Assignments to `dt`
+
+You may have models that assign to `dt`, either directly or as a
+parameter. You can no longer do this as `dt` will be provided by `dust`
+(see
+[`dust2::dust_system_create()`](https://mrc-ide.github.io/dust2/reference/dust_system_create.html)).
+
+We can automatically remove these (with a warning) in some cases.
+
+#### Assignments to `time`
+
+Conventionally, many models would write
+
+``` r
+time <- step * dt
+```
+
+which is the linear transformation of time that dust2 now does. We can
+remove these statements and your model should work as intended.
+
+#### Use of `step`
+
+All other uses of `step` are problematic and will need manual fixing. We
+will try and accumulate migration strategies here, so please let us know
+if you have had to do anything not listed.
+
+**Access “interpolated” values from a grid**: In `sircovid` we used
+`step` as an array index, in order to support time-varying inputs (e.g.,
+vaccine allocation schedules, rates of contact). This is no longer
+supported (at all) because `dt` is changed separately from the inputs.
+Instead you should use odin’s interpolation functions.
+
+**Periodic resetting**: You may have written:
+
+    a <- if (step %% freq == 0) b else c
+
+to have some quantity that took different values every `freq` steps,
+where `freq` is usually `1/dt` or `m/dt` where `m` is an integer. You
+should rewrite this to use `time`:
+
+    a <- if (time * dt / m == 0) b else c
+
+### The name of the time variable in continuous time models has changed
+
+Previously, time was `t` but we have moved this to `time` to be a little
+more explicit. We can automatically migrate your code in many cases,
+unless you have defined a variable `time` already.
+
+### Random number function calls have changed
+
+Previously we used the same names as R’s random-number-drawing
+functions, for example `rbinom` for drawing from a binomial
+distribution. This has changed to use the distribution name instead.
+
+The motivating reason for this change was that in odin we might write
+
+``` r
+rbinom(size, prob)
+```
+
+but if you were writing this in R you would write
+
+    rbinom(1, size, prob)
+
+with the first argument being the number of draws from the distribution
+in question. This departure in arguments feels needlessly confusing! If
+you were using `odin` without `odin.dust` then this did compile to a
+call to one of R’s underlying random number functions so this connection
+was reasonable but from version 2 we use monty’s parallelisable random
+number distributions.
+
+The mapping is:
+
+- [`rbeta()`](https://rdrr.io/r/stats/Beta.html) to `Beta`
+- [`rbinom()`](https://rdrr.io/r/stats/Binomial.html) to `Binomial`
+- [`rcauchy()`](https://rdrr.io/r/stats/Cauchy.html) to `Cauchy`
+- [`rchisq()`](https://rdrr.io/r/stats/Chisquare.html) to `ChiSquared`
+  (unsupported for now)
+- [`rexp()`](https://rdrr.io/r/stats/Exponential.html) to `Exponential`
+- [`rf()`](https://rdrr.io/r/stats/Fdist.html) to `F` (unsupported for
+  now)
+- [`rgamma()`](https://rdrr.io/r/stats/GammaDist.html) to `Gamma`
+- `rgeometric()` to `Geometric` (unsupported for now)
+- [`rhyper()`](https://rdrr.io/r/stats/Hypergeometric.html) to
+  `Hypergeometric`
+- [`rlogis()`](https://rdrr.io/r/stats/Logistic.html) to `Logistic`
+  (unsupported for now)
+- [`rlnorm()`](https://rdrr.io/r/stats/Lognormal.html) to `LogNormal`
+- [`rnbinom()`](https://rdrr.io/r/stats/NegBinomial.html) to
+  `NegativeBinomial`
+- [`rnorm()`](https://rdrr.io/r/stats/Normal.html) to `Normal`
+- [`rpois()`](https://rdrr.io/r/stats/Poisson.html) to `Poisson`
+- [`rt()`](https://rdrr.io/r/stats/TDist.html) to `T` (unsupported for
+  now)
+- [`runif()`](https://rdrr.io/r/stats/Uniform.html) to `Uniform`
+- [`rweibull()`](https://rdrr.io/r/stats/Weibull.html) to `Weibull`
+
+(Not all of these are implemented yet).
+
+### System size cannot be changed after creation
+
+This limitation comes from our implementation in `dust2` and it is
+possible to relax it in some settings. However, it is fairly important
+for efficiently running the system within a pMCMC context where we save
+state periodically.
+
+If your system has a parameter that affects the number of state
+variables in the system (e.g., the number of age categories that a
+compartment is stratified by), you may not change this after
+initialisation. This will be prevented by the parser once arrays are
+implemented.
+
+### Changes in the way arrays are handled
+
+The two-argument form of [`dim()`](https://rdrr.io/r/base/dim.html) has
+been removed, as we did not believe it was used and it is confusingly
+different to R. Previously you could write `dim(x, 3)` to get the length
+of the third dimension of `x`; this is no longer supported. Please let
+us know if this is a problem.
+
+## Changes to how delays are supported
+
+We support, to a degree, delay differential equations. That they work at
+all is a minor miracle, especially given that the solver we use (in
+dust2) is extremely simple.
+
+### `delay()` cannot be used in discrete time models
+
+This was removed in `odin.dust` and the limitation remains, at least for
+now. We may enable this later if required, please let us know. The
+reason for this change is that the way that delays are handled in
+continuous time is fundamentally different to how we would do this in
+discrete time (particularly with stochastic expressions), but we do not
+have a good motivating reason to develop this.
+
+### `delay()` results assign without array indices
+
+Previously, if you had a `delay()` call that returned a vector (or
+higher-dimension array) you had to write
+
+``` r
+v[] <- delay(a, tau)
+```
+
+but now you should drop the `[]`, as for the `parameter()` and
+`interpolate()` cases above, as you are replacing *all* of `v` at once,
+writing:
+
+``` r
+v <- delay(a, tau)
+```
+
+### The first argument to `delay()` must be the name of an equation
+
+Previously, you could delay an expression (e.g.,
+`x <- delay(a + b, 1)`). For simplicity in implementation we have
+dropped this and require that the first argument is a symbol. We might
+change this later, but in the current version it makes the syntax around
+handling delayed arrays a little more consistent (see above).
+
+### The ‘default’ argument to `delay()` has been removed
+
+Previously, you could write
+
+``` r
+x <- delay(y, tau, default)
+```
+
+to provide a default argument to the delayed value before `tau` time had
+elapsed. This was not widely advertised or used, and has been removed.
+
+### The delay time must be constant
+
+We require that the delay time is known at first model initialisation
+and not updated subsequently (i.e., that it is numeric, a literal value
+assigned to symbol or a parameter with `constant = TRUE`).
+
+## General changes
+
+This package replaces `odin.dust` and will eventually replace `odin` (as
+in, we’ll copy the entire `odin2` code into `odin` to become version
+2.0.0 of that package).
+
+The relationship between packages has changed. Previously `mcstate`
+“knew” about `dust` models and so you had to use `odin.dust` practically
+to use the statistical machinery in `mcstate`. We’ve changed this around
+now, so that `odin2` “knows” about `monty` and can create systems that
+will work well with `monty`. We now depend on `monty`, so if you have
+`odin2` installed you can start working towards fitting models
+immediately.
+
+## Known limitations
+
+### Much slower compilation time
+
+Because we now compile to C++ via `dust2`, the compilation times have
+massively increased. Previously, compilation of a simple model took less
+than a second, but now this will take 6 seconds or so. You can alleviate
+this to a degree during development by specifying `debug = TRUE` when
+compiling, which reduces this down to about 3 seconds. These times are
+from my workstation but I expect the relative differences to hold (we’re
+probably 10x slower than previously but can be “only” 5x slower if you
+turn off optimisation). If you were previously using `odin.dust` you
+should notice little change here.
+
+### Loss of features from odin 1.x
+
+Some original odin 1.x features have been lost:
+
+For discrete-time systems:
+
+- **You may not use `output()`**; see below for workarounds and the
+  reasons for this change.
+- **Delays are not supported**; they never worked well, particularly for
+  stochastic systems.
+
+## Updating old code
+
+If you compile odin code that contains any of the changes above, it will
+try and update the code to the new version and keep going:
+
+``` r
+gen <- odin2::odin({
+  initial(x) <- 1
+  deriv(x) <- x + a / t
+  a <- user(2)
+})
+#> Warning in odin2::odin({: Found 2 compatibility issues
+#> Replace calls to 'user()' with 'parameter()'
+#> ✖ a <- user(2)
+#> ✔ a <- parameter(2)
+#> Use 'time' and not 't' to refer to time
+#> ✖ deriv(x) <- x + a/t
+#> ✔ deriv(x) <- x + a/time
+```
+
+This model contains two issues that can be easily rewritten; the
+solution to this rewriting is printed to screen and the model is
+compiled as if you had rewritten them.
+
+Not everything can be rewritten, especially changes involving `step`:
+
+``` r
+gen <- odin2::odin({
+  initial(x) <- 1
+  update(x) <- x + a / step
+  a <- user(2)
+})
+#> Error in `odin2::odin()`:
+#> ! Use of 'step' is no longer allowed
+#> ℹ Previously, discrete-time models used 'step' as a measure of time, but we
+#>   have removed this in odin2
+#> ℹ Please see `vignette(odin2::migrating)` for guidance
+#> → Context:
+#> update(x) <- x + a/step
+#> ℹ For more information, run `odin2::odin_error_explain("E1050")`
+```
+
+In this case, odin errors and tries to indicate where you have work to
+do (and directs you to this document!)
+
+For code saved into a file, you can use `odin_migrate` to migrate code
+from the old syntax to the new; this will preserve comments and
+formatting except for code that is rewritten so it should be fairly
+unintrusive.
+
+For example, in `path` (a temporary file for this vignette) we have
+saved the code from above:
+
+``` r
+initial(x) <- 1
+deriv(x) <- x + a / t
+a <- user(2)
+```
+
+We can migrate this in-place with:
+
+``` r
+odin_migrate(path, path)
+#> ℹ Migrating 2 statements
+#> ✔ Wrote '/tmp/Rtmp6A8Pzd/file1f2973a6c66b.R'
+```
+
+and now the code contains:
+
+``` r
+initial(x) <- 1
+deriv(x) <- x + a/time
+a <- parameter(2)
+```
+
+### Avoiding `output()` in discrete-time systems
+
+If you have odin 1.x code, you may have a system that uses `output()` in
+discrete-time; this will fail to compile.
+
+``` r
+odin({
+  initial(x) <- 1
+  update(x) <- x + 1
+  output(y) <- x / 2
+})
+#> Error in `odin()`:
+#> ! Can't use 'output()' in discrete time systems
+#> ℹ You should be able to do what you need using 'update()'. If you are migrating
+#>   from odin 1.x.x, you might find some advice in `vignette(odin2::migrating)`
+#> → Context:
+#> output(y) <- x/2
+#> ℹ For more information, run `odin2::odin_error_explain("E2020")`
+```
+
+Previously, this would have worked to create a system where you have one
+input variable (on which the system depends) and one output variable
+(entirely derived from the inputs), producing output like
+
+    #>      step x   y
+    #> [1,]    0 1 0.5
+    #> [2,]    1 2 1.0
+    #> [3,]    2 3 1.5
+    #> [4,]    3 4 2.0
+    #> [5,]    4 5 2.5
+    #> [6,]    5 6 3.0
+
+(this comes from [the `odin.dust` migration
+guide](https://mrc-ide.github.io/odin.dust/articles/porting.html#avoiding-output))
+
+This is important in ODE models because there are often things that you
+want to observe that are functions of the system but for which you can’t
+write out equations to describe them in terms of their rates — the sum
+over a set of variables for example.
+
+Note here how the `x` used in the calculation is really the `x` at the
+*end* of a time step, not the `x` on inputs, which means that the output
+column satisfies `y == x / 2`. This turns out to be very hard to get
+right and reason about, and involved some fairly unpleasant bookkeeping
+in `dde` (the package that we used to drive these systems); in effect we
+run an additional time step at the end of the run in order to compute
+these `output` variables, and that is inefficient for `dust`’s use
+within a particle filter, and poorly behaved with anything that used
+random numbers.
+
+Additionally, there is no great need for `output` for discrete time
+models, as we can treat `y` above as just another variable. This also
+allows us to be more explicit about when within the time step this
+output is being computed:
+
+``` r
+gen <- odin({
+  initial(x) <- 1
+  new_x <- x + 1
+  update(x) <- new_x
+  initial(y1) <- 0
+  initial(y2) <- 0
+  update(y1) <- x / 2
+  update(y2) <- new_x / 2
+})
+```
+
+We can run this:
+
+``` r
+sys <- dust_system_create(gen)
+y <- dust_system_set_state_initial(sys)
+y <- dust_system_simulate(sys, 0:5)
+dust_unpack_state(sys, y)
+#> $x
+#> [1] 1 2 3 4 5 6
+#> 
+#> $y1
+#> [1] 0.0 0.5 1.0 1.5 2.0 2.5
+#> 
+#> $y2
+#> [1] 0.0 1.0 1.5 2.0 2.5 3.0
+```
+
+Here, the variable `x` is updated as for the original output. The
+variable `y1` column computes the relationship with the `x` at the
+beginning of the time step, while `y2` is most equivalent to our
+previous `output` command and requires storing the value that will
+become the updated `x` in order to use that value to both update `x` and
+`y2`.
