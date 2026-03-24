@@ -762,10 +762,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   } else if (location == "adjoint") {
     offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
-      ## Something like
-      ## > offset <- expr_plus(idx, offset)
-      ## but likely much more work needed
-      stop("arrays in adjoint probably need checking carefully") # nocov
+      offset <- expr_plus(idx, offset)
     }
     sprintf("%s[%s]",
             name_state,
@@ -875,6 +872,43 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       depends <- find_dependencies(eq$rhs$expr)$variables
       res <- generate_array_loops(
         res, depends, eq$lhs$array, dat$sexp_data, options)
+    } else if (!is.null(eq$reduce_loops)) {
+      ## Scalar adjoint accumulating from array equations.  Split
+      ## the expression into the accumulate (old value) part and
+      ## the array-indexed contributions, then generate:
+      ##   lhs = accumulate_part;
+      ##   for (...) { lhs += array_contribution; }
+      ## For stack-location intermediates, lhs includes "const real_type"
+      ## declaration which can't be used with +=. Strip it for the
+      ## loop body and use non-const declaration for init.
+      location <- dat$storage$location[[eq$lhs$name]]
+      if (identical(location, "stack")) {
+        lhs_bare <- eq$lhs$name
+        lhs_decl <- sprintf("%s %s",
+                            dat$storage$type[[eq$lhs$name]], lhs_bare)
+      } else {
+        lhs_bare <- lhs
+        lhs_decl <- lhs
+      }
+      accum_expr <- adjoint_split_accumulate(eq$rhs$expr, eq$lhs$name)
+      if (!is.null(accum_expr$base)) {
+        base_rhs <- generate_dust_sexp(accum_expr$base, dat$sexp_data, options)
+        inner_rhs <- generate_dust_sexp(accum_expr$contrib, dat$sexp_data,
+                                        options)
+        depends <- find_dependencies(accum_expr$contrib)$variables
+        loop_body <- sprintf("%s += %s;", lhs_bare, inner_rhs)
+        loop <- generate_array_loops(
+          loop_body, depends, eq$reduce_loops, dat$sexp_data, options)
+        res <- c(sprintf("%s = %s;", lhs_decl, base_rhs), loop)
+      } else {
+        ## Pure reduction, no accumulate base
+        inner_rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
+        depends <- find_dependencies(eq$rhs$expr)$variables
+        loop_body <- sprintf("%s += %s;", lhs_bare, inner_rhs)
+        loop <- generate_array_loops(
+          loop_body, depends, eq$reduce_loops, dat$sexp_data, options)
+        res <- c(sprintf("%s = 0;", lhs_decl), loop)
+      }
     }
   }
 
@@ -1073,6 +1107,27 @@ generate_dust_system_delay_equation <- function(nm, dat) {
   }
 
   ret
+}
+
+
+## Split an accumulated adjoint expression like (adj_beta + contrib)
+## into its base (adj_beta) and the array-indexed contribution.
+## The accumulate pattern in adjoint_equation adds as.name(name) to
+## the parts list, so the expression is typically:
+##   name + array_contribution
+## where array_contribution contains loop variables (i, j, etc.)
+adjoint_split_accumulate <- function(expr, name) {
+  sym <- as.name(name)
+  parts <- monty::monty_differentiation()$maths$as_sum_of_parts(expr)
+  is_base <- vlapply(parts, function(p) identical(p, sym))
+  if (any(is_base)) {
+    base <- sym
+    contrib_parts <- parts[!is_base]
+    contrib <- monty::monty_differentiation()$maths$plus_fold(contrib_parts)
+    list(base = base, contrib = contrib)
+  } else {
+    list(base = NULL, contrib = expr)
+  }
 }
 
 
