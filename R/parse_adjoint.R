@@ -75,6 +75,21 @@ parse_adjoint <- function(dat) {
   ## parameter gradients from offset n_state onwards).
   adj_state_names <- paste0("adj_", dat$variables)
   adj_param_names <- paste0("adj_", parameters)
+
+  ## Add array entries for parameter adjoints that are arrays.
+  ## Without this, adj_beta, adj_gamma etc. would be unpacked as
+
+  ## scalars even though the original parameters are arrays.
+  for (adj_nm in adj_param_names) {
+    fwd_nm <- sub("^adj_", "", adj_nm)
+    fwd_i <- match(fwd_nm, arrays$name)
+    if (!is.na(fwd_i) && !(adj_nm %in% arrays$name)) {
+      new_row <- arrays[fwd_i, , drop = FALSE]
+      new_row$name <- adj_nm
+      arrays <- rbind(arrays, new_row)
+    }
+  }
+
   all_adj_ordered <- c(adj_state_names, adj_param_names)
   all_adj_ordered <- intersect(
     all_adj_ordered,

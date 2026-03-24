@@ -880,30 +880,54 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       free_indices <- adjoint_find_free_indices(
         eq$rhs$expr, lhs_indices, dat$storage$arrays)
       if (length(free_indices) > 0) {
-        ## Before generating the reduction loop, check for Kronecker
-        ## deltas of the form (free == lhs_idx ? 1 : 0).  These arise
-        ## when a lower-dim adjoint (adj_prop_I[i]) is accumulated from
-        ## a higher-dim variable (s_ij[i, j]) where the dependency is
-        ## through a mismatched index (prop_I[j]).  The delta collapses
-        ## the sum to a single term, but the index roles in the array
-        ## subscripts need swapping.  E.g.,
-        ##   adj_s_ij[i, j] * m[i, j] * (j == i ? 1 : 0)
-        ## becomes
-        ##   adj_s_ij[j, i] * m[j, i]
-        ## with j still as the reduction variable.
         rhs_expr <- eq$rhs$expr
-        rhs_expr <- adjoint_resolve_kronecker_delta(
-          rhs_expr, lhs_indices, free_indices)
-        rhs <- generate_dust_sexp(rhs_expr, dat$sexp_data, options)
-        depends <- find_dependencies(rhs_expr)$variables
+        free_names <- vapply(free_indices, function(x) x$name, "")
 
-        ## Build reduction loops for the free indices.
-        ## Zero-init the LHS, then accumulate contributions.
-        lhs_assign <- sprintf("%s = 0;", lhs)
-        inner_body <- sprintf("%s += %s;", lhs, rhs)
-        inner <- generate_array_loops(
-          inner_body, depends, free_indices, dat$sexp_data, options)
-        res <- c(lhs_assign, inner)
+        ## Split the RHS into additive terms and partition them by
+        ## whether they contain the free index.  Terms without the free
+        ## index (direct contributions like adj_I[i]*(1-gamma[i]*dt))
+        ## go outside the reduction loop.  Terms with the free index
+        ## (like adj_s_ij[j,i]*beta[j,i]/N_pop[i]) go inside.
+        all_terms <- adjoint_split_additive(rhs_expr)
+        has_free <- vapply(all_terms, function(t) {
+          any(vapply(free_names, function(fn) {
+            adjoint_expr_contains_free_index(t, fn,
+                                             dat$storage$arrays)
+          }, logical(1)))
+        }, logical(1))
+
+        free_terms <- all_terms[has_free]
+        non_free_terms <- all_terms[!has_free]
+
+        ## Direct terms go outside the loop
+        if (length(non_free_terms) > 0) {
+          direct_expr <- adjoint_reconstruct_sum(non_free_terms)
+          direct_rhs <- generate_dust_sexp(direct_expr, dat$sexp_data,
+                                           options)
+          direct_stmt <- sprintf("%s = %s;", lhs, direct_rhs)
+        } else {
+          direct_stmt <- sprintf("%s = 0;", lhs)
+        }
+
+        ## Free-index terms: apply delta resolution, wrap in loop
+        if (length(free_terms) > 0) {
+          free_expr <- adjoint_reconstruct_sum(free_terms)
+          free_expr <- adjoint_resolve_kronecker_delta(
+            free_expr, lhs_indices, free_indices)
+          free_rhs <- generate_dust_sexp(free_expr, dat$sexp_data,
+                                         options)
+          depends_free <- find_dependencies(free_expr)$variables
+          inner_body <- sprintf("%s += %s;", lhs, free_rhs)
+          inner <- generate_array_loops(
+            inner_body, depends_free, free_indices,
+            dat$sexp_data, options)
+        } else {
+          inner <- NULL
+        }
+
+        ## Combine: all terms need the LHS array loops
+        depends <- find_dependencies(rhs_expr)$variables
+        res <- c(direct_stmt, inner)
         res <- generate_array_loops(
           res, depends, eq$lhs$array, dat$sexp_data, options)
       } else {
@@ -1213,6 +1237,74 @@ adjoint_find_free_indices <- function(expr, lhs_indices, arrays_table) {
       to = call("OdinDim", ref$array, as.integer(ref$dim)))
   }
   result[!vapply(result, is.null, FALSE)]
+}
+
+
+## Split an expression into additive terms by flattening + operators.
+adjoint_split_additive <- function(expr) {
+  if (is.call(expr) && identical(expr[[1]], as.name("+"))) {
+    c(adjoint_split_additive(expr[[2]]),
+      adjoint_split_additive(expr[[3]]))
+  } else {
+    list(expr)
+  }
+}
+
+
+## Check if an expression contains a free index variable in an array context.
+## Returns TRUE if var_name appears as an index in an array subscript X[..., var, ...]
+## or as a bare symbol in a context that suggests it's a loop variable.
+adjoint_expr_contains_free_index <- function(expr, var_name, arrays) {
+  sym <- as.name(var_name)
+  if (is.name(expr)) return(FALSE)  # bare variable name, not an index usage
+
+  if (!is.call(expr)) return(FALSE)
+
+  ## Check if this is an array access X[...] containing var_name as an index
+  if (identical(expr[[1]], as.name("["))) {
+    for (k in seq_along(expr)[-c(1, 2)]) {
+      if (adjoint_expr_mentions(expr[[k]], var_name)) return(TRUE)
+    }
+  }
+
+  ## Check if this is a Kronecker delta referencing the free index
+  if (identical(expr[[1]], as.name("if"))) {
+    cond <- expr[[2]]
+    if (is.call(cond) && identical(cond[[1]], as.name("=="))) {
+      if (adjoint_expr_mentions(cond, var_name)) return(TRUE)
+    }
+  }
+
+  ## Recurse into children
+  for (k in seq_along(expr)[-1]) {
+    child <- tryCatch(expr[[k]], error = function(e) NULL)
+    if (!is.null(child)) {
+      if (adjoint_expr_contains_free_index(child, var_name, arrays)) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
+}
+
+
+## Check if an expression mentions a variable name anywhere.
+adjoint_expr_mentions <- function(expr, var_name) {
+  sym <- as.name(var_name)
+  if (is.name(expr)) return(identical(expr, sym))
+  if (!is.call(expr)) return(FALSE)
+  for (k in seq_along(expr)) {
+    if (adjoint_expr_mentions(expr[[k]], var_name)) return(TRUE)
+  }
+  FALSE
+}
+
+
+## Reconstruct a sum expression from a list of terms.
+adjoint_reconstruct_sum <- function(terms) {
+  if (length(terms) == 0) return(0)
+  if (length(terms) == 1) return(terms[[1]])
+  Reduce(function(a, b) call("+", a, b), terms)
 }
 
 
