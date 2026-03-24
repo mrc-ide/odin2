@@ -585,7 +585,8 @@ generate_dust_system_adjoint <- function(dat) {
 
   c(generate_dust_system_adjoint_update(dat),
     generate_dust_system_adjoint_compare_data(dat),
-    generate_dust_system_adjoint_initial(dat))
+    generate_dust_system_adjoint_initial(dat),
+    generate_dust_system_adjoint_rhs(dat))
 }
 
 
@@ -678,6 +679,43 @@ generate_dust_system_adjoint_initial <- function(dat) {
   }
 
   cpp_function("void", "adjoint_initial", args, body$get(), static = TRUE)
+}
+
+
+## Generate adjoint_rhs for continuous models.  This computes the
+## derivatives of the adjoint vector: dλ/dt = -(∂f/∂y)^T λ for state
+## adjoints and dμ/dt = -(∂f/∂θ)^T λ for parameter adjoints.  The
+## negative sign implements the adjoint equation for backward time.
+generate_dust_system_adjoint_rhs <- function(dat) {
+  if (is.null(dat$adjoint$deriv)) {
+    return(NULL)
+  }
+  args <- c("real_type" = "time",
+            "const real_type*" = "state",
+            "const real_type*" = "adjoint",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal",
+            "real_type*" = "adjoint_deriv")
+  body <- collector()
+  options <- list(stochastic_expectation = TRUE)
+
+  unpack <- intersect(dat$variables, dat$adjoint$deriv$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
+
+  unpack <- intersect(dat$storage$contents$adjoint,
+                      dat$adjoint$deriv$unpack_adjoint)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
+                         "adjoint"))
+
+  eqs <- c(get_phase_equations("deriv", dat, adjoint = TRUE),
+           dat$adjoint$deriv$adjoint)
+  for (eq in eqs) {
+    body$add(generate_dust_assignment(eq, "adjoint_deriv", dat, options))
+  }
+
+  cpp_function("void", "adjoint_rhs", args, body$get(), static = TRUE)
 }
 
 

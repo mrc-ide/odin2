@@ -26,14 +26,29 @@ parse_adjoint <- function(dat) {
     compare = adjoint_compare(dat, parameters, deps),
     initial = adjoint_initial(dat, parameters, deps))
 
+  ## For continuous models, generate adjoint_rhs (Jacobian transpose of
+  ## the RHS).  This is used by dust_continuous::adjoint_run_to_time()
+  ## to integrate the adjoint ODE backward between data times.
+  if (dat$time == "continuous") {
+    dat$adjoint$deriv <- adjoint_deriv(dat, parameters, deps)
+  }
+
   ## Update storage with all this information
   adjoint_location <- merge_location(lapply(dat$adjoint, "[[", "location"))
   for (nm in names(dat$adjoint)) {
     dat$adjoint$location <- NULL
   }
 
-  dat$storage$contents$adjoint <-
-    names(adjoint_location)[adjoint_location == "adjoint"]
+  ## Force state adjoints before parameter adjoints in packing to match
+  ## the layout expected by adjoint_data::gradient() (which reads
+  ## parameter gradients from offset n_state onwards).
+  adj_state_names <- paste0("adj_", dat$variables)
+  adj_param_names <- paste0("adj_", parameters)
+  all_adj_ordered <- c(adj_state_names, adj_param_names)
+  all_adj_ordered <- intersect(
+    all_adj_ordered,
+    names(adjoint_location)[adjoint_location == "adjoint"])
+  dat$storage$contents$adjoint <- all_adj_ordered
   dat$storage$location <- c(dat$storage$location, adjoint_location)
   dat$storage$packing$adjoint <-
     parse_packing(dat$storage$contents$adjoint, arrays, NULL, "adjoint")
@@ -94,6 +109,25 @@ adjoint_initial <- function(dat, parameters, deps) {
 }
 
 
+## Generate adjoint equations for the RHS (deriv phase) of continuous
+## models.  The adjoint ODE is dλ/dt = -(∂f/∂y)^T λ with parameter
+## accumulation dμ/dt = -(∂f/∂θ)^T λ.  We use the same differentiation
+## machinery as adjoint_update but applied to the deriv equations.
+adjoint_deriv <- function(dat, parameters, deps) {
+  deriv <- dat$phases$deriv
+  used <- adjoint_uses(deriv$variables, deriv$equations, deps)
+  equations <- c(deriv$variables, dat$equations[used])
+  eqs <- c(
+    lapply(used, adjoint_equation, equations,
+           intermediate = TRUE, accumulate = FALSE),
+    lapply(dat$variables, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = FALSE),
+    lapply(parameters, adjoint_equation, equations,
+           intermediate = FALSE, accumulate = FALSE))
+  adjoint_phase(eqs, dat)
+}
+
+
 adjoint_uses <- function(phase, equations, deps) {
   used <- unique(unlist0(lapply(phase, function(eq) eq$rhs$depends$variables)))
   used <- c(used, equations)
@@ -121,7 +155,9 @@ adjoint_phase <- function(eqs, dat) {
   equations <- setdiff(intersect(names(dat$equations), uses), ignore)
   location <- set_names(vcapply(eqs, function(x) x$lhs$location),
                         vcapply(eqs, function(x) x$lhs$name))
-  include_adjoint <- names(location) %in% uses
+  ## Always include adjoint-location equations (they are outputs);
+  ## only filter out unused stack (intermediate) equations.
+  include_adjoint <- (names(location) %in% uses) | (location != "stack")
 
   unpack_adjoint <- intersect(names(location)[location == "adjoint"], uses)
   list(unpack = unpack,
