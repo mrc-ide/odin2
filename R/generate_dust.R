@@ -647,6 +647,19 @@ generate_dust_system_adjoint_compare_data <- function(dat) {
     body$add(generate_dust_assignment(eq, "adjoint_next", dat, options))
   }
 
+  ## Sanitise NaN values in adjoint_next.  The forward compare_data
+  ## uses unless_nan() to skip density evaluations when data is NA
+  ## (NaN in C++), but the symbolic adjoint expressions reference data
+  ## fields directly (e.g., log(1 - data.cfr)) and produce NaN when
+  ## those data are missing.  Replace any NaN entries with the incoming
+  ## adjoint value, i.e., no contribution from the compare step for
+  ## that variable, matching the forward semantics.
+  body$add(paste0(
+    "const auto n_adj = shared.odin.packing.adjoint.size();"))
+  body$add(paste0(
+    "for (size_t k = 0; k < n_adj; ++k) {",
+    " if (std::isnan(adjoint_next[k])) adjoint_next[k] = adjoint[k]; }"))
+
   cpp_function("void", "adjoint_compare_data", args, body$get(), static = TRUE)
 }
 
