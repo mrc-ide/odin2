@@ -880,6 +880,23 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
       free_indices <- adjoint_find_free_indices(
         eq$rhs$expr, lhs_indices, dat$storage$arrays)
       if (length(free_indices) > 0) {
+        ## Before generating the reduction loop, check for Kronecker
+        ## deltas of the form (free == lhs_idx ? 1 : 0).  These arise
+        ## when a lower-dim adjoint (adj_prop_I[i]) is accumulated from
+        ## a higher-dim variable (s_ij[i, j]) where the dependency is
+        ## through a mismatched index (prop_I[j]).  The delta collapses
+        ## the sum to a single term, but the index roles in the array
+        ## subscripts need swapping.  E.g.,
+        ##   adj_s_ij[i, j] * m[i, j] * (j == i ? 1 : 0)
+        ## becomes
+        ##   adj_s_ij[j, i] * m[j, i]
+        ## with j still as the reduction variable.
+        rhs_expr <- eq$rhs$expr
+        rhs_expr <- adjoint_resolve_kronecker_delta(
+          rhs_expr, lhs_indices, free_indices)
+        rhs <- generate_dust_sexp(rhs_expr, dat$sexp_data, options)
+        depends <- find_dependencies(rhs_expr)$variables
+
         ## Build reduction loops for the free indices.
         ## Zero-init the LHS, then accumulate contributions.
         lhs_assign <- sprintf("%s = 0;", lhs)
@@ -1196,6 +1213,147 @@ adjoint_find_free_indices <- function(expr, lhs_indices, arrays_table) {
       to = call("OdinDim", ref$array, as.integer(ref$dim)))
   }
   result[!vapply(result, is.null, FALSE)]
+}
+
+
+## Resolve Kronecker deltas in adjoint expressions with free indices.
+##
+## When a lower-dimensional adjoint (e.g., adj_prop_I[i]) accumulates
+## from a higher-dimensional equation (e.g., s_ij[i,j] = m[i,j] * prop_I[j]),
+## the symbolic differentiator produces an expression like:
+##
+##   adj_s_ij[i, j] * m[i, j] * (j == i ? 1 : 0)
+##
+## The Kronecker delta (j == i ? 1 : 0) indicates that only terms where
+## j matches the LHS index i contribute.  However, in the generated code
+## the outer loop variable i (for adj_prop_I[i]) is the same symbol as
+## i in adj_s_ij[i, j], creating a name collision.  The correct
+## accumulation is:
+##
+##   adj_prop_I[i] = sum_j adj_s_ij[j, i] * m[j, i]
+##
+## i.e., the second index of s_ij (matching prop_I's index) takes the
+## LHS value i, while the first index becomes the summation variable j.
+##
+## This function detects the delta, removes it, and swaps the index
+## variables in all array subscript accesses within the expression.
+adjoint_resolve_kronecker_delta <- function(expr, lhs_indices, free_indices) {
+  free_names <- vapply(free_indices, function(x) x$name, "")
+
+  for (fi in seq_along(free_names)) {
+    free_idx <- free_names[[fi]]
+    for (lhs_idx in lhs_indices) {
+      if (free_idx == lhs_idx) next
+      ## Look for delta pattern: (free == lhs ? 1 : 0)
+      delta <- adjoint_find_delta(expr, free_idx, lhs_idx)
+      if (!is.null(delta)) {
+        ## Remove the delta from the expression
+        expr <- adjoint_remove_delta(expr, delta)
+        ## Swap free_idx and lhs_idx in all subscript positions
+        expr <- adjoint_swap_subscript_indices(expr, free_idx, lhs_idx)
+        break
+      }
+    }
+  }
+  expr
+}
+
+
+## Find a Kronecker delta of the form (a == b ? 1 : 0) in an expression.
+## Returns the delta sub-expression if found, NULL otherwise.
+adjoint_find_delta <- function(expr, idx_a, idx_b) {
+  if (!is.call(expr)) return(NULL)
+  ## Check if this expression IS a delta: (a == b ? 1 : 0)
+  ## In R's AST this is: if(a == b) 1 else 0
+  if (identical(expr[[1]], as.name("if")) && length(expr) == 4) {
+    cond <- expr[[2]]
+    if (is.call(cond) && identical(cond[[1]], as.name("==")) &&
+        length(cond) == 3) {
+      args <- sort(c(as.character(cond[[2]]), as.character(cond[[3]])))
+      target <- sort(c(idx_a, idx_b))
+      if (identical(args, target)) {
+        true_val <- expr[[3]]
+        false_val <- expr[[4]]
+        if (is.numeric(true_val) && true_val == 1 &&
+            is.numeric(false_val) && false_val == 0) {
+          return(expr)
+        }
+      }
+    }
+  }
+  ## Recurse into children
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      found <- adjoint_find_delta(child, idx_a, idx_b)
+      if (!is.null(found)) return(found)
+    }
+  }
+  NULL
+}
+
+
+## Remove a delta sub-expression from a product.
+## When the delta is multiplied in a product (a * b * delta), replace
+## it with 1 and simplify.  If it appears in a sum context or alone,
+## wrap the remaining expression.
+adjoint_remove_delta <- function(expr, delta) {
+  if (identical(expr, delta)) return(1)
+  if (!is.call(expr)) return(expr)
+
+  ## If this is a multiply and one operand is the delta, remove it
+  if (identical(expr[[1]], as.name("*")) && length(expr) == 3) {
+    if (identical(expr[[2]], delta)) return(expr[[3]])
+    if (identical(expr[[3]], delta)) return(expr[[2]])
+  }
+
+  ## Recurse into all children
+  result <- expr
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      new_child <- adjoint_remove_delta(child, delta)
+      if (!identical(new_child, child)) {
+        result[[k + 1L]] <- new_child
+      }
+    }
+  }
+  result
+}
+
+
+## Swap two index variables in all array subscript positions.
+## Walks the expression tree and in all X[a, b, ...] accesses,
+## swaps occurrences of idx_a and idx_b.
+adjoint_swap_subscript_indices <- function(expr, idx_a, idx_b) {
+  if (is.name(expr)) return(expr)  # Don't swap bare names
+  if (!is.call(expr)) return(expr)
+
+  ## If this is an array subscript access X[...], swap indices in positions
+  if (identical(expr[[1]], as.name("["))) {
+    sym_a <- as.name(idx_a)
+    sym_b <- as.name(idx_b)
+    for (k in seq_along(expr)[-c(1, 2)]) {
+      arg <- expr[[k]]
+      if (is.name(arg)) {
+        if (identical(arg, sym_a)) {
+          expr[[k]] <- sym_b
+        } else if (identical(arg, sym_b)) {
+          expr[[k]] <- sym_a
+        }
+      }
+    }
+    return(expr)
+  }
+
+  ## Recurse into children
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      expr[[k + 1L]] <- adjoint_swap_subscript_indices(child, idx_a, idx_b)
+    }
+  }
+  expr
 }
 
 

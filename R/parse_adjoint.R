@@ -107,8 +107,15 @@ adjoint_update <- function(dat, parameters, deps) {
   arrays <- dat$storage$arrays
   used <- adjoint_uses(update$variables, update$equations, deps)
   equations <- c(update$variables, dat$equations[used])
+  ## Include shared intermediates that depend on differentiated
+  ## parameters.  These are computed in build_shared and treated as
+  ## constants in the update step, but the adjoint chain from the
+  ## update equations through these intermediates to the parameters
+  ## must still be tracked.
+  shared_deps <- adjoint_find_shared_param_deps(dat, parameters, used)
+  equations <- c(equations, dat$equations[shared_deps])
   eqs <- c(
-    lapply(used, adjoint_equation, equations,
+    lapply(c(used, shared_deps), adjoint_equation, equations,
            intermediate = TRUE, accumulate = FALSE, arrays = arrays),
     lapply(dat$variables, adjoint_equation, equations,
            intermediate = FALSE, accumulate = FALSE, arrays = arrays),
@@ -159,8 +166,10 @@ adjoint_deriv <- function(dat, parameters, deps) {
   arrays <- dat$storage$arrays
   used <- adjoint_uses(deriv$variables, deriv$equations, deps)
   equations <- c(deriv$variables, dat$equations[used])
+  shared_deps <- adjoint_find_shared_param_deps(dat, parameters, used)
+  equations <- c(equations, dat$equations[shared_deps])
   eqs <- c(
-    lapply(used, adjoint_equation, equations,
+    lapply(c(used, shared_deps), adjoint_equation, equations,
            intermediate = TRUE, accumulate = FALSE, arrays = arrays),
     lapply(dat$variables, adjoint_equation, equations,
            intermediate = FALSE, accumulate = FALSE, arrays = arrays),
@@ -175,6 +184,53 @@ adjoint_uses <- function(phase, equations, deps) {
   used <- c(used, equations)
   used <- union(used, unlist0(deps[equations]))
   rev(intersect(equations, used))
+}
+
+
+## Find shared-location intermediates that lie on the dependency path
+## from update/deriv equations to differentiated parameters.  These
+## are computed once in build_shared() and treated as constants during
+## the time step, but the adjoint chain must still trace through them
+## to accumulate parameter gradients.
+##
+## For example, if p_IR = 1 - exp(-gamma) is shared and n_IR[i] uses
+## p_IR, then the gradient of gamma requires:
+##   adj_p_IR = sum_i(adj_n_IR[i] * I[i])
+##   adj_gamma += adj_p_IR * exp(-gamma)
+##
+## Returns names of shared intermediates to include in the equations
+## list (in dependency order).
+adjoint_find_shared_param_deps <- function(dat, parameters, used_eqs) {
+  shared <- dat$storage$contents$shared
+  if (length(shared) == 0 || length(parameters) == 0) {
+    return(character(0))
+  }
+
+  ## Find shared variables that (a) are used by update equations and
+  ## (b) depend (transitively) on at least one differentiated parameter.
+  result <- character(0)
+  for (nm in shared) {
+    eq <- dat$equations[[nm]]
+    if (is.null(eq)) next
+    ## Check if this shared variable is referenced by any update equation
+    referenced <- nm %in% unlist0(lapply(dat$equations[used_eqs],
+                                         function(x) x$rhs$depends$variables))
+    if (!referenced) next
+    ## Check if it depends (transitively) on any differentiated parameter
+    deps <- eq$rhs$depends$variables
+    ## Expand transitively through other shared equations
+    repeat {
+      new_deps <- unique(c(deps, unlist0(
+        lapply(dat$equations[intersect(deps, shared)],
+               function(x) x$rhs$depends$variables))))
+      if (length(new_deps) == length(deps)) break
+      deps <- new_deps
+    }
+    if (any(parameters %in% deps)) {
+      result <- c(result, nm)
+    }
+  }
+  result
 }
 
 
