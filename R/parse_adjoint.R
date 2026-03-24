@@ -296,6 +296,12 @@ adjoint_equation <- function(nm, equations, intermediate, accumulate,
     parts <- c(parts, list(accum_ref))
   }
   expr <- maths$plus_fold(parts)
+
+  ## Re-wrap any bare sum() calls back to OdinReduce for code generation.
+  if (!is.null(arrays) && nrow(arrays) > 0) {
+    expr <- adjoint_rewrap_sums(expr, arrays)
+  }
+
   location <- if (intermediate) {
     ## Array intermediate adjoints can't go on the stack — use internal
     ## storage (like the forward intermediates themselves).
@@ -348,4 +354,70 @@ adjoint_unwrap_expr <- function(expr) {
     return(expr[["expr"]])
   }
   as.call(lapply(expr, adjoint_unwrap_expr))
+}
+
+
+## Reverse of adjoint_unwrap_expr: convert bare sum(X) or sum(X[...])
+## back to OdinReduce so the C++ code generator can emit them correctly.
+## This runs AFTER differentiation on the adjoint expressions.
+adjoint_rewrap_sums <- function(expr, arrays) {
+  if (is.null(expr) || is.numeric(expr) || is.symbol(expr) ||
+      is.character(expr) || is.logical(expr)) {
+    return(expr)
+  }
+  ## Don't descend into OdinReduce — already in correct form
+  if (rlang::is_call(expr, "OdinReduce")) {
+    return(expr)
+  }
+  if (rlang::is_call(expr, "sum") && length(expr) == 2) {
+    arg <- expr[[2]]
+    ## sum(X) where X is a bare symbol (whole-array sum)
+    if (is.symbol(arg)) {
+      nm <- as.character(arg)
+      if (nm %in% arrays$name) {
+        return(adjoint_make_reduce("sum", nm, index = NULL, expr = expr))
+      }
+    }
+    ## sum(X[i, ]) or sum(X[, j]) — partial sum with indexing
+    if (rlang::is_call(arg, "[")) {
+      nm <- as.character(arg[[2]])
+      if (nm %in% arrays$name) {
+        idx <- as.list(arg[-(1:2)])
+        arr_i <- match(nm, arrays$name)
+        rank <- arrays$rank[[arr_i]]
+        idx_names <- c("i", "j", "k", "l", "i5", "i6", "i7", "i8")
+        ## Build index info for each dimension
+        has_index <- FALSE
+        index <- lapply(seq_len(rank), function(d) {
+          if (d > length(idx) || rlang::is_missing(idx[[d]])) {
+            ## Full range: 1 to dim(X, d)
+            list(name = idx_names[d], type = "range",
+                 from = 1L,
+                 to = call("OdinDim", nm, as.integer(d)))
+          } else {
+            has_index <<- TRUE
+            list(name = idx_names[d], type = "single", at = idx[[d]])
+          }
+        })
+        ## If all NULL, it's a whole-array sum
+        if (!has_index) {
+          return(adjoint_make_reduce("sum", nm, index = NULL, expr = expr))
+        }
+        return(adjoint_make_reduce("sum", nm, index = index, expr = expr))
+      }
+    }
+  }
+  ## Recursively process call arguments, preserving NULL elements
+  args <- as.list(expr)
+  for (i in seq_along(args)) {
+    if (!is.null(args[[i]])) {
+      args[[i]] <- adjoint_rewrap_sums(args[[i]], arrays)
+    }
+  }
+  as.call(args)
+}
+
+
+adjoint_make_reduce <- function(fn, what, index, expr) {
+  call("OdinReduce", fn = fn, what = what, index = index, expr = expr)
 }
