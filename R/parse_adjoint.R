@@ -182,12 +182,19 @@ adjoint_phase <- function(eqs, dat) {
   uses <- unique(
     unlist0(lapply(eqs, function(x) find_dependencies(x$rhs$expr)$variables)))
 
-  ## This is a bit gross; we need to find all variables referenced in
-  ## all equations referenced in all adjoint calculations!
-  uses_in_equations <- unlist0(
-    lapply(dat$equations[intersect(names(dat$equations), uses)],
-           function(x) x$rhs$depends$variables))
-  uses <- union(uses, uses_in_equations)
+  ## Recursively resolve all variable dependencies through the equation
+  ## graph.  We need to find *all* variables referenced by any equation
+  ## that the adjoint method will evaluate, including transitive
+  ## dependencies (e.g., adjoint uses eq_A which uses eq_B which uses
+  ## state variable D).
+  repeat {
+    uses_in_equations <- unlist0(
+      lapply(dat$equations[intersect(names(dat$equations), uses)],
+             function(x) x$rhs$depends$variables))
+    new_uses <- union(uses, uses_in_equations)
+    if (length(new_uses) == length(uses)) break
+    uses <- new_uses
+  }
 
   unpack <- intersect(dat$variables, uses)
   ## Alternatively, filter *to* things in stack/internal?

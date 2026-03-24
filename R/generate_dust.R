@@ -870,8 +870,29 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     is_array <- !is.null(eq$lhs$array)
     if (is_array) {
       depends <- find_dependencies(eq$rhs$expr)$variables
-      res <- generate_array_loops(
-        res, depends, eq$lhs$array, dat$sexp_data, options)
+      ## Check for free index variables in the RHS that are not
+      ## covered by the LHS array loops.  This happens in adjoint
+      ## equations when a lower-dimensional variable depends on a
+      ## higher-dimensional one: e.g., adj_prop_infectious[i] gets a
+      ## contribution from s_ij_sex[i, j] which introduces free 'j'.
+      ## We need to wrap in a reduction loop and accumulate with +=.
+      lhs_indices <- vcapply(eq$lhs$array, function(x) x$name)
+      free_indices <- adjoint_find_free_indices(
+        eq$rhs$expr, lhs_indices, dat$storage$arrays)
+      if (length(free_indices) > 0) {
+        ## Build reduction loops for the free indices.
+        ## Zero-init the LHS, then accumulate contributions.
+        lhs_assign <- sprintf("%s = 0;", lhs)
+        inner_body <- sprintf("%s += %s;", lhs, rhs)
+        inner <- generate_array_loops(
+          inner_body, depends, free_indices, dat$sexp_data, options)
+        res <- c(lhs_assign, inner)
+        res <- generate_array_loops(
+          res, depends, eq$lhs$array, dat$sexp_data, options)
+      } else {
+        res <- generate_array_loops(
+          res, depends, eq$lhs$array, dat$sexp_data, options)
+      }
     } else if (!is.null(eq$reduce_loops)) {
       ## Scalar adjoint accumulating from array equations.  Split
       ## the expression into the accumulate (old value) part and
@@ -1116,6 +1137,68 @@ generate_dust_system_delay_equation <- function(nm, dat) {
 ## the parts list, so the expression is typically:
 ##   name + array_contribution
 ## where array_contribution contains loop variables (i, j, etc.)
+## Find index variables in RHS that are not covered by the LHS array
+## loops.  Returns a list of range-index specs suitable for
+## generate_array_loops().  Each free index gets a range determined by
+## the first array in the expression that uses it.
+adjoint_find_free_indices <- function(expr, lhs_indices, arrays_table) {
+  ## Collect all array subscript accesses in the expression:
+  ## find names used as `X[i, j]` and record which index position
+  ## each variable appears in.
+  accesses <- list()
+  walk_subscripts <- function(e) {
+    if (!is.call(e)) return()
+    if (identical(e[[1]], as.name("["))) {
+      arr_name <- as.character(e[[2]])
+      for (k in seq_along(e)[-c(1, 2)]) {
+        arg <- e[[k]]
+        if (is.name(arg)) {
+          idx_name <- as.character(arg)
+          if (idx_name %in% INDEX) {
+            dim_pos <- k - 2L
+            accesses[[length(accesses) + 1L]] <<-
+              list(array = arr_name, index = idx_name, dim = dim_pos)
+          }
+        }
+      }
+    }
+    for (k in seq_len(length(e) - 1L)) {
+      tryCatch(
+        walk_subscripts(e[[k + 1L]]),
+        error = function(cond) NULL)
+    }
+  }
+  walk_subscripts(expr)
+
+  if (length(accesses) == 0) return(list())
+
+  rhs_indices <- unique(vapply(accesses, function(x) x$index, ""))
+  free <- setdiff(rhs_indices, lhs_indices)
+  if (length(free) == 0) return(list())
+
+  ## For each free index, find a reference array and dimension to
+  ## determine its range.
+  result <- vector("list", length(free))
+  for (fi in seq_along(free)) {
+    idx_name <- free[[fi]]
+    ref <- NULL
+    for (acc in accesses) {
+      if (acc$index == idx_name) {
+        ref <- acc
+        break
+      }
+    }
+    if (is.null(ref)) next
+    result[[fi]] <- list(
+      name = idx_name,
+      type = "range",
+      from = 1L,
+      to = call("OdinDim", ref$array, as.integer(ref$dim)))
+  }
+  result[!vapply(result, is.null, FALSE)]
+}
+
+
 adjoint_split_accumulate <- function(expr, name) {
   sym <- as.name(name)
   parts <- monty::monty_differentiation()$maths$as_sum_of_parts(expr)
