@@ -2281,6 +2281,28 @@ test_that("print integers", {
 })
 
 
+test_that("print with min for arrays", {
+  dat <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] + 1
+    dim(x) <- 5
+    print("min(x): {min(x)}", when = min(x) > 2)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + 1;",
+      "  }",
+      "  if (dust2::array::min<real_type>(x, shared.dim.x) > 2) {",
+      '    Rprintf(\"[%f] min(x): %f\\n\", time, dust2::array::min<real_type>(x, shared.dim.x));',
+      "  }",
+      "}" ))
+})
+
+
 test_that("support min/max", {
   dat <- odin_parse({
     update(x) <- min(a) + max(b, c)
@@ -2539,6 +2561,31 @@ test_that("browse with arrays", {
       '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
+})
+
+
+test_that("conditional browser using sum/min for arrays", {
+  dat <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] + 1
+    dim(x) <- 5
+    browser(phase = "update", when = sum(x) - min(x) > 2)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + 1;",
+      "  }",
+      "  if (dust2::array::sum<real_type>(x, shared.dim.x) - dust2::array::min<real_type>(x, shared.dim.x) > 2) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      "    dust2::r::browser::save(time, \"time\", odin_env);",
+      "    dust2::r::browser::save(x, shared.dim.x, \"x\", odin_env);",
+      "    dust2::r::browser::enter(odin_env, \"update\", time);",
+      "  }",
+      "}" ))
 })
 
 
