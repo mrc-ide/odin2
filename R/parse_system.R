@@ -712,7 +712,8 @@ parse_system_arrays <- function(exprs, call) {
   ## Need to treat browser here, as the error we get below is poor if
   ## we have multiple browser calls.
   is_browser <- vlapply(exprs, function(x) identical(x$special, "browser"))
-  err <- duplicated(id) & !is_browser
+  is_print <- vlapply(exprs, function(x) identical(x$special, "print"))
+  err <- duplicated(id) & !is_browser & !is_print
   if (any(err)) {
     for (i in unique(id[err])) {
       parse_system_arrays_check_duplicated(id == i, exprs, call)
