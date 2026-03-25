@@ -797,7 +797,7 @@ parse_expr_browser <- function(expr, src, call) {
   }
 
   phase <- m$value$phase
-  when <- m$value$when
+  when <- parse_expr_usage(m$value$when, src, call)
 
   tryCatch(
     match_value(phase, PHASES_BROWSER),
