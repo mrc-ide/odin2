@@ -312,6 +312,18 @@ test_that("work out correct print phase", {
   expect_equal(names(res$print), "deriv")
 })
 
+test_that("can use multiple print statements", {
+  res <- odin_parse({
+    update(a) <- 1
+    initial(a) <- 1
+    update(b) <- 2
+    initial(b) <- 2
+    print("{a}")
+    print("{b}")
+  })
+  expect_equal(length(res$print$update$equations), 2)
+})
+
 
 test_that("parse a very simple delay", {
   dat <- odin_parse({
