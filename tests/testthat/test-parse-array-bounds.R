@@ -360,6 +360,9 @@ test_that("can use an if/else ladder", {
       dim(a) <- 4
       initial(x) <- 0
       update(x) <- sum(a) + sum(b)
+    })
+  )
+})
 
 test_that("warn on error", {
   w <- testthat::capture_warnings(
