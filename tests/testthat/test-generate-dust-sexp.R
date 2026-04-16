@@ -45,7 +45,7 @@ test_that("can generate integer maths functions", {
   expect_equal(generate_dust_sexp(quote(a %% b), dat, options),
                "std::fmod(shared.a, b)")
   expect_equal(generate_dust_sexp(quote(a %/% b), dat, options),
-               "monty::math::fintdiv(shared.a, b)")
+               "monty::math::fintdiv<real_type>(shared.a, b)")
 })
 
 
@@ -119,13 +119,13 @@ test_that("can use functions from the library", {
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
-    "3 * monty::math::exp(1 + 2)")
+    "3 * monty::math::exp<real_type>(1 + 2)")
   expect_equal(
     generate_dust_sexp(quote(4^8), dat, options),
-    "monty::math::pow(4, 8)")
+    "monty::math::pow<real_type>(4, 8)")
   expect_equal(
     generate_dust_sexp(quote(ceiling(4)), dat, options),
-    "monty::math::ceil(4)")
+    "monty::math::ceil<real_type>(4)")
 })
 
 
@@ -165,13 +165,13 @@ test_that("can generate min/max", {
   options <- list()
   expect_equal(
     generate_dust_sexp(quote(3 * exp(1 + 2)), dat, options),
-    "3 * monty::math::exp(1 + 2)")
+    "3 * monty::math::exp<real_type>(1 + 2)")
   expect_equal(
     generate_dust_sexp(quote(4^8), dat, options),
-    "monty::math::pow(4, 8)")
+    "monty::math::pow<real_type>(4, 8)")
   expect_equal(
     generate_dust_sexp(quote(ceiling(4)), dat, options),
-    "monty::math::ceil(4)")
+    "monty::math::ceil<real_type>(4)")
 })
 
 

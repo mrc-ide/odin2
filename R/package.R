@@ -58,7 +58,8 @@
 ##'
 ##' # Resulting files:
 ##' fs::dir_tree(path)
-odin_package <- function(path, quiet = FALSE, compatibility = NULL) {
+odin_package <- function(path, quiet = FALSE, compatibility = NULL,
+                         check_bounds = NULL) {
   ## This finds the package root, and errors (fairly) nicely if it is
   ## not found.
   path <- pkgload::pkg_path(path)
@@ -101,7 +102,9 @@ odin_package <- function(path, quiet = FALSE, compatibility = NULL) {
 
   ## Process everything before writing anything:
   dat <- lapply(filenames, odin_parse,
-                compatibility = compatibility, input_type = "file")
+                compatibility = compatibility,
+                check_bounds = check_bounds,
+                input_type = "file")
   ## For now, take the base name of the input .R file as the class
   ## name for the generated C++ code; we'll make this configurable
   ## once we support a general approach for config/options.

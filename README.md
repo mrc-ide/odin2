@@ -18,11 +18,18 @@
 
 ## Documentation
 
+The best place to start for most people is probably the [odin & monty book](https://mrc-ide.github.io/odin-monty/) which walks through odin and its context within a wider set of statistical packages.
+
+The package also includes a number of vignettes and other documentation:
+
 * See [the introductory vignette](https://mrc-ide.github.io/odin2/articles/odin2.html) for a tutorial-style introduction to `odin2`
 * A [tutorial-style guide](https://mrc-ide.github.io/odin2/articles/fitting.html) to using `odin2` with `dust2` and `monty` to fit models to data
 * A [reference-style guide](https://mrc-ide.github.io/odin2/articles/functions.html) to the syntax and supported functions
 * If you have used [`odin` version 1](https://mrc-ide.github.io/odin) before, see the [migration guide](https://mrc-ide.github.io/odin2/articles/migrating.html) to see what has changed.
-* Because `odin2` compiles to `dust2`, see [its documentation](https://mrc-ide.github.io/dust2) and in particular the [list of functions that you can use](https://mrc-ide.github.io/dust2/reference/index.html)
+
+Because `odin2` compiles to `dust2`, see [its documentation](https://mrc-ide.github.io/dust2) and in particular the [list of functions that you can use](https://mrc-ide.github.io/dust2/reference/index.html)
+
+Because `odin2` is designed for use with `monty`, see [its documentation](https://mrc-ide.github.io/monty/), especially when fitting models to data or working with the random number generators for stochastic models.
 
 ## Roadmap
 

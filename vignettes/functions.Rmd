@@ -134,7 +134,7 @@ sqrt(3)^2 == 3
 * `%/%` -- **Integer divide**: Different to floating point division, effectively the full number of times one number divides into another (e.g., `20 %/% 7` &rarr; `2`)
 * `abs` -- **Absolute value** (e.g., `abs(-1)` &rarr; `1`)
 * `sign` -- **Sign function**: Returns the sign of its argument as either -1, 0 or 1, which may be useful for multiplying by another argument (e.g., `sign(-100)` &rarr; `-1`)
-* `round` -- **Round a number** (e.g., `round(1.23)` &rarr; `1`; `round(1.23, 1)` &rarr; `1.2`)
+* `round` -- **Round a number**: round a number to the nearest integer (e.g., `round(1.23)` &rarr; `1`). Note that this uses the C++ convention that half rounds away from zero (e.g. `round(2.5)` &rarr; `3`) in contrast to the R convention that half rounds to even (in R, `round(2.5)` &rarr; `2`)
 * `floor` -- **Floor of a number**: Largest integer not greater than the provided number (e.g., `floor(6.5)` &rarr; `6`)
 * `ceiling` -- **Ceiling of a number**: Smallest integer not less than the provided number (e.g., `ceiling(6.5)` &rarr; `7`)
 * `trunc` -- **Truncate a number**: Round a number towards zero
@@ -153,6 +153,10 @@ sqrt(3)^2 == 3
 * `lchoose` -- **Log binomial coefficients** (e.g., `choose(60, 3)` &rarr; `10.44057`)
 * `gamma` -- **Gamma function** (e.g., `gamma(10)` &rarr; `362880`)
 * `lgamma` -- **Log gamma function** (e.g., `lgamma(10)` &rarr; `12.80183`)
+* `factorial` -- **Factorial function** (e.g., `factorial(10)` &rarr; `3628800`)
+* `lfactorial` -- **Log factorial function** (e.g., `lfactorial(10)` &rarr; `15.10441`)
+* `erf` -- **Error function** (e.g., `erf(1)` &rarr; `0.8427008`)
+* `erfc` -- **Complementary error function** (e.g., `erfc(1)` &rarr; `0.1572992`)
 
 The exact behaviour for `%%` and `%/%` for floating point numbers and negative numbers is complicated - please see `?Arithmetic`.  The rules for operators in `odin` try to follow those in R as closely as possible.
 
@@ -271,7 +275,7 @@ You can use this approach to compute a matrix-vector product $\mathbf(Ax)$:
 
 ```
 ax_tmp[, ] <- a[i, j] * x[j]
-ax[] <- sum(a[, i])
+ax[] <- sum(ax_tmp[, i])
 ```
 
 # Distribution functions
@@ -334,8 +338,25 @@ The currently supported distributions are (alphabetically):
 * `TruncatedNormal` -- the [truncated normal distribution](https://en.wikipedia.org/wiki/Truncated_normal_distribution) with parameters `mean`, `sd`, `min` and `max`. For a one-sided truncated normal distribution, you can set `min = -Inf` or `max = Inf`. Note that `mean` and `sd` are not the mean and standard deviation of the truncated normal distribution, but are the mean and standard deviation of the normal distribution that has been truncated.
 * `Uniform` -- the [uniform distribution](https://en.wikipedia.org/wiki/Uniform_distribution) with parameters `min` and `max`
 * `Weibull` -- the [Weibull distribution](https://en.wikipedia.org/wiki/Weibull_distribution) with parameters `shape` and `scale`
+* `ZINegativeBinomial` -- the [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model) negative binomial distribution. With probability `pi0` a 0 is drawn, otherwise we draw from the corresponding standard negative binomial distribution using the other parameters (which may also result in a 0 being drawn). As with the standard negative binomial distribution, there are two forms:
+  - `pi0`, `size`, `prob` (**default**)
+  - `pi0`, `size`, `mu` (the mean of the negative binomial part of the distribution - note that the mean of the zero-inflated negative binomial distribution will be `(1 - pi0) * mu`).
+* `ZIPoisson` -- the [zero-inflated](https://en.wikipedia.org/wiki/Zero-inflated_model) Poisson distribution. with parameters `pi0` (the probability of excess zeros) and `lambda` (the mean of the Poisson part of the distribution). With probability `pi0` a 0 is drawn, otherwise we draw from the corresponding standard Poisson distribution with mean `lambda` (which may also result in a 0 being drawn). Note the mean of this distribution is `(1 - pi0) * lambda`.
 
 In the future, we plan support for additional distributions, please let us know if we are missing any that you need.  The support for these functions comes from `monty` and we will link here to the docs in that package once they exist for additional details.
+
+We plan to explicitly support the [multinomial distribution](https://en.wikipedia.org/wiki/Multinomial_distribution) in future, but for the time being it can be implemented as a loop of nested binomial distributions. For instance if you want to draw `y` from a multinomial distribution with parameters `size` and `prob` (where `prob` will be a vector of the same length as `y`) then this can be implemented as
+
+```
+y[1] <- Binomial(size, prob[1])
+y[2:length(y)] <- Binomial(size - sum(y[1:(i - 1)]), prob[i] / sum(prob[i:length(y)]))
+```
+
+while if you want to include a likelihood term where `z` is a vector of data (see [here](https://mrc-ide.github.io/odin2/articles/fitting.html#comparing-against-vectors-of-data) for guidance on vectors of data) from a multinomial distribution with probability vector `prob`, this can be implemented as
+
+```
+z[1:(length(z) - 1)] ~ Binomial(sum(z[i:length(z)]), prob[i] / sum(prob[i:length(z)]))
+```
 
 ## Semantics of random number draws
 

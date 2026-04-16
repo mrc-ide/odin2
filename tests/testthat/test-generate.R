@@ -520,7 +520,7 @@ test_that("pull recursive dependencies into compare_data", {
       "  auto unless_nan = [](real_type x) { return std::isnan(x) ? 0 : x; };",
       "  const auto x = state[0];",
       "  real_type odin_ll = 0;",
-      "  const real_type p = monty::math::exp(x);",
+      "  const real_type p = monty::math::exp<real_type>(x);",
       "  odin_ll += unless_nan(monty::density::poisson(data.d, p, true));",
       "  return odin_ll;",
       "}"))
@@ -586,9 +586,9 @@ test_that("generate adjoint", {
       "  const auto x = state[0];",
       "  const auto adj_x = adjoint[0];",
       "  const auto adj_a = adjoint[1];",
-      "  const real_type p = monty::math::exp(x);",
+      "  const real_type p = monty::math::exp<real_type>(x);",
       "  const real_type adj_p = data.d / p - 1;",
-      "  adjoint_next[0] = adj_p * monty::math::exp(x) + adj_x;",
+      "  adjoint_next[0] = adj_p * monty::math::exp<real_type>(x) + adj_x;",
       "  adjoint_next[1] = adj_a;",
       "}"))
 
@@ -760,9 +760,9 @@ test_that("can generate models with commonly used mathematical functions", {
     generate_dust_system_update(dat),
     c(method_args$update,
       "  const auto x = state[0];",
-      "  const real_type a = monty::math::log(x);",
-      "  const real_type b = monty::math::ceil(a);",
-      "  const real_type c = monty::math::pow(a, b);",
+      "  const real_type a = monty::math::log<real_type>(x);",
+      "  const real_type b = monty::math::ceil<real_type>(a);",
+      "  const real_type c = monty::math::pow<real_type>(a, b);",
       "  state_next[0] = c;",
       "}"))
 })
@@ -1900,6 +1900,14 @@ test_that("can add interpolation", {
       "  odin.packing.state.copy_offset(odin.offset.state.begin());",
       "  return shared_state{odin, dim, n, at, ay, interpolate_y};",
       "}"))
+  
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.at, shared.at.data(), "at", false);',               
+      '  dust2::r::read_real_array(parameters, shared.dim.ay, shared.ay.data(), "ay", false);',              
+      '  shared.interpolate_y = dust2::interpolate::InterpolateConstant(shared.at, shared.ay, "at", "ay");',
+      "}" ))
 })
 
 
@@ -2081,6 +2089,14 @@ test_that("can interpolate arrays", {
       "  odin.packing.state.copy_offset(odin.offset.state.begin());",
       "  return shared_state{odin, dim, nt, na, at, ay, interpolate_a};",
       "}"))
+  
+  expect_equal(
+    generate_dust_system_update_shared(dat),
+    c(method_args$update_shared,
+      '  dust2::r::read_real_array(parameters, shared.dim.at, shared.at.data(), "at", false);',                                               
+      '  dust2::r::read_real_array(parameters, shared.dim.ay, shared.ay.data(), "ay", false);',                                                
+      '  shared.interpolate_a = dust2::interpolate::InterpolateConstantArray<real_type, 1>(shared.at, shared.ay, shared.dim.a, "at", "ay");',
+      "}"))
 
   expect_equal(
     generate_dust_system_build_internal(dat),
@@ -2168,6 +2184,27 @@ test_that("can generate print strings", {
 })
 
 
+test_that("can generate print strings for ode systems", {
+  dat <- odin_parse({
+    initial(x) <- 1
+    deriv(x) <- x_deriv
+    x_deriv <- x * 2
+    print("x_deriv: {x_deriv}")
+  })
+  
+  dat <- generate_prepare(dat)
+  
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const auto x = state[0];",
+      "  const real_type x_deriv = x * 2;",
+      "  state_deriv[0] = x_deriv;",
+      '  Rprintf("[%f] x_deriv: %f\\n", time, x_deriv);',
+      "}"))
+})
+
+
 test_that("can generate print that requires additional unpack", {
   dat <- odin_parse({
     initial(x) <- 1
@@ -2241,6 +2278,28 @@ test_that("print integers", {
       "  state_next[0] = x + a;",
       '  Rprintf("[%f] a: %d\\n", time, a);',
       "}"))
+})
+
+
+test_that("print with min for arrays", {
+  dat <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] + 1
+    dim(x) <- 5
+    print("min(x): {min(x)}", when = min(x) > 2)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + 1;",
+      "  }",
+      "  if (dust2::array::min<real_type>(x, shared.dim.x) > 2) {",
+      '    Rprintf(\"[%f] min(x): %f\\n\", time, dust2::array::min<real_type>(x, shared.dim.x));',
+      "  }",
+      "}" ))
 })
 
 
@@ -2343,6 +2402,40 @@ test_that("can generate browser code", {
 })
 
 
+test_that("can generate browser code for ode systems", {
+  dat <- odin_parse({
+    initial(x) <- 0
+    deriv(x) <- b
+    a <- x * 2
+    b <- a / x
+    browser(phase = "deriv", when = time > 2)
+  })
+  dat <- generate_prepare(dat)
+  
+  expect_equal(
+    generate_dust_system_includes(dat),
+    c("#include <dust2/common.hpp>",
+      "#include <dust2/r/browser.hpp>"))
+  
+  expect_equal(
+    generate_dust_system_rhs(dat),
+    c(method_args$rhs,
+      "  const auto x = state[0];",
+      "  const real_type a = x * 2;",
+      "  const real_type b = a / x;",
+      "  state_deriv[0] = b;",
+      "  if (time > 2) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      '    dust2::r::browser::save(time, "time", odin_env);',
+      '    dust2::r::browser::save(a, "a", odin_env);',
+      '    dust2::r::browser::save(b, "b", odin_env);',
+      '    dust2::r::browser::save(x, "x", odin_env);',
+      '    dust2::r::browser::enter(odin_env, "deriv", time);',
+      "  }",
+      "}"))
+})
+
+
 test_that("can dereference array dimension alias in browser", {
   dat <- odin_parse({
     dim(a, b) <- 4
@@ -2408,8 +2501,8 @@ test_that("can generate nontrivial debug", {
       "  const auto S = state[0];",
       "  const auto I = state[1];",
       "  const auto R = state[2];",
-      "  const real_type p_IR = 1 - monty::math::exp(-shared.gamma * dt);",
-      "  const real_type p_SI = 1 - monty::math::exp(-(shared.beta * I / shared.N * dt));",
+      "  const real_type p_IR = 1 - monty::math::exp<real_type>(-shared.gamma * dt);",
+      "  const real_type p_SI = 1 - monty::math::exp<real_type>(-(shared.beta * I / shared.N * dt));",
       "  const real_type n_SI = monty::random::binomial<real_type>(rng_state, S, p_SI);",
       "  const real_type n_IR = monty::random::binomial<real_type>(rng_state, I, p_IR);",
       "  state_next[0] = S - n_SI;",
@@ -2468,6 +2561,31 @@ test_that("browse with arrays", {
       '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
+})
+
+
+test_that("conditional browser using sum/min for arrays", {
+  dat <- odin_parse({
+    initial(x[]) <- 1
+    update(x[]) <- x[i] + 1
+    dim(x) <- 5
+    browser(phase = "update", when = sum(x) - min(x) > 2)
+  })
+  dat <- generate_prepare(dat)
+  expect_equal(
+    generate_dust_system_update(dat),
+    c(method_args$update,
+      "  const auto * x = state + 0;",
+      "  for (size_t i = 1; i <= shared.dim.x.size; ++i) {",
+      "    state_next[i - 1 + 0] = x[i - 1] + 1;",
+      "  }",
+      "  if (dust2::array::sum<real_type>(x, shared.dim.x) - dust2::array::min<real_type>(x, shared.dim.x) > 2) {",
+      "    auto odin_env = dust2::r::browser::create();",
+      "    dust2::r::browser::save(time, \"time\", odin_env);",
+      "    dust2::r::browser::save(x, shared.dim.x, \"x\", odin_env);",
+      "    dust2::r::browser::enter(odin_env, \"update\", time);",
+      "  }",
+      "}" ))
 })
 
 

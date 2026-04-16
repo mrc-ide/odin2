@@ -1415,3 +1415,16 @@ test_that("Throw sensible error on invalid call to compare()", {
     "Invalid special function 'compare()' on the lhs of a `~` comparison",
     fixed = TRUE)
 })
+
+
+
+test_that("can parse system that resets and has output", {
+  d <- odin_parse({
+    deriv(x) <- x + 1
+    initial(x, zero_every = 4) <- 0
+    deriv(y) <- y + 1
+    initial(y) <- 0
+    output(z) <- x / y
+  })
+  expect_equal(d$zero_every, list(x = 4))
+})

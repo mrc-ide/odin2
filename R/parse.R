@@ -1,11 +1,14 @@
-odin_parse <- function(expr, input_type = NULL, compatibility = NULL) {
+odin_parse <- function(expr, input_type = NULL, compatibility = NULL,
+                       check_bounds = NULL) {
   call <- environment()
-  odin_parse_quo(rlang::enquo(expr), input_type, compatibility, call)
+  odin_parse_quo(rlang::enquo(expr), input_type, compatibility, check_bounds,
+                 call)
 }
 
 
-odin_parse_quo <- function(quo, input_type, compatibility, call) {
+odin_parse_quo <- function(quo, input_type, compatibility, check_bounds, call) {
   compatibility <- odin_compatibility_value(compatibility, call)
+  check_bounds <- odin_check_bounds_value(check_bounds, call)
   dat <- parse_prepare(quo, input_type, call)
   dat$exprs <- parse_compat(dat$exprs, compatibility, ignore_error = FALSE,
                             call = call)
@@ -13,12 +16,15 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
 
   exprs <- parse_system_arrays(exprs, call)
   system <- parse_system_overall(exprs, call)
+
+  variables_without_output <- system$ode_variables %||% system$variables
+
   equations <- parse_system_depends(
-    system$exprs$equations, system$ode_variables, call)
+    system$exprs$equations, variables_without_output, call)
   equations <- parse_system_stage(
     equations, system$variables, system$parameters, system$data$name, call)
   delays <- parse_system_delays(
-    equations, system$ode_variables, system$arrays, call)
+    equations, variables_without_output, system$arrays, call)
   phases <- parse_system_phases(
     system$exprs, equations, system$variables, system$output,
     system$parameters, delays, system$data$name, call)
@@ -32,7 +38,7 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
     equations, phases, system$variables, system$output, system$arrays,
     system$parameters, system$data, delays, call)
   zero_every <- parse_zero_every(system$time, phases, equations,
-                                 system$variables, call)
+                                 variables_without_output, call)
   print <- parse_print(system$exprs$print, system$time, system$variables,
                        equations, system$data, phases, call)
   browser <- parse_browser(system$exprs$browser, system$time, system$variables,
@@ -55,7 +61,21 @@ odin_parse_quo <- function(quo, input_type, compatibility, call) {
               src = src)
 
   parse_check_usage(ret, call)
-  parse_array_bounds(ret, call)
+  rlang::try_fetch(
+    parse_array_bounds(ret, check_bounds, call),
+    error = function(e) {
+      if (inherits(e, "odin_parse_error")) {
+        rlang::zap()
+      } else {
+        odin_parse_error(
+          c("An odin bug is preventing analysis of your bounds",
+            i = paste("You can disable bounds checking to continue, by",
+                      "passing in 'check_bounds = \"disabled\"' to 'odin()'"),
+            i = paste("Please report this error to us, and send along the",
+                      "model code so that we can replicate it")),
+          "E3003", NULL, call, parent = e)
+      }
+    })
   ret <- parse_adjoint(ret)
   ret
 }
@@ -309,6 +329,21 @@ odin_compatibility_value <- function(compatibility, call) {
   if (is.null(compatibility)) {
     compatibility <- getOption("odin2.compatibility", "warning")
   }
+  ## Slightly different list to below, we'll add "disabled" here soon
   valid <- c("warning", "silent", "error")
   match_value(compatibility, valid, call = call)
+}
+
+
+odin_check_bounds_value <- function(check_bounds, call) {
+  if (is.null(check_bounds)) {
+    check_bounds <- getOption("odin2.check_bounds", "error")
+  }
+  if (isTRUE(check_bounds)) {
+    check_bounds <- "error"
+  } else if (isFALSE(check_bounds)) {
+    check_bounds <- "disabled"
+  }
+  valid <- c("error", "warning", "disabled")
+  match_value(check_bounds, valid, call = call)
 }

@@ -718,13 +718,15 @@ parse_expr_print <- function(expr, src, call) {
   inputs <- parse_print_string(string, src, call)
   depends <- join_dependencies(
     lapply(inputs, function(x) find_dependencies(x$expr)))
+  
+  when <- parse_expr_usage(m$value$when, src, call)
 
   list(special = "print",
        rhs = list(type = "print"), # makes checking easier elsewhere
        string = string,
        inputs = inputs,
        depends = depends,
-       when = m$value$when,
+       when = when,
        src = src)
 }
 
@@ -753,12 +755,14 @@ parse_print_string <- function(string, src, call) {
   }
 
   lapply(parts, function(p) {
-    tryCatch(
+    x <- tryCatch(
       parse_print_element(p), error = function(e) {
         odin_parse_error(
           "Failed to parse print string '{string}': '{p}' is not valid",
           "E1054", src, call, parent = e)
       })
+    x$expr <- parse_expr_usage(x$expr, src, call)
+    x
   })
 }
 
@@ -793,7 +797,7 @@ parse_expr_browser <- function(expr, src, call) {
   }
 
   phase <- m$value$phase
-  when <- m$value$when
+  when <- parse_expr_usage(m$value$when, src, call)
 
   tryCatch(
     match_value(phase, PHASES_BROWSER),

@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 `odin2` implements a high-level language for describing and implementing ordinary differential equations and difference equations in R.  It provides a "[domain specific language](https://en.wikipedia.org/wiki/Domain-specific_language)" (DSL) which _looks_ like R but is compiled directly to C++, using [`dust2`](https://mrc-ide.github.io/dust2/) to solve your system and to provide an interface to particle filters.  You can then use [`monty`](https://mrc-ide.github.io/monty/) to fit your models using MCMC.
 
-This vignette jumps through a few of the core features of `odin2` and ways that you might use it with `dust2` and `monty`.  Other vignettes (when written!) will expand on topics covered here in more detail.
+This vignette jumps through a few of the core features of `odin2` and ways that you might use it with `dust2` and `monty`.  The [other vignettes](https://mrc-ide.github.io/odin2/articles/) and the [odin & monty book](https://mrc-ide.github.io/odin-monty/) expand on topics covered here in more detail.
 
 # Discrete time stochastic SIR model
 
