@@ -585,7 +585,8 @@ generate_dust_system_adjoint <- function(dat) {
 
   c(generate_dust_system_adjoint_update(dat),
     generate_dust_system_adjoint_compare_data(dat),
-    generate_dust_system_adjoint_initial(dat))
+    generate_dust_system_adjoint_initial(dat),
+    generate_dust_system_adjoint_rhs(dat))
 }
 
 
@@ -681,6 +682,43 @@ generate_dust_system_adjoint_initial <- function(dat) {
 }
 
 
+## Generate adjoint_rhs for continuous models.  This computes the
+## derivatives of the adjoint vector: dλ/dt = -(∂f/∂y)^T λ for state
+## adjoints and dμ/dt = -(∂f/∂θ)^T λ for parameter adjoints.  The
+## negative sign implements the adjoint equation for backward time.
+generate_dust_system_adjoint_rhs <- function(dat) {
+  if (is.null(dat$adjoint$deriv)) {
+    return(NULL)
+  }
+  args <- c("real_type" = "time",
+            "const real_type*" = "state",
+            "const real_type*" = "adjoint",
+            "const shared_state&" = "shared",
+            "internal_state&" = "internal",
+            "real_type*" = "adjoint_deriv")
+  body <- collector()
+  options <- list(stochastic_expectation = TRUE)
+
+  unpack <- intersect(dat$variables, dat$adjoint$deriv$unpack)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$state, dat$sexp_data))
+
+  unpack <- intersect(dat$storage$contents$adjoint,
+                      dat$adjoint$deriv$unpack_adjoint)
+  body$add(
+    generate_dust_unpack(unpack, dat$storage$packing$adjoint, dat$sexp_data,
+                         "adjoint"))
+
+  eqs <- c(get_phase_equations("deriv", dat, adjoint = TRUE),
+           dat$adjoint$deriv$adjoint)
+  for (eq in eqs) {
+    body$add(generate_dust_assignment(eq, "adjoint_deriv", dat, options))
+  }
+
+  cpp_function("void", "adjoint_rhs", args, body$get(), static = TRUE)
+}
+
+
 generate_dust_lhs <- function(lhs, dat, name_state, options) {
   name <- lhs$name
   is_array <- !is.null(lhs$array)
@@ -724,10 +762,7 @@ generate_dust_lhs <- function(lhs, dat, name_state, options) {
   } else if (location == "adjoint") {
     offset <- call("OdinOffset", "adjoint", name)
     if (is_array) {
-      ## Something like
-      ## > offset <- expr_plus(idx, offset)
-      ## but likely much more work needed
-      stop("arrays in adjoint probably need checking carefully") # nocov
+      offset <- expr_plus(idx, offset)
     }
     sprintf("%s[%s]",
             name_state,
@@ -835,8 +870,107 @@ generate_dust_assignment <- function(eq, name_state, dat, options = list()) {
     is_array <- !is.null(eq$lhs$array)
     if (is_array) {
       depends <- find_dependencies(eq$rhs$expr)$variables
-      res <- generate_array_loops(
-        res, depends, eq$lhs$array, dat$sexp_data, options)
+      ## Check for free index variables in the RHS that are not
+      ## covered by the LHS array loops.  This happens in adjoint
+      ## equations when a lower-dimensional variable depends on a
+      ## higher-dimensional one: e.g., adj_prop_infectious[i] gets a
+      ## contribution from s_ij_sex[i, j] which introduces free 'j'.
+      ## We need to wrap in a reduction loop and accumulate with +=.
+      lhs_indices <- vcapply(eq$lhs$array, function(x) x$name)
+      free_indices <- adjoint_find_free_indices(
+        eq$rhs$expr, lhs_indices, dat$storage$arrays)
+      if (length(free_indices) > 0) {
+        rhs_expr <- eq$rhs$expr
+        free_names <- vapply(free_indices, function(x) x$name, "")
+
+        ## Split the RHS into additive terms and partition them by
+        ## whether they contain the free index.  Terms without the free
+        ## index (direct contributions like adj_I[i]*(1-gamma[i]*dt))
+        ## go outside the reduction loop.  Terms with the free index
+        ## (like adj_s_ij[j,i]*beta[j,i]/N_pop[i]) go inside.
+        all_terms <- adjoint_split_additive(rhs_expr)
+        has_free <- vapply(all_terms, function(t) {
+          any(vapply(free_names, function(fn) {
+            adjoint_expr_contains_free_index(t, fn,
+                                             dat$storage$arrays)
+          }, logical(1)))
+        }, logical(1))
+
+        free_terms <- all_terms[has_free]
+        non_free_terms <- all_terms[!has_free]
+
+        ## Direct terms go outside the loop
+        if (length(non_free_terms) > 0) {
+          direct_expr <- adjoint_reconstruct_sum(non_free_terms)
+          direct_rhs <- generate_dust_sexp(direct_expr, dat$sexp_data,
+                                           options)
+          direct_stmt <- sprintf("%s = %s;", lhs, direct_rhs)
+        } else {
+          direct_stmt <- sprintf("%s = 0;", lhs)
+        }
+
+        ## Free-index terms: apply delta resolution, wrap in loop
+        if (length(free_terms) > 0) {
+          free_expr <- adjoint_reconstruct_sum(free_terms)
+          free_expr <- adjoint_resolve_kronecker_delta(
+            free_expr, lhs_indices, free_indices)
+          free_rhs <- generate_dust_sexp(free_expr, dat$sexp_data,
+                                         options)
+          depends_free <- find_dependencies(free_expr)$variables
+          inner_body <- sprintf("%s += %s;", lhs, free_rhs)
+          inner <- generate_array_loops(
+            inner_body, depends_free, free_indices,
+            dat$sexp_data, options)
+        } else {
+          inner <- NULL
+        }
+
+        ## Combine: all terms need the LHS array loops
+        depends <- find_dependencies(rhs_expr)$variables
+        res <- c(direct_stmt, inner)
+        res <- generate_array_loops(
+          res, depends, eq$lhs$array, dat$sexp_data, options)
+      } else {
+        res <- generate_array_loops(
+          res, depends, eq$lhs$array, dat$sexp_data, options)
+      }
+    } else if (!is.null(eq$reduce_loops)) {
+      ## Scalar adjoint accumulating from array equations.  Split
+      ## the expression into the accumulate (old value) part and
+      ## the array-indexed contributions, then generate:
+      ##   lhs = accumulate_part;
+      ##   for (...) { lhs += array_contribution; }
+      ## For stack-location intermediates, lhs includes "const real_type"
+      ## declaration which can't be used with +=. Strip it for the
+      ## loop body and use non-const declaration for init.
+      location <- dat$storage$location[[eq$lhs$name]]
+      if (identical(location, "stack")) {
+        lhs_bare <- eq$lhs$name
+        lhs_decl <- sprintf("%s %s",
+                            dat$storage$type[[eq$lhs$name]], lhs_bare)
+      } else {
+        lhs_bare <- lhs
+        lhs_decl <- lhs
+      }
+      accum_expr <- adjoint_split_accumulate(eq$rhs$expr, eq$lhs$name)
+      if (!is.null(accum_expr$base)) {
+        base_rhs <- generate_dust_sexp(accum_expr$base, dat$sexp_data, options)
+        inner_rhs <- generate_dust_sexp(accum_expr$contrib, dat$sexp_data,
+                                        options)
+        depends <- find_dependencies(accum_expr$contrib)$variables
+        loop_body <- sprintf("%s += %s;", lhs_bare, inner_rhs)
+        loop <- generate_array_loops(
+          loop_body, depends, eq$reduce_loops, dat$sexp_data, options)
+        res <- c(sprintf("%s = %s;", lhs_decl, base_rhs), loop)
+      } else {
+        ## Pure reduction, no accumulate base
+        inner_rhs <- generate_dust_sexp(eq$rhs$expr, dat$sexp_data, options)
+        depends <- find_dependencies(eq$rhs$expr)$variables
+        loop_body <- sprintf("%s += %s;", lhs_bare, inner_rhs)
+        loop <- generate_array_loops(
+          loop_body, depends, eq$reduce_loops, dat$sexp_data, options)
+        res <- c(sprintf("%s = 0;", lhs_decl), loop)
+      }
     }
   }
 
@@ -1035,6 +1169,298 @@ generate_dust_system_delay_equation <- function(nm, dat) {
   }
 
   ret
+}
+
+
+## Split an accumulated adjoint expression like (adj_beta + contrib)
+## into its base (adj_beta) and the array-indexed contribution.
+## The accumulate pattern in adjoint_equation adds as.name(name) to
+## the parts list, so the expression is typically:
+##   name + array_contribution
+## where array_contribution contains loop variables (i, j, etc.)
+## Find index variables in RHS that are not covered by the LHS array
+## loops.  Returns a list of range-index specs suitable for
+## generate_array_loops().  Each free index gets a range determined by
+## the first array in the expression that uses it.
+adjoint_find_free_indices <- function(expr, lhs_indices, arrays_table) {
+  ## Collect all array subscript accesses in the expression:
+  ## find names used as `X[i, j]` and record which index position
+  ## each variable appears in.
+  accesses <- list()
+  walk_subscripts <- function(e) {
+    if (!is.call(e)) return()
+    if (identical(e[[1]], as.name("["))) {
+      arr_name <- as.character(e[[2]])
+      for (k in seq_along(e)[-c(1, 2)]) {
+        arg <- e[[k]]
+        if (is.name(arg)) {
+          idx_name <- as.character(arg)
+          if (idx_name %in% INDEX) {
+            dim_pos <- k - 2L
+            accesses[[length(accesses) + 1L]] <<-
+              list(array = arr_name, index = idx_name, dim = dim_pos)
+          }
+        }
+      }
+    }
+    for (k in seq_len(length(e) - 1L)) {
+      tryCatch(
+        walk_subscripts(e[[k + 1L]]),
+        error = function(cond) NULL)
+    }
+  }
+  walk_subscripts(expr)
+
+  if (length(accesses) == 0) return(list())
+
+  rhs_indices <- unique(vapply(accesses, function(x) x$index, ""))
+  free <- setdiff(rhs_indices, lhs_indices)
+  if (length(free) == 0) return(list())
+
+  ## For each free index, find a reference array and dimension to
+  ## determine its range.
+  result <- vector("list", length(free))
+  for (fi in seq_along(free)) {
+    idx_name <- free[[fi]]
+    ref <- NULL
+    for (acc in accesses) {
+      if (acc$index == idx_name) {
+        ref <- acc
+        break
+      }
+    }
+    if (is.null(ref)) next
+    result[[fi]] <- list(
+      name = idx_name,
+      type = "range",
+      from = 1L,
+      to = call("OdinDim", ref$array, as.integer(ref$dim)))
+  }
+  result[!vapply(result, is.null, FALSE)]
+}
+
+
+## Split an expression into additive terms by flattening + operators.
+adjoint_split_additive <- function(expr) {
+  if (is.call(expr) && identical(expr[[1]], as.name("+"))) {
+    c(adjoint_split_additive(expr[[2]]),
+      adjoint_split_additive(expr[[3]]))
+  } else {
+    list(expr)
+  }
+}
+
+
+## Check if an expression contains a free index variable in an array context.
+## Returns TRUE if var_name appears as an index in an array subscript X[..., var, ...]
+## or as a bare symbol in a context that suggests it's a loop variable.
+adjoint_expr_contains_free_index <- function(expr, var_name, arrays) {
+  sym <- as.name(var_name)
+  if (is.name(expr)) return(FALSE)  # bare variable name, not an index usage
+
+  if (!is.call(expr)) return(FALSE)
+
+  ## Check if this is an array access X[...] containing var_name as an index
+  if (identical(expr[[1]], as.name("["))) {
+    for (k in seq_along(expr)[-c(1, 2)]) {
+      if (adjoint_expr_mentions(expr[[k]], var_name)) return(TRUE)
+    }
+  }
+
+  ## Check if this is a Kronecker delta referencing the free index
+  if (identical(expr[[1]], as.name("if"))) {
+    cond <- expr[[2]]
+    if (is.call(cond) && identical(cond[[1]], as.name("=="))) {
+      if (adjoint_expr_mentions(cond, var_name)) return(TRUE)
+    }
+  }
+
+  ## Recurse into children
+  for (k in seq_along(expr)[-1]) {
+    child <- tryCatch(expr[[k]], error = function(e) NULL)
+    if (!is.null(child)) {
+      if (adjoint_expr_contains_free_index(child, var_name, arrays)) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
+}
+
+
+## Check if an expression mentions a variable name anywhere.
+adjoint_expr_mentions <- function(expr, var_name) {
+  sym <- as.name(var_name)
+  if (is.name(expr)) return(identical(expr, sym))
+  if (!is.call(expr)) return(FALSE)
+  for (k in seq_along(expr)) {
+    if (adjoint_expr_mentions(expr[[k]], var_name)) return(TRUE)
+  }
+  FALSE
+}
+
+
+## Reconstruct a sum expression from a list of terms.
+adjoint_reconstruct_sum <- function(terms) {
+  if (length(terms) == 0) return(0)
+  if (length(terms) == 1) return(terms[[1]])
+  Reduce(function(a, b) call("+", a, b), terms)
+}
+
+
+## Resolve Kronecker deltas in adjoint expressions with free indices.
+##
+## When a lower-dimensional adjoint (e.g., adj_prop_I[i]) accumulates
+## from a higher-dimensional equation (e.g., s_ij[i,j] = m[i,j] * prop_I[j]),
+## the symbolic differentiator produces an expression like:
+##
+##   adj_s_ij[i, j] * m[i, j] * (j == i ? 1 : 0)
+##
+## The Kronecker delta (j == i ? 1 : 0) indicates that only terms where
+## j matches the LHS index i contribute.  However, in the generated code
+## the outer loop variable i (for adj_prop_I[i]) is the same symbol as
+## i in adj_s_ij[i, j], creating a name collision.  The correct
+## accumulation is:
+##
+##   adj_prop_I[i] = sum_j adj_s_ij[j, i] * m[j, i]
+##
+## i.e., the second index of s_ij (matching prop_I's index) takes the
+## LHS value i, while the first index becomes the summation variable j.
+##
+## This function detects the delta, removes it, and swaps the index
+## variables in all array subscript accesses within the expression.
+adjoint_resolve_kronecker_delta <- function(expr, lhs_indices, free_indices) {
+  free_names <- vapply(free_indices, function(x) x$name, "")
+
+  for (fi in seq_along(free_names)) {
+    free_idx <- free_names[[fi]]
+    for (lhs_idx in lhs_indices) {
+      if (free_idx == lhs_idx) next
+      ## Look for delta pattern: (free == lhs ? 1 : 0)
+      delta <- adjoint_find_delta(expr, free_idx, lhs_idx)
+      if (!is.null(delta)) {
+        ## Remove the delta from the expression
+        expr <- adjoint_remove_delta(expr, delta)
+        ## Swap free_idx and lhs_idx in all subscript positions
+        expr <- adjoint_swap_subscript_indices(expr, free_idx, lhs_idx)
+        break
+      }
+    }
+  }
+  expr
+}
+
+
+## Find a Kronecker delta of the form (a == b ? 1 : 0) in an expression.
+## Returns the delta sub-expression if found, NULL otherwise.
+adjoint_find_delta <- function(expr, idx_a, idx_b) {
+  if (!is.call(expr)) return(NULL)
+  ## Check if this expression IS a delta: (a == b ? 1 : 0)
+  ## In R's AST this is: if(a == b) 1 else 0
+  if (identical(expr[[1]], as.name("if")) && length(expr) == 4) {
+    cond <- expr[[2]]
+    if (is.call(cond) && identical(cond[[1]], as.name("==")) &&
+        length(cond) == 3) {
+      args <- sort(c(as.character(cond[[2]]), as.character(cond[[3]])))
+      target <- sort(c(idx_a, idx_b))
+      if (identical(args, target)) {
+        true_val <- expr[[3]]
+        false_val <- expr[[4]]
+        if (is.numeric(true_val) && true_val == 1 &&
+            is.numeric(false_val) && false_val == 0) {
+          return(expr)
+        }
+      }
+    }
+  }
+  ## Recurse into children
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      found <- adjoint_find_delta(child, idx_a, idx_b)
+      if (!is.null(found)) return(found)
+    }
+  }
+  NULL
+}
+
+
+## Remove a delta sub-expression from a product.
+## When the delta is multiplied in a product (a * b * delta), replace
+## it with 1 and simplify.  If it appears in a sum context or alone,
+## wrap the remaining expression.
+adjoint_remove_delta <- function(expr, delta) {
+  if (identical(expr, delta)) return(1)
+  if (!is.call(expr)) return(expr)
+
+  ## If this is a multiply and one operand is the delta, remove it
+  if (identical(expr[[1]], as.name("*")) && length(expr) == 3) {
+    if (identical(expr[[2]], delta)) return(expr[[3]])
+    if (identical(expr[[3]], delta)) return(expr[[2]])
+  }
+
+  ## Recurse into all children
+  result <- expr
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      new_child <- adjoint_remove_delta(child, delta)
+      if (!identical(new_child, child)) {
+        result[[k + 1L]] <- new_child
+      }
+    }
+  }
+  result
+}
+
+
+## Swap two index variables in all array subscript positions.
+## Walks the expression tree and in all X[a, b, ...] accesses,
+## swaps occurrences of idx_a and idx_b.
+adjoint_swap_subscript_indices <- function(expr, idx_a, idx_b) {
+  if (is.name(expr)) return(expr)  # Don't swap bare names
+  if (!is.call(expr)) return(expr)
+
+  ## If this is an array subscript access X[...], swap indices in positions
+  if (identical(expr[[1]], as.name("["))) {
+    sym_a <- as.name(idx_a)
+    sym_b <- as.name(idx_b)
+    for (k in seq_along(expr)[-c(1, 2)]) {
+      arg <- expr[[k]]
+      if (is.name(arg)) {
+        if (identical(arg, sym_a)) {
+          expr[[k]] <- sym_b
+        } else if (identical(arg, sym_b)) {
+          expr[[k]] <- sym_a
+        }
+      }
+    }
+    return(expr)
+  }
+
+  ## Recurse into children
+  for (k in seq_len(length(expr) - 1L)) {
+    child <- tryCatch(expr[[k + 1L]], error = function(e) NULL)
+    if (!is.null(child)) {
+      expr[[k + 1L]] <- adjoint_swap_subscript_indices(child, idx_a, idx_b)
+    }
+  }
+  expr
+}
+
+
+adjoint_split_accumulate <- function(expr, name) {
+  sym <- as.name(name)
+  parts <- monty::monty_differentiation()$maths$as_sum_of_parts(expr)
+  is_base <- vlapply(parts, function(p) identical(p, sym))
+  if (any(is_base)) {
+    base <- sym
+    contrib_parts <- parts[!is_base]
+    contrib <- monty::monty_differentiation()$maths$plus_fold(contrib_parts)
+    list(base = base, contrib = contrib)
+  } else {
+    list(base = NULL, contrib = expr)
+  }
 }
 
 
