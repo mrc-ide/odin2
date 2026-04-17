@@ -167,10 +167,10 @@ parse_array_bounds_extract_constraint_rhs <- function(eq) {
 
   ret <- collector(list())
   extract <- function(expr, condition) {
-    condition_vars <- unlist(lapply(condition, all.vars))
     if (rlang::is_call(expr, "[")) {
       name <- deparse(expr[[2]])
       at <- as.list(expr[-(1:2)])
+      condition_vars <- unlist(lapply(condition, all.vars))      
       for (i in seq_along(at)) {
         uses <- c(condition_vars, all.vars(at[[i]]))
         uses <- intersect(uses, INDEX)
