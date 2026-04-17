@@ -1,0 +1,1509 @@
+# Odin parse errors
+
+This vignette outlines errors that might be generated when parsing odin
+code, with more explanation about the error and how they can be avoided.
+Don’t read this top to bottom as it’s quite boring! However, if we get
+errors that benefit from more explanation about why they’ve been thrown
+then we’ll expand on the contents here and arrange for these to be
+linked from the thrown error directly.
+
+The error numbers are arbitrary after the first digit. The first digit
+will correspond to different phases of the parsing:
+
+- `E0xxx` - general errors
+- `E1xxx` - errors during parsing of individual expressions
+- `E2xxx` - errors when considering the system as a whole
+- `E3xxx` - errors when during the analysis phase, after validating the
+  code
+
+When an error is thrown you will be directed here, for example:
+
+``` r
+odin2::odin({
+  initial(x) <- 1
+  update(x) <- 1
+  1 < 10
+})
+#> Error in `odin2::odin()`:
+#> ! Unclassifiable expression
+#> ℹ Expected an assignment (with '<-') or a relationship (with '~')
+#> → Context:
+#> 1 < 10
+#> ℹ For more information, run `odin2::odin_error_explain("E1001")`
+```
+
+You can then print the explanation:
+
+``` r
+odin2::odin_error_explain("E1001")
+#> 
+#> ── E1001 ───────────────────────────────────────────────────────────────────────
+#> We were not able to classify an expression in your odin source code.
+#> 
+#> Example:
+#> 
+#>     a + 1
+#> 
+```
+
+## `E0001`
+
+You have used a feature that is not yet implemented, but which is
+intended to be implemented. Try again later. Probably the code you have
+written works well in odin v1.x.x but has not been implemented in odin2.
+
+In some cases, code that produces this error may in future produce a
+different error code, if implementation is forecast to take a while.
+
+## `E1001`
+
+We were not able to classify an expression in your odin source code.
+
+Example:
+
+    a + 1
+
+## `E1002`
+
+Invalid assignment of [`data()`](https://rdrr.io/r/utils/data.html). If
+you use [`data()`](https://rdrr.io/r/utils/data.html) on the right hand
+side of an expression, then the left hand side must be a symbol.
+
+Example:
+
+    initial(x) <- data()
+
+## `E1003`
+
+Invalid input to a special lhs function (`initial()`,
+[`update()`](https://rdrr.io/r/stats/update.html), etc). These functions
+all (currently) accept a single unnamed argument.
+
+Examples:
+
+    initial() <- 1
+    initial(a, b) <- 1
+    initial(x = a) <- 1
+
+## `E1004`
+
+Assignment to reserved words (in odin, C, C++ or JavaScript) is not
+allowed. An example statement that would trigger this:
+
+    new <- 2 * old
+
+This is an error because [`new` is a keyword in
+C++](https://en.cppreference.com/w/cpp/language/new). The list of
+forbidden keywords can be found in `vignette("functions"`) (Section:
+“Restricted names”).
+
+## `E1005`
+
+Invalid target on lhs of assignment or comparison relationship (`~`).
+There are quite a few ways of being an invalid assignment target, and at
+present they are all grouped within this error. We may split these into
+different errors in future where particular types of error are both
+common and difficult to understand.
+
+Examples:
+
+    1 <- 10
+
+The code above is valid R (as in, it can be parsed) but it is
+nonsensical. Generally, the lhs of an assignment must be a symbol (e.g.,
+`a <- 1`).
+
+This code is also reported if you have a spelling mistake, such as
+
+    inital(x) <- 1
+
+instead of `initial(x)`, though we will try and suggest the appropriate
+function if you have a near miss.
+
+It is also reported with this code, which contains two legacy errors.
+
+    compare(d) <- Normal(0, 1)
+
+Firstly, there is an error you may have made in the previous version, in
+which the assignment `<-` should be the comparison symbol `~`.
+Furthermore, in this version, the `compare()` function is not required
+at all, and you should write `d ~ Normal(0, 1)`.
+
+If you assign into an array, then the array name must be a symbol, so
+this is invalid:
+
+    f(x)[] <- 1
+
+as is this:
+
+    deriv(1[]) <- 1
+
+Sometimes you will see this error if you have accidentally nested
+special functions
+
+    deriv(deriv(x)) <- 1
+
+## `E1006`
+
+Invalid call to the `parameter()` function, used on the rhs of an
+assignment. If this error is thrown then we have failed to parse the
+arguments of your call to `parameter`. The full prototype of
+`parameter()` is:
+
+    parameter(default = NULL, constant = NULL, differentiate = FALSE)
+
+We will fail to parse your call if:
+
+- You provide more than three arguments
+- You provide named arguments that do not match the three above
+  (`default`, `constant` or `differentiate`)
+
+Example:
+
+    x <- parameter(value = 10)
+
+This fails because `value` is not a valid keyword argument to
+`parameter`.
+
+## `E1007`
+
+Invalid `default` argument to `parameter()`.
+
+Currently we support very little of odin’s syntax within the default
+argument definition, though in future we may support more. It’s
+complicated (and a bit confusing) to allow use of other variables here
+because we end up with another copy of the dependency graph to consider
+(we have to be able to resolve all the possible relationships between
+quantities used as defaults *before* any of these quantities are used).
+It’s not impossible to support this and in future we may consider doing
+so.
+
+At present, you may perform arithmetic operations on literal numbers.
+This allows you to write:
+
+    a <- parameter(1 / 3)
+
+defining `a` to be a parameter with a default value of `0.33333...`
+without having to write out a long floating point number.
+
+## `E1008`
+
+Invalid `differentiate` argument to `parameter()`. You have provided
+something other than a literal `TRUE` or `FALSE` here (e.g., a missing
+value, an expression or a symbol).
+
+## `E1009`
+
+Invalid `constant` argument to `parameter()`. You have provided
+something other than a literal `NULL`, `TRUE` or `FALSE` here (e.g., a
+missing value, an expression or a symbol).
+
+## `E1010`
+
+Invalid call to [`data()`](https://rdrr.io/r/utils/data.html) used on
+the right hand side. Currently this function takes no arguments, though
+later we will expand this to allow description of the data that you wish
+to use.
+
+Example
+
+    d <- data(integer = TRUE)
+
+Here, you have somewhat hopefully requested that `d` will be data as an
+integer but we don’t yet support that. Probably this will be supported
+in future, but the interface is not yet decided. For now all data
+elements are assumed to be scalar reals.
+
+## `E1012`
+
+**Obsolete since 0.3.27, these problems are now included within
+[E1005](#e1005)**
+
+Invalid argument on the lhs of a `~` comparison.
+
+Example
+
+    x / 2 ~ Normal(0, 1)
+    1 ~ Normal(0, 1)
+
+The lhs of a `~` comparison must be a symbol. We may expand this in the
+future to support arrays too.
+
+## `E1013`
+
+Failed to parse the rhs of `~` as a valid distribution. This can fail
+for many reasons, and the details of the failure come from
+[`monty::monty_dsl_parse_distribution`](https://mrc-ide.github.io/monty/reference/monty_dsl_parse_distribution.html)
+
+Example reasons for failure include the the rhs being:
+
+- not a call (e.g., `x ~ 1`
+- not a call to distribution function (e.g., `x ~ sqrt(2)`)
+- an invalid call (e.g., `x ~ Normal(0, 1, 2)`)
+
+The details for the failure will be included in the body of the error
+message.
+
+## `E1014`
+
+Invalid assignment of `parameter()`. If you use `parameter()` on the
+right hand side of an expression, then the left hand side must be a
+symbol.
+
+Example:
+
+    initial(x) <- parameter()
+
+## `E1015`
+
+Differentiable parameters must not be constant. You have written
+
+    a <- parameter(constant = TRUE, differentiate = TRUE)
+
+which is impossible. Parameters that are differentiable need to be able
+to be set by `dust::dust_system_update_pars()` as well as on model
+creation.
+
+Probably you want to set at least one of these to `FALSE`, or omit the
+argument and accept the default.
+
+## `E1016`
+
+Failed to translate a `user()` expression (valid in odin before version
+2) into a call to `parameter()`. This was likely code that would not
+work in old odin either.
+
+## `E1017`
+
+Compatibility issues were present in the system (e.g., using `user()`
+instead of `parameter()` and the compatibility action was `"error"`. You
+can, in the short term, disable failure here by using
+`compatibility = "warning"` or `compatibility = "silent"`, but
+eventually this will become an error that is always thrown when running
+with old odin code.
+
+The error message will explain how to update your code to use new odin2
+syntax.
+
+## `E1018`
+
+Failed to parse a call to a stochastic function (e.g., `Normal()`).
+These errors come from
+[`monty::monty_dsl_parse_distribution`](https://mrc-ide.github.io/monty/reference/monty_dsl_parse_distribution.html),
+typically where the function call does not match arguments for any
+candidate call (some distributions have multiple candidates,
+distinguished by argument names).
+
+Example calls that will fail:
+
+    * `Normal(1, 2, 3)` -- too many arguments
+    * `Normal()` -- too few arguments
+    * `Normal(mu = 0, sd = 1)` -- invalid argument names
+
+The details for the failure will be included in the body of the error
+message.
+
+## `E1019`
+
+Invalid value for the `zero_every` argument to `initial()`. At present,
+this must be a literal value, and that value must be an integer-like
+number (e.g., 2 or 2L). We may relax this in future to allow more
+flexibility (e.g., a variable which contains an integer-like number).
+
+Examples that would error
+
+    initial(x, zero_every = a) <- 0
+    initial(y, zero_every = 2.5) <- 0
+
+## `E1020`
+
+The right hand side of a call to `initial()` that uses the `zero_every`
+argument was not 0, but it must be. Because we periodically reset values
+to zero, any initial condition other than zero makes no sense. See [the
+`dust2` docs on periodic
+variables](https://mrc-ide.github.io/dust2/articles/periodic.html) for
+details.
+
+Examples that would error
+
+    initial(x, zero_every = 1) <- 10
+    initial(x, zero_every = 1) <- a
+
+## `E1021`
+
+Invalid use of a special array access variable (e.g., `i`, `j`, `k`) on
+the right hand side of an expression. The available index variables are
+determined by the rank (number of dimensions) of the variable on the
+left hand side. If you have a vector you can only use `i` on the right
+hand side, if you have a matrix you can use `i` and `j` and so on.
+
+Example causing an error:
+
+``` r
+x[, ] <- a[i, k] + a[i, j]
+```
+
+Above, we have used `k` on the rhs, but `x` is only a matrix so this
+would not work. Think of the above statement as it might appear in
+generated pseudo-code:
+
+    for i in 1:nrow(x):
+      for j in 1:ncol(x):
+         x[i, j] <- a[i, k] + a[i, j]
+
+and the reason that this is an error should be apparent.
+
+## `E1022`
+
+Invalid use of `:` within the left hand side of an array assignment. We
+might increase the number of ways you can use this but for now we are
+quite strict (the same rules as with version 1 of odin). If you use `:`
+it must be the *outermost* operator within an index, so this is fine:
+
+``` r
+x[a:b]
+```
+
+but this is not
+
+``` r
+x[a:b + 1]
+```
+
+This is because we can’t generally convert the latter type into a
+`from:to` form, which we need for the code generation to work, and also
+because R’s parsing rules are fairly ambiguous about if this really
+means `(a:b) + 1` or a:(b + 1)\`.
+
+## `E1023`
+
+Invalid functions used within an array index. At the moment you can only
+use `:` (the range operator, which must be the outermost function call),
+`+`, `-` and `(`. The error will indicate the function that you have
+tried to use, and if you feel this is unreasonable please let us know.
+We may expand the list of supported functions within arrays in future,
+with candidates being `*`, `%/%` and `%%`.
+
+## `E1024`
+
+Unary minus (`-` as “negative” rather than “minus”) detected within
+arrays. This error is a special case of [`E1023`](#e1023) but deserves
+special mention here because it has special meaning in R’s array access.
+In R, we can write
+
+    x[-1]
+
+and this means “all of `x` except the first element”, which is something
+we might support in future.
+
+## `E1025`
+
+Invalid use of `i`, `j`, etc on the left hand side of an expression, for
+example:
+
+``` r
+x[i] <- 2 * a[i]
+```
+
+Usually, this error can be fixed by omitting the `i` from the left hand
+side as you probably meant
+
+``` r
+x[] <- 2 * a[i]
+```
+
+## `E1026`
+
+Something unexpected was used as an array index on the left hand side of
+an array expression, such as:
+
+``` r
+x[TRUE] <- 1
+```
+
+## `E1027`
+
+You have tried to use a function that odin does not support.
+
+Example:
+
+``` r
+a <- pgamma(0, 1)
+```
+
+It’s also possible that you have simply misspelt the function you
+intended:
+
+``` r
+a <- sqt(2)
+```
+
+Not all of R’s mathematical functions are supported, but please let us
+know if you need something that we don’t support.
+
+## `E1028`
+
+Invalid call to an odin function. Usually, this means that you have
+provided too many or too few arguments, or that you have provided a
+named argument that the function does not support. The message should
+guide you to fix the mistake, but the machinery for doing this
+(currently) comes from `match.call` which can be unhelpful at times.
+
+Example:
+
+``` r
+a <- round(b, 2)
+```
+
+We don’t yet support `round`’s `digit` argument, so this call will fail.
+
+## `E1029`
+
+Disallowed use of named arguments. For some primitive R functions (e.g.,
+`+` we disallow use of named argument forms). You are unlikely to see
+this error, but we would be interested to know if you do.
+
+## `E1030`
+
+Incorrect number of arguments to a function that does not accept
+argument names. You are unlikely to see this error, but we would be
+interested to know if you do.
+
+## `E1031`
+
+Invalid `type` argument to `parameter()`. You have provided something
+other than a literal `"real"`, `"integer"` or `"logical"` (e.g., a
+missing value, an expression, symbol, or other string).
+
+## `E1032`
+
+Impossible attempt to differentiate parameter with non-real type. You
+cannot differentiate integer or logical parameters. Example:
+
+``` r
+a <- parameter(type = "integer", differentiate = TRUE)
+```
+
+Here, you must decide if `a` should be differentiable (in which case
+remove the `type` argument) or an integer (in which case remove the
+`differentiate` argument).
+
+## `E1033`
+
+The argument to sum must be an array. This can either be a complete
+array (in which case the argument will be a symbol), or an indexed
+array. So these are both fine:
+
+``` r
+a <- sum(x)
+b[] <- sum(x[, i])
+```
+
+with the first summing over the whole array and the second summing over
+rows (each element of `b` will contain a sum over the corresponding row
+of `x`.
+
+But these are errors:
+
+``` r
+a <- sum(a + y)
+b[] <- sum([, i] + 1)
+```
+
+Because summation is associative (or commutative) in this case we could
+write:
+
+``` r
+a <- sum(a) + sum(y)
+b[] <- sum([, i]) + 1
+```
+
+but in more complicated cases you may have to jump through more hoops to
+get the expression you want, and this may involve saving out an
+intermediate variable. For example, rather than writing:
+
+``` r
+a <- sum(x^2)
+```
+
+You might write:
+
+``` r
+xx[] <- x[i]^2
+a <- sum(xx)
+
+# `E1034`
+
+Invalid use of `:` within a partial sum.  If you use `:` it must be the *outermost* operator within an index, so this is fine:
+
+```r
+sum(x[a:b])
+```
+
+but this is not
+
+``` r
+sum(x[a:b + 1])
+```
+
+See [E1022](#e1022) for more information in the case where this same
+class of error is applied to indexing the left hand side of an
+assignment.
+
+## `E1035`
+
+Invalid arguments to interpolation. The first two arguments (`time` and
+`value`, respectively) must be symbols corresponding to arrays. The
+whole array is used by `interpolate()` so these cannot be subset.
+
+## `E1036`
+
+Invalid interpolation mode. The `mode` argument to `interpolate` must be
+a string, and must be one of the values `"constant"` (for piecewise
+constant), `"linear"` (for piecewise linear) or `"spline"` (for cubic
+splines).
+
+Example:
+
+``` r
+a <- interpolate(at, ay, "wiggly")
+```
+
+## `E1037`
+
+Calls to interpolate must be assigned to a symbol, because they affect
+the **whole** structure. Rather than writing:
+
+    a[] <- interpolate(at, ay, "linear")
+    dim(a) <- 10
+
+we expect to see
+
+    a <- interpolate(at, ay, "linear")
+    dim(a) <- 10
+
+This is similar to the requirement that array-valued parameters are
+assigned at once (in contrast to odin version 1).
+
+## `E1038`
+
+This equation cannot reference itself. There are some types of equations
+that **can** reference themselves, for example:
+
+    update(x) <- x + 1         # references 'x' from the previous step
+    deriv(x) <- x              # derivative referencing the actual variable
+    x[2:n] <- x[i] / x[i - 1]  # referencing elsewhere in the array
+
+However, in general this makes little sense and is disallowed, for
+example:
+
+    b <- b + 1
+
+This is not allowed because we have a cycle in the graph for `b` (a
+special case of [E2005](#e2005)).
+
+## `E1039`
+
+Array extent cannot be stochastic. This is really a special case of
+[E2011](#e2011) but detectable in a single expression. An example that
+would throw this error is:
+
+    dim(a) <- Poisson(2)
+
+## `E1040`
+
+Array extent cannot be determined by time. This is really a special case
+of [E2011](#e2011) but detectable in a single expression. An example
+that would throw this error is:
+
+    dim(a) <- if (time > 10) 100 else 20
+
+## `E1041`
+
+Special functions on the right-hand-side of an expression must be the
+only expression there. This applies to `parameter()`, `interpolate()`,
+[`data()`](https://rdrr.io/r/utils/data.html) and `delay()`; if these
+are used they must be the **only** expression on the right hand side.
+
+For example you cannot write:
+
+    x <- interpolate(at, ay) + interpolate(bt, by)
+
+You might write this as:
+
+    a <- interpolate(at, ay)
+    b <- interpolate(bt, by)
+    x <- a + b
+
+## `E1042`
+
+Invalid special function used on the right hand side. Some odin
+functions can only be used on the lhs; these include `initial`, `update`
+and `deriv`. So you cannot write this:
+
+    a <- x + deriv(y)
+
+## `E1043`
+
+Invalid functions used in expression for
+[`dim()`](https://rdrr.io/r/base/dim.html). Currently
+[`dim()`](https://rdrr.io/r/base/dim.html) is quite limited in what it
+can accept (though slightly more relaxed than `odin1`). You can use `+`,
+`-`, `(`, `length`, `nrow` and `ncol` but nothing else. Let us know if
+you think you should be able to use more.
+
+## `E1044`
+
+Attempt to call something which is not the **name** of a function. This
+might be
+
+    a <- 1(x)
+
+where `1` is not a symbol, so this fails. Other possible errors, which
+are valid R code but not valid odin code, might include:
+
+    a <- f(x)(y)
+
+where `f(x)` might return a function in R, but this is not possible in
+odin.
+
+## `E1045`
+
+Attempt to use one of R’s reserved words: `function`, `while`, `repeat`,
+`for`, etc.
+
+## `E1046`
+
+All `if` statements must have an `else` clause. You cannot write:
+
+    a <- if (condition) 1
+
+as this is really the same as (in R)
+
+    a <- if (condition) 1 else NULL
+
+which would not be valid in odin because we can’t assign a `NULL` value.
+Always provide an `else` branch.
+
+## `E1047`
+
+Assignment to a name that starts with a restricted prefix. Names cannot
+begin with `odin_`, `interpolate_`, `delay_` or `adjoint_`.
+
+An example that would trigger this:
+
+    delay_cases_days <- 10
+
+## `E1048`
+
+Cannot assign to `time`. Prior to odin2, this was allowed as `t` was the
+name for time in continuous-time models and discrete time models
+sometimes wrote:
+
+    time <- step * dt
+
+We can migrate the above special case, but any other assignments to
+`time` are disallowed, and you will need to update your model. See
+[`vignette("migrating")`](https://mrc-ide.github.io/odin2/articles/migrating.md)
+for more information.
+
+## `E1049`
+
+Cannot assign to `dt`. Prior to odin2, this was how `dt` was controlled,
+but now you should control `dt` via
+[`dust2::dust_system_create`](https://mrc-ide.github.io/dust2/reference/dust_system_create.html)
+and
+[`dust2::dust_filter_create`](https://mrc-ide.github.io/dust2/reference/dust_filter_create.html)
+etc. Previously you might have written
+
+    dt <- parameter(0.5) # or really user() in old odin code
+
+but this is no longer allowed. We can migrate this special case, but
+other uses such as
+
+    dt <- 0.5
+
+are disallowed and you will need to update your model. See
+[`vignette("migrating")`](https://mrc-ide.github.io/odin2/articles/migrating.md)
+for more information.
+
+## `E1050`
+
+Cannot use `step` within discrete time models. Prior to odin version 2,
+the `step` variable was automatically provided by odin to be the time
+basis for discrete time models; models started at step 0 and increased
+by one each time step. We no longer support this, and instead models
+start at some real-valued (but integral) time and increment with a step
+size of `dt` (which must be of the form `1 / <integer>`).
+
+You will need to adapt your code to fix this error, and this may require
+features that we are still developing. Please see
+[`vignette("migrating")`](https://mrc-ide.github.io/odin2/articles/migrating.md)
+for details.
+
+## `E1051`
+
+Array parameters cannot have defaults. If `a` is an array (of any rank),
+then this is an error:
+
+``` r
+a <- parameter(1)
+```
+
+In future, we may allow this to allow filling an array with a value on
+initialisation. However, if we did this we’d also like to support
+something like
+
+``` r
+a <- parameter(c(1, 2, 3))
+```
+
+to have a default value of vector of 1:3; however this is quite hard to
+validate and generalises poorly to higher dimensions. Your thoughts and
+use-cases are very welcome.
+
+## `E1052`
+
+Failed to parse call to [`print()`](https://rdrr.io/r/base/print.html).
+If this error is thrown then we have failed to parse the arguments of
+your call to `print`. The full prototype of
+[`print()`](https://rdrr.io/r/base/print.html) is:
+
+    print(string, when = NULL)
+
+We will fail to parse your call if:
+
+- You provide more than two arguments
+- You provide named arguments that do not match the two above (`string`,
+  `when`)
+
+## `E1053`
+
+Invalid first (`string`) argument to
+[`print()`](https://rdrr.io/r/base/print.html). This argument must be a
+string, it must be parseable by
+[`glue::glue()`](https://glue.tidyverse.org/reference/glue.html) using
+curly-brace delimiters, and it must contain at least one template
+argument.
+
+If you see this error, it’s likely you have failed to terminate a
+template, such as:
+
+    print("v: {value")
+
+Here, we might have meant to write `"v: {value}"` (note the closing
+`}`), but because we did not terminate the template, `glue` failed to
+parse the string.
+
+## `E1054`
+
+Failed to parse template within print string. Unlike [E1053](#e1053)
+this is an error **within** a template. Typically this will be one of
+two issues:
+
+- The expression within [`{}`](https://rdrr.io/r/base/Paren.html) is not
+  valid R
+- The format specifier after `;` is not interpretable (see
+  [`vignette("debugging")`](https://mrc-ide.github.io/odin2/articles/debugging.md)
+  for details)
+
+Examples
+
+    print("x: {x + }") # invalid as `x +` is an incomplete expression
+    print("x: {x; q}") # invalid as `q` is not an sprintf format
+
+## `E1055`
+
+Invalid use of `rank` argument to `parameter()` call that does not
+assign to dimensions. You might have written
+
+    a <- parameter(rank = 2)
+
+but this is not the place to include the `rank` argument. Instead, it
+should go onto the call with `dim(a)` on the left-hand-side.
+
+## `E1056`
+
+Missing `rank` argument to call to `parameter()` which assigns to
+[`dim()`](https://rdrr.io/r/base/dim.html). You may have written
+
+    dim(a) <- parameter()
+
+but here we need to know what rank `a` is (is it a vector, matrix, etc).
+You can fix this by writing
+
+    dim(a) <- parameter(rank = 2)
+
+with the value of the `rank` argument being a literal integer. See
+[`vignette("functions")`](https://mrc-ide.github.io/odin2/articles/functions.md)
+for more information on this interface.
+
+## `E1057`
+
+Invalid value for `rank` argument to `parameter()`. Where given it must
+be a positive size; literally an integer value of 1, 2, 3, …, 8. You
+cannot use a variable here.
+
+## `E1058`
+
+Failed to migrate expression of form
+
+``` r
+dim(a) <- user()
+```
+
+because we never found an assignment like
+
+    a[] <- user()
+
+where we could determine the rank. This might be because you’ve removed
+the square brackets from the original, or the original assignment is
+simply missing. If your code does compile with odin1 but you see this
+error code please let us know.
+
+## `E1059`
+
+Failed to parse call to
+[`browser()`](https://rdrr.io/r/base/browser.html). Note that while this
+shares ideas and a core implementation with R’s
+[`browser()`](https://rdrr.io/r/base/browser.html), the call in odin
+code is different and must have the form
+
+``` r
+browser(phase, when)
+```
+
+where `phase` is the phase to evaluate the browser (one of `update` or
+`deriv` for now) and `when` is an expression describing the conditions
+to evaluate the `browser` call.
+
+## `E1060`
+
+Invalid `phase` argument for call to
+[`browser()`](https://rdrr.io/r/base/browser.html). Currently this must
+be one of `update` or `deriv`, but we may expand this in future.
+
+## `E1061`
+
+You can use the built-in constant `pi` on the right hand side of an
+expression, without setting it. You should not use it on the left-hand
+side of any expression.
+
+## `E1062`
+
+Cannot use missing values (`NA`) within expressions. Handling of missing
+values in C++ code is complicated, particularly following the semantics
+that R uses, with missing values for integers and logicals, and sensible
+propagation of missingness through expressions. In most systems a
+missing value will propagate though the whole system very quickly and we
+don’t expect this is very useful.
+
+Example code that would throw this error:
+
+``` r
+a <- NA
+```
+
+## `E1063`
+
+Trying to use the arguments `min` or `max` in a `parameter()` call
+defining a logical parameter. This is not supported because logical
+parameters can only take the values `TRUE` and `FALSE`. Example code
+that would throw this error:
+
+``` r
+a <- parameter(type = "logical", min = 0)
+```
+
+## `E1064`
+
+Invalid argument for `min` or `max` in a `parameter()` call. You can
+only use numbers here, not expressions or symbols. We may relax this in
+future, so please let us know if this is a problem.
+
+Example assignments that would throw this error:
+
+``` r
+a <- parameter(min = 1/2)  # 1/2 is really an expression, use 0.5 instead
+b <- parameter(max = a)    # would create dependency issues
+c <- parameter(min = TRUE) # not a number
+d <- parameter(max = NaN)  # also not a number!
+```
+
+## `E1065`
+
+Impossible range implied by `min` and `max` in `parameter()` call. This
+is thrown when `min` is greater than or equal to `max` as either this
+means you really have a constant, or no value can satisfy the
+relationship.
+
+Example assignment that would throw this error
+
+    a <- parameter(min = 10, max = 0)
+
+## `E1066`
+
+The `dim` function when used on the right hand side only takes the name
+of an array whose dimensions are to be copied. For example:
+
+    dim(b) <- dim(a)
+    dim(c) <- dim(b)
+
+are both valid, resulting in both `b` and `c` having the same dimensions
+as `a`. Below, however, are all incorrect:
+
+    dim(a) <- dim(1)
+    dim(a) <- dim(b[])
+    dim(a) <- dim(a * 2)
+    dim(a) <- dim(a + 5)
+
+## `E1067`
+
+Invalid call top the to `delay()` function, used on the rhs of an
+assignment. If this error is thrown then we have failed to parse the
+arguments of your call to `delay`. The full prototype of `delay()` is:
+
+``` r
+delay(what, by)
+```
+
+with both arguments required and typically unnamed.
+
+We will fail to parse your call if:
+
+- You provide any number other than two arguments
+- You provide named arguments that do not match the two above (`what`
+  and `by`)
+
+## `E1068`
+
+The first (`what`) argument to `delay()` must be a symbol; the name of a
+variable or derived quantity to delay. It cannot (currently at least) be
+a complex expression, though we may relax this in future, and it cannot
+be a number.
+
+Examples that would cause this error:
+
+``` r
+delay(a + 1, tau)
+delay(1, tau)
+```
+
+## `E1069`
+
+The second (`by`) argument to `delay()` must be a symbol or a number. It
+cannot be a complex expression. An example that would cause this error:
+
+``` r
+delay(a, b + 1)
+```
+
+You can fix this by writing:
+
+``` r
+delay(a, b1)
+b1 <- b + 1
+```
+
+## `E1070`
+
+Calls to delay must be assigned to a symbol, because they affect the
+**whole** structure. Rather than writing:
+
+    a[] <- delay(b, tau)
+    dim(a) <- 10
+
+we expect to see
+
+    a <- delay(b, tau)
+    dim(a) <- 10
+
+This is similar to the requirement that array-valued parameters are
+assigned at once (in contrast to odin version 1).
+
+## `E2001`
+
+Your system of equations does not include any expressions with
+`initial()` on the lhs. This is what we derive the set of variables
+from, so at least one must be present.
+
+## `E2002`
+
+No call to [`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html) on the lhs of any
+equation. Every call to `initial()` requires a call to
+[`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html), and when there is not
+even a single call to either of these we can’t tell what sort of time
+your model runs in (i.e., if it works in continuous or discrete time).
+This error is related to `E2004`, but separate because we can’t describe
+what is missing properly.
+
+## `E2003`
+
+Variables are missing initial conditions.
+
+All variables used in [`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html) require a
+corresponding entry in `initial()` to set their initial conditions. The
+error will highlight all lines that have a
+[`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html) call that lacks a call
+to `initial()`. This can sometimes be because you have a spelling error
+in your call to `initial()`.
+
+## `E2004`
+
+Variables are missing calls to
+[`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html)
+
+You have a system where you use different equations for
+[`deriv()`](https://rdrr.io/r/stats/deriv.html)/[`update()`](https://rdrr.io/r/stats/update.html)
+to the variables defined in `initial()`. This is an error if there are
+equations in
+[`deriv()`](https://rdrr.io/r/stats/deriv.html)/[`update()`](https://rdrr.io/r/stats/update.html)
+that don’t have a corresponding equation using `initial()`, or if you
+have equations in `initial()` that don’t have a corresponding
+[`deriv()`](https://rdrr.io/r/stats/deriv.html) or
+[`update()`](https://rdrr.io/r/stats/update.html) equation. The error
+will highlight all lines that might be involved in the error.
+
+## `E2005`
+
+Cyclic dependency detected within equations. There are a few ways this
+can happen. The simplest is that your equation references itself, for
+example:
+
+``` r
+a <- a + 1
+```
+
+Unlike in R, this is disallowed, as each variable may only be assigned
+to once within the target function of your system. Each assignment is
+much more like mathematical equation than usual programming statements.
+
+You can get more complicated cycles, for example:
+
+``` r
+a <- c / 2
+b <- sqrt(a)
+c <- a + 1
+```
+
+Here `a` depends on `c`, `c` depends on `b` and `b` depends on `a`. The
+error will reference all the variables involved in cycle.
+
+It is possible that there is more than one cycle within the reported
+expressions.
+
+## `E2006`
+
+Undefined variable used in an equation. This error means that you have
+referenced some variable that does not exist within the odin system.
+Common reasons for this error include:
+
+- A spelling mistake: you’ve referenced a variable that is very similar
+  to the one that you meant to (we may add “did you mean support” in
+  future; let us know if this would have saved you time).
+- Trying to reference variables defined in R’s environment but not in
+  odin. This is impossible, but you might want to make a parameter,
+  perhaps.
+
+Example:
+
+``` r
+initial(a) <- 1
+update(a) <- a * r
+r <- exp(v)
+```
+
+This will error because `v` (referenced by `r`, which is referenced by
+`update(a)`) is undefined.
+
+## `E2007`
+
+Trying to use `dt` in a continuous time (ODE) system. This is really a
+special case of `E2006`, but we treat it separately because it usually
+means that something has gone badly with the system design.
+
+## `E2008`
+
+An expression assigning as an array did not have a corresponding call to
+[`dim()`](https://rdrr.io/r/base/dim.html). We always need this, even if
+it looks like we should be able to work out how long your array is. You
+probably just need to add a call like
+
+``` r
+dim(x) <- ...
+```
+
+for the variables mentioned in the error, with the appropriate lengths.
+
+## `E2009`
+
+You have tried to assign to an array variable (i.e., something with a
+[`dim()`](https://rdrr.io/r/base/dim.html) call) without using `[]` on
+the left hand side.
+
+Example:
+
+``` r
+dim(a) <- 5
+a <- 0
+```
+
+If you wanted a length-5 array of zeros here, you should write
+
+    a[] <- 0
+
+## `E2010`
+
+Can’t reference data outside of equations that compare to data. You have
+tried to reference some data (a variable that exists on the lhs of a
+call to [`data()`](https://rdrr.io/r/utils/data.html)) from an equation
+that is used anywhere other than a comparison expression (involving `~`,
+or a dependency of these equations). You cannot do this, because data do
+not exist at this point.
+
+Here’s a trivial example that would error:
+
+``` r
+initial(x) <- 1
+update(x) <- x + d
+d <- data()
+```
+
+Here, `d` defines some data, and we try to use it from
+[`update()`](https://rdrr.io/r/stats/update.html) but we just can’t do
+that.
+
+## `E2011`
+
+Array extents must be determined at system creation. This means that
+they cannot be changed when setting parameters into the model, or by
+time.
+
+An example that would throw this error:
+
+    dim(a) <- n
+    n <- parameter(type = "integer")
+
+Here, parameter is not constant (it can be updated); you can fix this by
+writing this as:
+
+    dim(a) <- n
+    n <- parameter(type = "integer", constant = TRUE)
+
+Similarly, if `n` depended on `time`, or if it was (or depended on)
+anything stochastic, this would be an error because then the array
+dimension would have to change every time step.
+
+## `E2012`
+
+Assignments to the same variable must all be to arrays. You cannot
+write, for example:
+
+    a <- 1 + 2
+    a <- sqrt(a)
+
+to compute `a` in two stages.
+
+Sometimes this error will be thrown because you have been inconsistent
+with use of array-assignment square brackets, for example:
+
+    a <- 0
+    a[2] <- 1
+
+Above, the first line probably should have been `a[] <- 0 or`a\[1\] \<-
+0\`.
+
+## `E2013`
+
+Multiline array equations must be written as consecutive statements,
+with no assignments to other variables in between (comments are fine).
+So this is an error:
+
+    a[1] <- 1
+    b <- 10
+    a[2] <- b
+
+Because the assignment to `b` occurs within the block of assignments to
+`a[]`. When we evaluate the expressions, all of the assignments to `a`
+will happen in one go (in the order written) and if you interleave them
+it gives the false idea of controlling the flow of equations more than
+you really can.
+
+## `E2014`
+
+An equation has a name that shadows a variable. You may have written
+something like:
+
+    initial(a) <- 1
+    update(a) <- a + 1
+    a <- 2
+
+which is invalid because `a` is both an ordinary equation and also part
+of the system state.
+
+## `E2015`
+
+Invalid rank inputs to `interpolate()`. The time input (first argument)
+must always be a vector (rank 1), being a sequence of times
+corresponding to the times of inputs to interpolate. The value input
+(second argument) will have rank **one greater** than the output. So:
+
+- if the output is a scalar, then the value must be a vector
+- if the output is a vector, the value must be a matrix
+- if the output is a matrix, the value must be a 3-dimensional array
+
+and so on. This error is thrown where your inputs do not satisfy these
+tests.
+
+## `E2016`
+
+Your system contains unused equations. This is currently always an error
+(in odin1 this could be converted to a warning, message or ignored), and
+we may allow downgrading this error in a future version.
+
+Code that would generate this error:
+
+    update(x) <- x + 1
+    initial(x) <- x
+    a <- 1
+
+Here, `a` is unused. Perhaps it was meant to be an initial condition, or
+the amount that `x` is incremented, but at present it does nothing.
+
+## `E2017`
+
+Attempt to browse a phase that does not exist. You have a call like
+
+    browser("update")
+
+in a system of ODEs which does not have an update phase. The error will
+indicate which phases are valid.
+
+## `E2018`
+
+Array rank in expression differs from the rank declared with `dim`
+
+Here, the number of dimensions for a variable in an expression is
+different from the number declared with the `dim` function, which is the
+source of truth for rank. For example, you might declare a matrix and a
+3-dimensional structure like this:-
+
+    dim(xy) <- c(5,5)
+    dim(xyz) <- parameter(rank = 3)
+
+When you use these in other expressions, the rank must match the
+declaration above. So these examples would be valid syntax:-
+
+    initial(xy[, ]) <- 0
+    xyz[1, 2, 3] <- 5
+    xy <- sum(xyz[1, ,])
+
+but these would not:-
+
+    update(xy[]) <- 1
+    xyz[1, 2] <- xyz[1, 2] + 1
+
+## `E2019`
+
+The `length`, `ncol` and `nrow` functions take as their argument a whole
+array, matrix, or higher-order structure, without brackets or indexing.
+
+So
+
+    dim(x) <- c(5,5)
+    y <- length(x)
+
+is valid, but
+
+    y <- length(x[, 1]
+    y <- length(x[])
+
+are both invalid.
+
+## `E2020`
+
+`output()` was used (on lhs) within a discrete-time system. You can only
+use `output()` within systems that involve
+[`deriv()`](https://rdrr.io/r/stats/deriv.html) as it provides a way of
+computing variables for which you do not have derivatives. If you are
+writing a discrete-time system, you should use
+[`update()`](https://rdrr.io/r/stats/update.html) with a corresponding
+`initial()` statement.
+
+## `E2021`
+
+You have tried to set the dimensions of the same variable more than
+once. For example:
+
+    dim(a, b) <- 2
+    dim(b, c) <- 3
+
+    # `E2022`
+
+    Trying to access an array without using square bracket indexes.  For example if you write:
+
+    ```r
+    dim(b) <- 10
+    a[] <- b
+
+you would see this error, as you should have used `b[i]` on the right
+hand side (*probably!*; you might have meant `a[] <- b[1]`, too).
+
+## `E2023`
+
+Multiple calls to [`browser()`](https://rdrr.io/r/base/browser.html)
+targetting the same phase. For example
+
+``` r
+a <- time * 2
+browser("update")
+b <- a + 1
+browser("update")
+```
+
+Because the `browser` call is always put at the end of the phase,
+repeating [`browser()`](https://rdrr.io/r/base/browser.html) as above
+does not achieve anything.
+
+## `E2024`
+
+Cannot use `delay()` within a discrete-time system. We can only support
+delay differential equation models; delays in discrete-time systems need
+to be handled very differently. Let us know if you need this, but we
+removed this feature from odin1 in ~2017 and it does not seem to have
+been missed.
+
+## `E2025`
+
+The delay time (`by` or second argument to `delay()`) is not constant,
+i.e., determined at system creation. If you are taking this as a
+parameter, ensure that you have specified `constant = TRUE` (this
+disallows changing the parameter via
+[`dust2::dust_system_update_pars()`](https://mrc-ide.github.io/dust2/reference/dust_system_update_pars.html)).
+This requirement stems from our current design of the delay differential
+equation solver in dust and we may relax this if it causes difficulty.
+
+## `E2026`
+
+Invalid use of the empty index or range operator on the right hand side
+of an array expression. You cannot, for example, write
+
+``` r
+a[] <- b + c[i, ]
+```
+
+or
+
+``` r
+a[] <- b + c[i, 2:3]
+```
+
+Here, the accesses of `c` are problematic because they would refer to a
+vector. You might have forgotten to write `sum(c[i, ])` or some other
+reduction that would have converted this into a vector.
+
+This rule does not apply within
+[`sum()`](https://rdrr.io/r/base/sum.html) or other reductions.
+
+## `E2027`
+
+Delayed expression does not involve any variables. You have tried to use
+`delay()` to delay an expression which does not involve any of the ODE
+variables (those that involve
+[`deriv()`](https://rdrr.io/r/stats/deriv.html)), either directly or
+indirectly. For example:
+
+``` r
+b <- 1
+a <- delay(b, 10)
+```
+
+would throw this error because `b` is constant over time. This error
+usually indicates you have not written the model you intended to write.
+
+## `E2028`
+
+Delayed expression involves data (introduced with the
+[`data()`](https://rdrr.io/r/utils/data.html) function). For example:
+
+``` r
+d <- data()
+deriv(x) <- 1
+y <- x + d
+a <- delay(y, 5)
+```
+
+Here `y` involves the variable `x` but also the data `d`, which is not
+possible.
+
+## `E2029`
+
+Incompatible dimensionality of delayed expression (first argument to
+`delay`) and the object it is assigned to. A delayed expression will
+always be the same dimensionality (a delayed scalar is a scalar, a
+delayed matrix is a matrix, etc), so the left hand side of the `delay()`
+call needs to have the same dimensionality (and size!) as the expression
+being delayed. For example, this is an error:
+
+    a <- x * 2
+    b <- delay(a)
+    dim(b) <- 1
+
+because here `b` is a vector but `a` is a scalar.
+
+## `E3001`
+
+An array access would be out of bounds. This error is thrown where your
+code would result in you reading or writing out of bounds on an array
+(or a dimension of an array). Currently, we throw this error if we are
+certain that your access is invalid. For example, we would error if your
+code contains:
+
+``` r
+x[] <- a[i]
+dim(x) <- 5
+dim(a) <- 4
+```
+
+because we are accessing `a` at position 5 due to the loop over `x`, but
+`a` only has 4 elements.
+
+More complex errors are possible, and it may not be possible to
+obviously reverse odin’s chain of logic for deciding an access would be
+out of bounds; please let us know if you find difficult-to-explain cases
+and we can use these to try and make it clearer.
+
+## `E3002`
+
+Incompatible sizes in arguments to `interpolate()`. The array sizes of
+the arguments and the “target” (the variable on the left hand side),
+must be compatible with each other.
+
+Consider the expression:
+
+    a <- interpolate(b, c, "constant")
+
+The target `a` can be a scalar, vector or higher dimensional object. The
+time argument `b` is always a vector (say of length `nt`) and the value
+`c` has dimensions `c(dim(a), nt)`; that is the dimensions of `a`
+followed by the number of time elements.
+
+So:
+
+- if `a` is a scalar, then `c` must be a vector of length `nt`
+- If `a` is a vector of length `n1`, then `c` must be a matrix with `n1`
+  rows and `nt` columns
+- If `a` is a matrix with `n1` rows and `n2` columns, then `c` must be a
+  3-dimensional array with dimensions `c(n1, n2, nt)` and so on
+
+## `E3003`
+
+We have failed to analyse your bounds correctly, and consider this to be
+an odin bug. We can’t continue any further with analysis, but we’d like
+to see the model code in order to improve odin. Rerun odin with
+`check_bounds = "disabled"` to skip this error in the meantime.
