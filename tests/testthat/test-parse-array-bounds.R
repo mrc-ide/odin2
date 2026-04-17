@@ -392,6 +392,18 @@ test_that("can condition on interpolate in if/else", {
 })
 
 
+test_that("can condition on reduction (e.g. sum) in if/else", {
+  expect_no_error(
+    odin_parse({
+      update(x[]) <- if (sum(y) > 0) x[i] else 0
+      initial(x[]) <- 1
+      y[] <- x[i]
+      dim(x, y) <- 5
+    })
+  )
+})
+
+
 test_that("warn on error", {
   w <- testthat::capture_warnings(
     odin_parse({
