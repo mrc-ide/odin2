@@ -401,6 +401,15 @@ test_that("can condition on reduction (e.g. sum) in if/else", {
       dim(x, y) <- 5
     })
   )
+  
+  expect_no_error(
+    odin_parse({
+      update(x[]) <- if (sum(y[1:i]) > 0) x[i] else 0
+      initial(x[]) <- 1
+      y[] <- x[i]
+      dim(x, y) <- 5
+    })
+  )
 })
 
 

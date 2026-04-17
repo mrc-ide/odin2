@@ -473,7 +473,7 @@ constraint_resolve_dimensions <- function(arrays, equations, variables) {
 constraint_simplify_expr <- function(expr, arrays, equations, variables) {
   maths <- monty::monty_differentiation()$maths
   unknowable <- c("OdinParameter", "OdinParameterDim", "OdinVariable",
-                  "OdinInterpolateEval", "OdinReduce")
+                  "OdinInterpolateEval")
   logic <- c("&&", "||", "!", "==", "!=", "<", ">", "<=", ">=")
   simplify <- function(x) {
     if (is.numeric(x)) {
@@ -515,6 +515,11 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
     } else if (rlang::is_call(x, "ncol")) {
       nm <- as.character(x[[2]])
       return(simplify(arrays[[nm]][[2]]))
+    } else if (rlang::is_call(x, "OdinReduce")) {
+      args <- rlang::call_args(x)
+      list_to_list_call <- function(x) rlang::call2("list", !!!x)
+      args$index <- list_to_list_call(lapply(args$index, list_to_list_call))
+      return(rlang::call2("OdinReduce", !!!args))
     } else if (rlang::is_call(x, unknowable)) {
       return(x)
     } else if (is.recursive(x)) {
