@@ -10,3 +10,30 @@ test_that("basic manipulation", {
   expect_equal(expr_to_sum_of_parts(quote(x - y - z)),
                list(quote(x), quote(-y), quote(-z)))
 })
+
+
+test_that("can invert expressions", {
+  expect_false(expr_not(TRUE))
+  expect_true(expr_not(FALSE))
+
+  expect_equal(expr_not(quote(!a)), quote(a))
+  expect_equal(expr_not(quote(!(a + b))), quote(a + b))
+
+  expect_equal(expr_not(quote(a == b)), quote(a != b))
+  expect_equal(expr_not(quote(a != b)), quote(a == b))
+  expect_equal(expr_not(quote(a < b)), quote(a >= b))
+  expect_equal(expr_not(quote(a > b)), quote(a <= b))
+  expect_equal(expr_not(quote(a <= b)), quote(a > b))
+  expect_equal(expr_not(quote(a >= b)), quote(a < b))
+
+  expect_equal(expr_not(quote(a)), quote(!a))
+  expect_equal(expr_not(quote(a + b)), quote(!(a + b)))
+})
+
+
+test_that("can fold expressions", {
+  expect_identical(expr_fold(list(quote(a)), "+"), quote(a))
+  expect_identical(expr_fold(list(quote(a), quote(b)), "+"), quote(a + b))
+  expect_identical(expr_fold(list(quote(a), quote(b), quote(c)), "+"),
+                   quote(a + b + c))
+})
