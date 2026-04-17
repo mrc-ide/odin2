@@ -494,6 +494,11 @@ constraint_simplify_expr <- function(expr, arrays, equations, variables) {
       if (nm %in% c("time", "dt")) {
         return(nm)
       }
+      
+      if (nm %in% INDEX) {
+        return(nm)
+      }
+      
       stopifnot(sum(names(equations) == nm) == 1)
       eq <- equations[[nm]]
       if (is.null(eq$special)) {
