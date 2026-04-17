@@ -472,7 +472,8 @@ constraint_resolve_dimensions <- function(arrays, equations, variables) {
 
 constraint_simplify_expr <- function(expr, arrays, equations, variables) {
   maths <- monty::monty_differentiation()$maths
-  unknowable <- c("OdinParameter", "OdinParameterDim", "OdinVariable")
+  unknowable <- c("OdinParameter", "OdinParameterDim", "OdinVariable",
+                  "OdinInterpolateEval")
   logic <- c("&&", "||", "!", "==", "!=", "<", ">", "<=", ">=")
   simplify <- function(x) {
     if (is.numeric(x)) {
