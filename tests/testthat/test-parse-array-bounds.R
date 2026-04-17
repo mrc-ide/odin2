@@ -364,6 +364,19 @@ test_that("can use an if/else ladder", {
   )
 })
 
+
+test_that("no warning on if ladder", {
+  w <- testthat::capture_warnings(
+    odin({
+      update(x[]) <- if (i > 2) x[i - 2] + (if (i > 4) x[i - 4] else 0) else 0
+      initial(x[]) <- 1
+      dim(x) <- 5
+    })
+  )
+  expect_length(w, 0)
+})
+
+
 test_that("warn on error", {
   w <- testthat::capture_warnings(
     odin_parse({
