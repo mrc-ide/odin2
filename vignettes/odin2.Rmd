@@ -5,6 +5,7 @@ vignette: >
   %\VignetteIndexEntry{Getting started with odin2}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{decor}
 ---
 
 ```{r, include = FALSE}
