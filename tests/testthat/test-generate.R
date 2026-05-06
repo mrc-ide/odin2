@@ -2396,6 +2396,7 @@ test_that("can generate browser code", {
       '    dust2::r::browser::save(a, "a", odin_env);',
       '    dust2::r::browser::save(b, "b", odin_env);',
       '    dust2::r::browser::save(x, "x", odin_env);',
+      '    dust2::r::browser::save(dt, "dt", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
@@ -2464,6 +2465,7 @@ test_that("can dereference array dimension alias in browser", {
       '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
       '  dust2::r::browser::save(internal.b.data(), shared.dim.a, "b", odin_env);',
       '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::save(dt, "dt", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
@@ -2522,6 +2524,7 @@ test_that("can generate nontrivial debug", {
       '    dust2::r::browser::save(S, "S", odin_env);',
       '    dust2::r::browser::save(I, "I", odin_env);',
       '    dust2::r::browser::save(R, "R", odin_env);',
+      '    dust2::r::browser::save(dt, "dt", odin_env);',
       '    dust2::r::browser::enter(odin_env, "update", time);',
       "  }",
       "}"))
@@ -2559,6 +2562,7 @@ test_that("browse with arrays", {
       '  dust2::r::browser::save(internal.a.data(), shared.dim.a, "a", odin_env);',
       '  dust2::r::browser::save(internal.b.data(), shared.dim.b, "b", odin_env);',
       '  dust2::r::browser::save(x, shared.dim.x, "x", odin_env);',
+      '  dust2::r::browser::save(dt, "dt", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
@@ -2583,6 +2587,7 @@ test_that("conditional browser using sum/min for arrays", {
       "    auto odin_env = dust2::r::browser::create();",
       "    dust2::r::browser::save(time, \"time\", odin_env);",
       "    dust2::r::browser::save(x, shared.dim.x, \"x\", odin_env);",
+      "    dust2::r::browser::save(dt, \"dt\", odin_env);",
       "    dust2::r::browser::enter(odin_env, \"update\", time);",
       "  }",
       "}" ))
@@ -2995,6 +3000,7 @@ test_that("correctly use browser in system with compare", {
       '  dust2::r::browser::save(time, "time", odin_env);',
       '  dust2::r::browser::save(a, "a", odin_env);',
       '  dust2::r::browser::save(x, "x", odin_env);',
+      '  dust2::r::browser::save(dt, "dt", odin_env);',
       '  dust2::r::browser::enter(odin_env, "update", time);',
       "}"))
 })
