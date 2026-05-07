@@ -31,6 +31,7 @@ FUNCTIONS_MONTY_MATH <-
     lfactorial = "lfactorial",
     choose = "choose",
     lchoose = "lchoose",
+    digamma = "digamma",
     erf = "erf",
     erfc = "erfc",
     cos = "cos",
