@@ -155,5 +155,7 @@ test_that("can generate adjoint model", {
       "  adjoint_next[4] = adj_beta;",
       "  adjoint_next[5] = adj_gamma;",
       "  adjoint_next[6] = adj_I0;",
+      "  const auto n_adj = shared.odin.packing.adjoint.size();",
+      "  for (size_t k = 0; k < n_adj; ++k) { if (std::isnan(adjoint_next[k])) adjoint_next[k] = adjoint[k]; }",
       "}"))
 })
