@@ -1,5 +1,6 @@
 test_that("can compile a simple ode model", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   res <- odin({
     deriv(S) <- -beta * S * I / N
     deriv(I) <- beta * S * I / N - gamma * I
@@ -48,6 +49,7 @@ test_that("can compile a simple ode model", {
 
 test_that("can compile a discrete-time model that compares to data", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   res <- odin({
     ## Core equations for transitions between compartments:
     update(S) <- S - n_SI
@@ -124,6 +126,7 @@ test_that("can compile a discrete-time model that compares to data", {
 
 test_that("can generate simple model with array", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   gen <- odin({
     initial(x) <- 0
     update(x) <- a[1] + a[2] + a[3]
@@ -143,6 +146,7 @@ test_that("can generate simple model with array", {
 
 test_that("can generate model with interpolation", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   gen <- odin({
     initial(x) <- 0
     update(x) <- a
@@ -191,6 +195,7 @@ test_that("can generate model with interpolation", {
 
 test_that("Can generate an ode system with output", {
   skip_on_covr()
+  skip_if_not_installed("decor")
   gen <- odin({
     initial(x[]) <- 1
     deriv(x[]) <- r[i] * x[i] * (1 - x[i] / K[i])
@@ -224,6 +229,7 @@ test_that("Can generate an ode system with output", {
 
 test_that("can compile model with delays", {
   skip_if_not_installed("deSolve")
+  skip_if_not_installed("decor")
   gen <- odin({
     ylag <- delay(y, tau)
     initial(y) <- 0.5

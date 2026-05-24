@@ -9,6 +9,7 @@ vignette: >
   %\VignetteIndexEntry{Debugging}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{decor}
 ---
 
 ```{r, include = FALSE}
