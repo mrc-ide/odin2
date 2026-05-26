@@ -33,8 +33,9 @@ generate_js_system_packing <- function(name, dat) {
   packing <- dat$storage$packing[[name]]
   arrays <- dat$storage$arrays
   dim_name <- arrays$alias[match(packing$name, arrays$name)]
-  dims <- ifelse(packing$rank == 0, "[]", sprintf("dim.%s", dim_name))
-  els <- sprintf('["%s", %s.dim]', packing$name, dims)
+  els <- ifelse(packing$rank == 0,
+                sprintf('["%s", []]', packing$name),
+                sprintf('["%s", dim.%s.dim]', packing$name, dim_name))
   ## trailing comma if needed
   els[-length(els)] <- sprintf("%s,", els[-length(els)])
   shape <- c("const shape = new Map([",
