@@ -76,9 +76,13 @@ generate_js_system_build_internal <- function(dat) {
   if (length(dat$storage$contents$internal) == 0) {
     body <- "return {};"
   } else {
+    nms <- dat$storage$contents$internal
+    size <- vcapply(nms, function(nm) {
+      generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+    })
     body <- c(
       "return {",
-      sprintf("  %s: [],", dat$storage$contents$internal),
+      sprintf("  %s: Array(%s).fill(0),", nms, size),
       "};"
     )
   }
@@ -276,9 +280,10 @@ generate_js_assignment <- function(eq, name_state, dat, options = list()) {
     }
     rank <- dat$storage$arrays$rank[[i]]
     if (eq$rhs$is_user_sized) {
-      res <- sprintf(
-        "dim.%s = imports.io.readDims(params, '%s', %d)",
-        eq$lhs$name_data, eq$lhs$name_data, rank)
+      stop("user sized dimensions not supported in js")
+      # res <- sprintf(
+      #   "dim.%s = imports.io.readDims(params, '%s', %d)",
+      #   eq$lhs$name_data, eq$lhs$name_data, rank)
     } else {
       dims <- vcapply(dat$storage$arrays$dims[[i]], generate_js_sexp,
                       dat$sexp_data, options)
