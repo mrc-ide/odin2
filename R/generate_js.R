@@ -78,7 +78,7 @@ generate_js_system_build_internal <- function(dat) {
   } else {
     nms <- dat$storage$contents$internal
     size <- vcapply(nms, function(nm) {
-      generate_dust_sexp(call("OdinLength", nm), dat$sexp_data)
+      generate_js_sexp(call("OdinLength", nm), dat$sexp_data)
     })
     body <- c(
       "return {",
