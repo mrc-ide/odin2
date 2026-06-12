@@ -112,12 +112,15 @@ generate_js_unpack <- function(names, packing, sexp_data, from = "state") {
   is_scalar <- lengths(packing$dims[i]) == 0
   is_array <- !is_scalar
   starting <- c(
-    sprintf("const unpacked = params.odin.packing.unpackArray(%s);", from))
+    sprintf(
+      "const unpacked = params.odin.packing.unpackArrayNoCopy(%s);", from
+      )
+  )
   ret <- character(length(names))
   ret[is_scalar] <- sprintf("const %s = unpacked.get('%s');",
                             names[is_scalar],
                             names[is_scalar])
-  ret[is_array] <- sprintf("const %s = unpacked.get('%s').data;",
+  ret[is_array] <- sprintf("const %s = unpacked.get('%s');",
                            names[is_array],
                            names[is_array])
   c(starting, ret)
