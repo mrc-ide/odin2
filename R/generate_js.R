@@ -113,30 +113,20 @@ generate_js_unpack <- function(names, packing, sexp_data, from = "state") {
   is_array <- !is_scalar
   starting <- c(
     sprintf(
-      "const unpacked = params.odin.packing.unpackArrayNoCopy(%s);", from
+      "const unpacked = params.odin.packing.unpackArray(%s);", from
       )
   )
   ret <- character(length(names))
   ret[is_scalar] <- sprintf("const %s = unpacked.get('%s');",
                             names[is_scalar],
                             names[is_scalar])
-  ret[is_array] <- sprintf("const %s = unpacked.get('%s');",
+  ret[is_array] <- sprintf("const %s = unpacked.get('%s').data;",
                            names[is_array],
                            names[is_array])
   c(starting, ret)
 }
 
 generate_js_system_update <- function(dat) {
-  ## dust has this comment and code but I think I will generate out
-  ## update with empty body every time so that we do allow for mixed
-  ## models
-
-  ## I think this is not quite the right condition, because we do want
-  ## this with a mixed model.
-  # if (dat$time == "continuous") {
-  #   return(NULL)
-  # }
-
   args <- c("time", "dt", "state", "params", "internal", "stateNext", "random")
   body <- collector()
   unpack <- intersect(dat$variables, dat$phases$update$unpack)
@@ -148,7 +138,14 @@ generate_js_system_update <- function(dat) {
     body$add(generate_js_assignment(eq, "stateNext", dat))
   }
 
-  js_generator_method("update", args, body$get())
+  # don't include update function if body is empty because the runner
+  # either solves with dt or solver based on if the update function is
+  # defined
+  if (body$length() == 0) {
+    NULL
+  } else {
+    js_generator_method("update", args, body$get())
+  }
 }
 
 
