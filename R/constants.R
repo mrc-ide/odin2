@@ -47,6 +47,48 @@ FUNCTIONS_MONTY_MATH <-
     asinh = "asinh",
     atanh = "atanh")
 
+FUNCTIONS_JS_MATH <-
+  c("^" = "Math.pow",
+    min = "Math.min",
+    max = "Math.max",
+    ceiling = "Math.ceil",
+    sign = "Math.sign",
+    floor = "Math.floor",
+    round = "Math.round",
+    trunc = "Math.trunc",
+    sqrt = "Math.sqrt",
+    abs = "Math.abs",
+    exp = "Math.exp",
+    expm1 = "Math.expm1",
+    log = "Math.log",
+    log2 = "Math.log2",
+    log10 = "Math.log10",
+    log1p = "Math.log1p",
+    # Not in JS Math
+    # gamma = "tgamma",
+    # lgamma = "lgamma",
+    # beta = "beta",
+    # lbeta = "lbeta",
+    # factorial = "factorial",
+    # lfactorial = "lfactorial",
+    # choose = "choose",
+    # lchoose = "lchoose",
+    # erf = "erf",
+    # erfc = "erfc",
+    cos = "Math.cos",
+    sin = "Math.sin",
+    tan = "Math.tan",
+    acos = "Math.acos",
+    asin = "Math.asin",
+    atan = "Math.atan",
+    atan2 = "Math.atan2",
+    cosh = "Math.cosh",
+    sinh = "Math.sinh",
+    tanh = "Math.tanh",
+    acosh = "Math.acosh",
+    asinh = "Math.asinh",
+    atanh = "Math.atanh")
+
 
 FUNCTIONS <- list(
   "+" = 1:2,

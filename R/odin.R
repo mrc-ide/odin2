@@ -133,6 +133,54 @@ odin_show <- function(expr, input_type = NULL, compatibility = NULL,
 }
 
 
+##' Show generated js code from compiling an odin model.
+##'
+##' @title Show generated odin code
+##'
+##' @inheritParams odin
+##'
+##' @param what Optional string, being a single method to show.
+##'   Popular options are `update`, `rhs` and `compare_data`.
+##'
+##' @return A character vector, with class `odin_code` that has a
+##'   pretty-print method defined.  Returns `NULL` if `what` was given
+##'   but the model lacks this part.
+##'
+##' @export
+##' @examples
+##' # Show generated code for the whole system
+##' odin_show({
+##'   initial(x) <- 1
+##'   update(x) <- a
+##'   a <- Normal(x, 1)
+##' })
+##'
+##' # Just the update method
+##' odin_show({
+##'   initial(x) <- 1
+##'   update(x) <- a
+##'   a <- Normal(x, 1)
+##' }, what = "update")
+odin_show_js <- function(expr, input_type = NULL, compatibility = NULL,
+                      check_bounds = NULL, what = NULL) {
+  call <- environment()
+  dat <- odin_parse_quo(rlang::enquo(expr), input_type, compatibility,
+                        check_bounds, call)
+  if (!is.null(what)) {
+    parts <- generate_js_parts()
+    dat <- generate_prepare(dat)
+    code <- parts[[match_value(what, names(parts))]](dat)
+    attr(code, "what") <- what
+  } else {
+    code <- generate_js_system(dat)
+  }
+  if (!is.null(code)) {
+    class(code) <- "odin_code"
+  }
+  code
+}
+
+
 ##' @export
 print.odin_code <- function(x, ...) {
   ## We can probably do more with this later, but this should already
