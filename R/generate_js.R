@@ -54,7 +54,20 @@ generate_js_system_build_params <- function(dat) {
   body$add("const dim = imports.array.getDimObj();")
   body$add("const odin = {};")
   eqs <- get_phase_equations("build_shared", dat)
+  allocated <- character()
   for (eq in eqs) {
+    name <- eq$lhs$name
+    if (
+        name %in% dat$storage$arrays$name
+        && !(name %in% allocated)
+        && !identical(eq$special, "parameter")
+      ) {
+      size <- generate_js_sexp(
+        call("OdinLength", name),
+        dat$sexp_data, options)
+      body$add(sprintf("const %s = Array(%s).fill(0);", name, size))
+      allocated <- c(allocated, name)
+    }
     body$add(generate_js_assignment(eq, "state", dat, options))
   }
   body$add(generate_js_system_packing("state", dat))
@@ -226,6 +239,11 @@ generate_js_assignment <- function(eq, name_state, dat, options = list()) {
     read <- type_to_read[[type]]
     is_array <- name %in% dat$storage$arrays$name
     lhs <- generate_js_lhs(eq$lhs, dat, name_state, options)
+    if (isFALSE(options$shared_exists)) {
+      dest <- name
+    } else {
+      dest <- sprintf("params.%s", name)
+    }
 
     if (is_array) {
       i <- match(name, dat$storage$arrays$name)
@@ -235,6 +253,7 @@ generate_js_assignment <- function(eq, name_state, dat, options = list()) {
       } else {
         dim <- sprintf("params.dim.%s", dim_name)
       }
+      dest <- generate_js_sexp(name, dat$sexp_data, options)
       rhs <- sprintf(
         'imports.io.%sArray(params, "%s", %s)',
         read, name, dim)
@@ -262,7 +281,6 @@ generate_js_assignment <- function(eq, name_state, dat, options = list()) {
         func <- if (constraint == "min") "Min" else "Max"
         constraint_value <- generate_js_sexp(eq$rhs$args[[constraint]],
                                              dat$sexp_data, options)
-        dest <- sprintf("params.%s", name)
         res <- c(res,
                  sprintf('imports.io.check%s%s(%s, %s, "%s");',
                          func, what, dest, constraint_value, name))
