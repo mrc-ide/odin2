@@ -146,6 +146,7 @@ odin_show <- function(expr, input_type = NULL, compatibility = NULL,
 ##'   pretty-print method defined.  Returns `NULL` if `what` was given
 ##'   but the model lacks this part.
 ##'
+##' @keywords internal
 ##' @export
 ##' @examples
 ##' # Show generated code for the whole system

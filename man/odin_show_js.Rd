@@ -68,3 +68,4 @@ odin_show({
   a <- Normal(x, 1)
 }, what = "update")
 }
+\keyword{internal}
