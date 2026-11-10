@@ -92,7 +92,7 @@ dust functions (starting from \link[dust2:dust_system_create]{dust2::dust_system
 Compile an odin model, yielding a \code{dust_system_generator} object.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # A random walk:
 gen <- odin({
   initial(x) <- 0
