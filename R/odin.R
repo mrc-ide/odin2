@@ -150,14 +150,14 @@ odin_show <- function(expr, input_type = NULL, compatibility = NULL,
 ##' @export
 ##' @examples
 ##' # Show generated code for the whole system
-##' odin_show({
+##' odin_show_js({
 ##'   initial(x) <- 1
 ##'   update(x) <- a
 ##'   a <- Normal(x, 1)
 ##' })
 ##'
 ##' # Just the update method
-##' odin_show({
+##' odin_show_js({
 ##'   initial(x) <- 1
 ##'   update(x) <- a
 ##'   a <- Normal(x, 1)
