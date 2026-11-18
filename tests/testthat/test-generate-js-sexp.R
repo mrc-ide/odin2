@@ -151,6 +151,23 @@ test_that("can coerce to different types", {
 })
 
 
+test_that("can generate all reduction", {
+  dat <- generate_dust_dat(
+    c(x = "state", y = "internal", dim_y = "dim"),
+    packing = list(
+      state = list(name = "x", rank = 0, dims = NULL, offset = 0)),
+    type = list(x = "real_type", y = "real_type", dim_y = "dimension"),
+    arrays = list(
+      list(name = "y", rank = 1, dims = 3, alias = "y")
+    ))
+  options <- list()
+  expr <- quote(OdinReduce(fn = "sum", what = "y", index = NULL, expr = sum(y)))
+  expect_equal(
+    generate_js_sexp_reduce(expr, dat, options),
+    "imports.array.sumAll(internal.y)")
+})
+
+
 test_that("unsupported functions are bugs", {
   dat <- generate_dust_dat(NULL, NULL, NULL, NULL)
   expect_error(

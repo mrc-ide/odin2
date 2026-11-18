@@ -405,7 +405,7 @@ generate_js_lhs <- function(lhs, dat, name_state, options) {
             name_state,
             generate_js_sexp(offset, dat$sexp_data, options))
   } else if (location == "adjoint") {
-    stop("Adjoint location not support in js")
+    stop("Adjoint location not supported in js")
   } else {
     stop(sprintf("Unsupported location '%s'", location))
   }
