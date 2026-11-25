@@ -373,6 +373,8 @@ test_that("can generate system with array variable", {
       "},"))
   expect_equal(
     generate_js_system_initial(dat),
+    # the "+ 0" here is from the fact that in the state array, x is
+    # first so has start index 0
     c(method_args$initial,
       "  for (let i = 1; i <= params.dim.x.dim[0]; i++) {",
       "    state[i - 1 + 0] = 0;",
