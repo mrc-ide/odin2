@@ -31,6 +31,22 @@ test_that("odin calls dust", {
 })
 
 
+test_that("can show js", {
+  str <- odin_show_js({
+    initial(x) <- 1
+    update(x) <- 1
+  }, what = "update")
+
+  expected_odin_code <- c("update(imports, time, dt, state, params, internal, stateNext, random) {",
+    "  stateNext[0] = 1;",
+    "},")
+  attr(expected_odin_code, "what") <- "update"
+  class(expected_odin_code) <- "odin_code"
+
+  expect_equal(str, expected_odin_code)
+})
+
+
 test_that("can request js generation", {
   expect_error(
     odin({
